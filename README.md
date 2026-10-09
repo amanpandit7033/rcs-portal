@@ -11,8 +11,10 @@ Enterprise multi-role Rich Communication Services (RCS) messaging portal built o
 - **Modern UI Stack**: Django Server-Rendered Templates + Tailwind CSS + Alpine.js + HTMX.
 - **OneXtel Vendor Integration**: Centralized in `integrations/onextel/client.py` with mock mode (`ONEXTEL_MOCK=True`) for safe local testing.
 - **Login Defense**: Brute-force lockout protection via `django-axes`.
+- **Database Architecture**: Enterprise PostgreSQL database with `psycopg` 3 and persistent connection pooling (`CONN_MAX_AGE`).
 - **Background Dispatch**: Asynchronous queuing via Celery (eager execution in dev, Redis broker in prod).
-- **Split Settings**: Clean separation into `base.py`, `dev.py`, and `prod.py` driven by `.env`.
+- **Environment Driven**: Unified configuration driven by `.env` with production security defaults.
+
 
 ---
 
@@ -58,16 +60,26 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
+### 2. Database & Environment Configuration
 
-Copy the example configuration file:
+1. Create a PostgreSQL database (e.g. via `psql` or pgAdmin):
+```sql
+CREATE DATABASE rcs_portal;
+```
+
+2. Copy the example configuration file and adjust your PostgreSQL credentials:
 ```bash
 cp .env.example .env
 ```
 
+Ensure `DATABASE_URL` in `.env` points to your PostgreSQL instance:
+```env
+DATABASE_URL=postgres://postgres:password@localhost:5432/rcs_portal
+```
+
 ### 3. Database Migration
 
-Apply initial migrations (creates custom User model first, followed by auth and axes tables):
+Apply migrations to initialize all tables, schemas, and constraints in PostgreSQL:
 ```bash
 python manage.py migrate
 ```
