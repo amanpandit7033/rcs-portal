@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='username',
-            field=models.CharField(blank=True, db_index=True, max_length=150, null=True, verbose_name='Username'),
+            field=models.CharField(blank=True, max_length=150, null=True, verbose_name='Username'),
         ),
         # 2. Make email nullable/optional
         migrations.AlterField(
@@ -56,6 +56,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='username',
-            field=models.CharField(db_index=True, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, verbose_name='Username'),
+            field=models.CharField(help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, verbose_name='Username'),
         ),
     ]

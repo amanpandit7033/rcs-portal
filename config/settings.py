@@ -74,10 +74,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database
+# Database (PostgreSQL)
 DATABASES = {
-    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+    "default": env.db("DATABASE_URL", default="postgres://postgres:postgres@localhost:5432/rcs_portal")
 }
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+
 
 # Custom User Model
 AUTH_USER_MODEL = "accounts.User"
