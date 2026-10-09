@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Bot Onboarding Application - RCS Portal{% endblock %}
+{% block header_title %}RCS Bot Onboarding{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Top Breadcrumb & Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">RCS Bot Onboarding Form</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Complete all fields below for carrier brand verification and operator whitelisting.</p>
+        </div>
+        <a href="{% url 'onboarding:client_list' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+            &larr; Back to Applications
+        </a>
+    </div>
+
+    <!-- Carrier Compliance Notice -->
+    <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 font-bold border border-blue-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <div class="text-xs space-y-1">
+            <h3 class="font-bold text-slate-900 text-sm">Official Operator Verification Form</h3>
+            <p class="text-slate-500 leading-relaxed">
+                Fields marked with <span class="text-rose-500 font-bold">*</span> are mandatory for Vodafone / Telecom Operator submission. Assets (Logo, Banner, Opt-in proof) must comply with specified dimensions and file size constraints to prevent carrier rejection.
+            </p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+            {% for err in form.non_field_errors %}
+                <p>{{ err }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- 1. Bot Message Type -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="block text-sm font-bold text-slate-900">
+                        Bot Message Type <span class="text-rose-500">*</span>
+                    </label>
+                    <p class="text-xs text-slate-500 mt-0.5">Select only one category at a time</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                {% for choice in form.bot_message_types %}
+                <label class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-blue-300 transition-all cursor-pointer">
+                    {{ choice.tag }}
+                    <span class="text-xs font-semibold text-slate-800">{{ choice.choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.bot_message_types.errors %}
+                <p class="text-xs text-rose-600 font-medium">{{ form.bot_message_types.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <!-- 2. Brand & Bot Profile Identity -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Brand &amp; Bot Profile</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Enterprise brand representation visible on users' messaging app header.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Brand Name <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.brand_name }}
+                    {% if form.brand_name.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.brand_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Bot Name <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.bot_name }}
+                    <p class="text-[11px] text-slate-400 mt-1">At-least 1 alpha should be there. Max of 40 characters.</p>
+                    {% if form.bot_name.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.bot_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Short Description <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.short_description }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 100 characters. Shown beneath the brand bot title.</p>
+                    {% if form.short_description.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.short_description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Colour Code <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-10 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                            {{ form.color_code }}
+                        </div>
+                        <span class="text-xs text-slate-500">Pick the primary theme color for buttons &amp; header accents</span>
+                    </div>
+                    {% if form.color_code.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.color_code.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Languages Supported <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.languages_supported }}
+                    <p class="text-[11px] text-slate-400 mt-1">Mention the full name of languages supported by the bot (Ex: English, Hindi)</p>
+                    {% if form.languages_supported.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.languages_supported.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Brand SPOC Details -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Brand SPOC Details</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Enterprise brand's primary Single Point of Contact (SPOC) information.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Brand SPOC name <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.brand_spoc_name }}
+                    {% if form.brand_spoc_name.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.brand_spoc_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Brand SPOC designation
+                    </label>
+                    {{ form.brand_spoc_designation }}
+                    {% if form.brand_spoc_designation.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.brand_spoc_designation.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Brand SPOC email id
+                    </label>
+                    {{ form.brand_spoc_email }}
+                    {% if form.brand_spoc_email.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.brand_spoc_email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Business Verification Documents (GST & PAN) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Business Verification Documents</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Statutory enterprise registration documents required for telecom operator KYC whitelisting.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- GST Certificate -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-800">
+                            GST Certificate <span class="text-rose-500">*</span>
+                        </label>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">PDF Only</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Upload 1 supported file: PDF. Max 10 MB.</p>
+                    {{ form.gst_certificate }}
+                    {% if form.instance.gst_certificate %}
+                        <p class="text-[11px] text-emerald-600 font-medium">Current file: <a href="{{ form.instance.gst_certificate.url }}" target="_blank" class="underline">View uploaded GST certificate</a></p>
+                    {% endif %}
+                    {% if form.gst_certificate.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.gst_certificate.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- PAN Card -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-800">
+                            Pan Card <span class="text-rose-500">*</span>
+                        </label>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">PDF / Images</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Upload 1 supported file. Max 10 MB.</p>
+                    {{ form.pan_card }}
+                    {% if form.instance.pan_card %}
+                        <p class="text-[11px] text-emerald-600 font-medium">Current file: <a href="{{ form.instance.pan_card.url }}" target="_blank" class="underline">View uploaded PAN card</a></p>
+                    {% endif %}
+                    {% if form.pan_card.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.pan_card.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Visual Media Uploads (Logo & Banner) -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Visual Brand Assets</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Strict image requirements enforced by carrier telecom networks.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Bot Logo -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <label class="block text-xs font-bold text-slate-800">
+                        Bot Logo <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="text-[11px] text-slate-500 space-y-0.5">
+                        <p>• <strong>Dimensions:</strong> Exactly 224 x 224 px</p>
+                        <p>• <strong>Max File Size:</strong> 50 KB</p>
+                        <p>• <strong>Supported:</strong> JPG, JPEG, PNG</p>
+                    </div>
+                    {{ form.bot_logo }}
+                    {% if form.bot_logo.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.bot_logo.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Banner Image -->
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                    <label class="block text-xs font-bold text-slate-800">
+                        Banner Image <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="text-[11px] text-slate-500 space-y-0.5">
+                        <p>• <strong>Dimensions:</strong> Exactly 1440 x 448 px</p>
+                        <p>• <strong>Max File Size:</strong> 200 KB</p>
+                        <p>• <strong>Supported:</strong> JPG, JPEG, PNG</p>
+                    </div>
+                    {{ form.banner_image }}
+                    {% if form.banner_image.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.banner_image.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Contact Information -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Public Contact &amp; Web Links</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Displayed inside the bot details drawer on the mobile client.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Phone -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Primary Phone Number <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_phone }}
+                    <p class="text-[11px] text-slate-400 mt-1">Valid phone number with Country code (e.g. +91 9876543210)</p>
+                    {% if form.primary_phone.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_phone.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Label for primary phone number <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_phone_label }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 25 characters (e.g. Support Phone, Hotline)</p>
+                    {% if form.primary_phone_label.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_phone_label.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Primary email id <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_email }}
+                    <p class="text-[11px] text-slate-400 mt-1">Valid official business Email id</p>
+                    {% if form.primary_email.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Label for primary email id <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_email_label }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 25 characters (e.g. Customer Care, Inquiries)</p>
+                    {% if form.primary_email_label.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_email_label.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Website -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Primary website <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_website }}
+                    <p class="text-[11px] text-slate-400 mt-1">Valid website URL (including https://)</p>
+                    {% if form.primary_website.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_website.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Label for primary website <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.primary_website_label }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 25 characters (e.g. Official Website)</p>
+                    {% if form.primary_website_label.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.primary_website_label.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Legal & Compliance Policies -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900">Legal &amp; Compliance URLs</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Public links to terms and data privacy policies.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Terms and Conditions URL <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.terms_conditions_url }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 2048 characters</p>
+                    {% if form.terms_conditions_url.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.terms_conditions_url.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Privacy URL <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.privacy_url }}
+                    <p class="text-[11px] text-slate-400 mt-1">Max of 2048 characters</p>
+                    {% if form.privacy_url.errors %}
+                        <p class="text-xs text-rose-600 mt-1">{{ form.privacy_url.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Opt-in Verification Screenshots -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <label class="block text-sm font-bold text-slate-900">
+                    Opt-in Screenshots <span class="text-rose-500">*</span>
+                </label>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Share screenshots showcasing how opt-in is collected from customers to send messages for the final step in the Vodafone verification process.
+                </p>
+            </div>
+
+            <!-- Visual guide banner showcasing sample opt-in -->
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="md:col-span-2 space-y-1 text-xs text-slate-600">
+                    <p class="font-bold text-slate-900">Opt-in Verification Requirement:</p>
+                    <p>Operators require explicit proof of how your subscribers consent to receive RCS broadcasts (e.g. web form signup, SMS keyword opt-in, or purchase checkout checkbox).</p>
+                    <p class="text-slate-400 text-[11px]">Attach screenshot (PNG, JPG, or PDF) of the actual consent mechanism.</p>
+                </div>
+                <div class="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs text-[10px] space-y-1 text-slate-400 text-center font-mono">
+                    <div class="bg-slate-100 p-1 rounded">E-mail [_________]</div>
+                    <div class="bg-slate-100 p-1 rounded">Company name [_________]</div>
+                    <div class="bg-slate-100 p-1 rounded">Product of Interest [ ▼ ]</div>
+                    <div class="text-emerald-600 font-bold">☑ I agree to receive RCS updates</div>
+                </div>
+            </div>
+
+            <div>
+                {{ form.opt_in_screenshot }}
+                {% if form.opt_in_screenshot.errors %}
+                    <p class="text-xs text-rose-600 mt-1">{{ form.opt_in_screenshot.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Submit Button Footer -->
+        <div class="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-slate-400">
+                By submitting, you certify that all brand trademarks and opt-in records are authorized.
+            </p>
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <a href="{% url 'onboarding:client_list' %}" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 text-center transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Submit for Carrier Onboarding</span>
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

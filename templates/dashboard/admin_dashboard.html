@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block header_title %}Admin Overview &amp; Analytics{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Row 1: 4 Real Platform Metric KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        <!-- 1. Total Accounts -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Total Accounts</span>
+                <span class="text-2xl font-bold text-slate-900 tracking-tight block mt-0.5">
+                    {{ total_users }}
+                </span>
+                <span class="text-[11px] text-slate-400 block mt-0.5 font-medium">
+                    {{ total_clients }} Clients &bull; {{ total_resellers }} Resellers
+                </span>
+            </div>
+        </div>
+
+        <!-- 2. Total Dispatched Messages -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100/80 text-blue-600 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Messages Dispatched</span>
+                <span class="text-2xl font-bold text-slate-900 tracking-tight block mt-0.5 font-mono">
+                    {{ total_messages_sent }}
+                </span>
+                <span class="text-[11px] text-emerald-600 block mt-0.5 font-medium">
+                    {{ total_messages_delivered }} Delivered ({{ today_messages_sent }} today)
+                </span>
+            </div>
+        </div>
+
+        <!-- 3. Platform Wallet Funds -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Total Platform Balance</span>
+                <span class="text-2xl font-bold text-emerald-600 tracking-tight block mt-0.5 font-mono">
+                    {{ total_platform_balance }}
+                </span>
+                <span class="text-[11px] text-slate-400 block mt-0.5 font-medium">
+                    Across all user wallets
+                </span>
+            </div>
+        </div>
+
+        <!-- 4. Campaigns & Approved Templates -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
+            <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100/80 text-purple-600 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Campaigns &amp; Templates</span>
+                <span class="text-2xl font-bold text-slate-900 tracking-tight block mt-0.5">
+                    {{ total_campaigns }}
+                </span>
+                <span class="text-[11px] text-slate-400 block mt-0.5 font-medium">
+                    {{ approved_templates }} Approved Templates
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 2: Charts (Platform Message Traffic + Message Types Breakdown) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Platform Message Traffic (2 Columns wide) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">System Message Traffic</h2>
+                    </div>
+                    <div class="flex items-center gap-4 mt-1.5 text-xs">
+                        <span class="flex items-center gap-1.5 text-slate-500">
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#c7d2fe]"></span>
+                            Sent
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-500">
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+                            Delivered
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-500">
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span>
+                            Failed
+                        </span>
+                    </div>
+                </div>
+
+                <span class="text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
+                    Last 7 Days
+                </span>
+            </div>
+
+            <!-- Bar Chart Canvas -->
+            <div class="relative h-72 w-full mt-2">
+                <canvas id="adminTrafficChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: Message Types Breakdown Donut Chart (1 Column wide) -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                    </svg>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Message Types</h2>
+                </div>
+                <span class="text-xs font-semibold text-slate-500 font-mono">
+                    Total: {{ total_typed_msgs }}
+                </span>
+            </div>
+
+            <!-- Donut Container with Center Label -->
+            <div class="relative flex items-center justify-center my-4 h-52">
+                <canvas id="msgTypeDonutChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                    <span class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">All-Time</span>
+                    <span class="text-xl font-bold text-slate-900 tracking-tight font-mono">{{ total_typed_msgs }}</span>
+                </div>
+            </div>
+
+            <!-- Type Breakdown List -->
+            <div class="space-y-2.5 text-xs pt-2 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-slate-600 font-medium">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        Promotional
+                    </span>
+                    <span class="font-bold text-slate-800 font-mono">{{ msg_type_promo }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-slate-600 font-medium">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        Transactional
+                    </span>
+                    <span class="font-bold text-slate-800 font-mono">{{ msg_type_trans }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-slate-600 font-medium">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        OTP
+                    </span>
+                    <span class="font-bold text-slate-800 font-mono">{{ msg_type_otp }}</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 3: Bottom Split (Recent Onboarding Dossiers + Recent Campaigns Table) -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        <!-- Left: Recent Onboarding Dossiers (2 of 5 columns) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">Recent Bot Onboardings</h2>
+                    </div>
+                    <a href="{% url 'onboarding:admin_list' %}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                        View All ({{ total_onboardings }}) &rarr;
+                    </a>
+                </div>
+
+                <!-- Onboardings List -->
+                <div class="space-y-3">
+                    {% for app in recent_onboardings %}
+                    <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            {% if app.bot_logo %}
+                                <img src="{{ app.bot_logo.url }}" alt="Logo" class="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0">
+                            {% else %}
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {{ app.bot_name|slice:":1"|upper }}
+                                </div>
+                            {% endif %}
+                            <div class="min-w-0">
+                                <a href="{% url 'onboarding:admin_detail' app.id %}" class="text-xs font-bold text-slate-900 block truncate hover:text-blue-600">
+                                    {{ app.bot_name }}
+                                </a>
+                                <span class="text-[11px] text-slate-400 block truncate">
+                                    {{ app.brand_name }} &bull; @{{ app.user.username }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            {% if app.status == 'approved' %}
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[10px]">Approved</span>
+                            {% elif app.status == 'forwarded_to_operator' %}
+                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold text-[10px]">With Operator</span>
+                            {% elif app.status == 'rejected' %}
+                                <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-semibold text-[10px]">Rejected</span>
+                            {% else %}
+                                <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px]">Under Review</span>
+                            {% endif %}
+                            <span class="block text-[10px] text-slate-400 mt-1 font-mono">{{ app.created_at|date:"d M Y" }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <p>No onboarding applications submitted yet.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Recent Campaigns Table (3 of 5 columns) -->
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">Recent Broadcast Campaigns</h2>
+                    </div>
+                    <a href="{% url 'campaigns:campaign_list' %}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                        View All ({{ total_campaigns }}) &rarr;
+                    </a>
+                </div>
+
+                <!-- Campaigns Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-[11px] font-semibold text-slate-400">
+                                <th class="pb-3 font-medium">Campaign</th>
+                                <th class="pb-3 font-medium">Sender / User</th>
+                                <th class="pb-3 font-medium text-right">Audience</th>
+                                <th class="pb-3 font-medium text-right">Status</th>
+                                <th class="pb-3 font-medium text-right">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 text-xs">
+                            {% for c in recent_campaigns %}
+                            <tr class="hover:bg-slate-50/60 transition-colors">
+                                <td class="py-3 font-semibold text-slate-900">
+                                    <a href="{% url 'campaigns:campaign_detail' c.id %}" class="hover:text-blue-600">
+                                        {{ c.name }}
+                                    </a>
+                                </td>
+                                <td class="py-3 text-slate-500 font-mono text-[11px]">
+                                    @{{ c.user.username }}
+                                </td>
+                                <td class="py-3 text-right text-slate-700 font-mono font-medium">
+                                    {{ c.total|default:c.valid_count|default:0 }}
+                                </td>
+                                <td class="py-3 text-right">
+                                    {% if c.status == 'completed' %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Completed</span>
+                                    {% elif c.status == 'running' %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">Running</span>
+                                    {% elif c.status == 'failed' %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Failed</span>
+                                    {% else %}
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{{ c.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 text-right text-slate-400 font-mono text-[11px]">
+                                    {{ c.created_at|date:"d M Y" }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
+                                    No broadcast campaigns dispatched yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Interactive Chart.js Initialization Scripts with 100% Real Database Data -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. System Traffic Bar Chart
+        const ctxBar = document.getElementById('adminTrafficChart');
+        if (ctxBar) {
+            const labels = {{ admin_chart_labels|safe }};
+            const sentData = {{ admin_chart_sent|safe }};
+            const deliveredData = {{ admin_chart_delivered|safe }};
+            const failedData = {{ admin_chart_failed|safe }};
+
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Sent',
+                            data: sentData,
+                            backgroundColor: '#c7d2fe',
+                            borderRadius: 6,
+                            barPercentage: 0.55,
+                            categoryPercentage: 0.75,
+                        },
+                        {
+                            label: 'Delivered',
+                            data: deliveredData,
+                            backgroundColor: '#10b981',
+                            borderRadius: 6,
+                            barPercentage: 0.55,
+                            categoryPercentage: 0.75,
+                        },
+                        {
+                            label: 'Failed',
+                            data: failedData,
+                            backgroundColor: '#f43f5e',
+                            borderRadius: 6,
+                            barPercentage: 0.55,
+                            categoryPercentage: 0.75,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#ffffff',
+                            titleColor: '#0f172a',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 12,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 11, family: 'Figtree' }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            border: { dash: [4, 4] },
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 11, family: 'Figtree' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Message Types Donut Chart
+        const ctxDonut = document.getElementById('msgTypeDonutChart');
+        if (ctxDonut) {
+            const donutLabels = {{ donut_labels|safe }};
+            const donutData = {{ donut_data|safe }};
+            const totalSum = donutData.reduce((a, b) => a + b, 0);
+
+            new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: donutLabels,
+                    datasets: [{
+                        data: totalSum > 0 ? donutData : [1, 1, 1],
+                        backgroundColor: totalSum > 0 ? ['#3b82f6', '#10b981', '#f59e0b'] : ['#f1f5f9', '#f1f5f9', '#f1f5f9'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '76%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: totalSum > 0,
+                            backgroundColor: '#ffffff',
+                            titleColor: '#0f172a',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10,
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

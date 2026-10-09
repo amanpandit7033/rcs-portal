@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Application #{{ application.id }}: {{ application.bot_name }}{% endblock %}
+{% block header_title %}Onboarding Dossier{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ application.bot_name }}</h1>
+                <!-- Status Badge -->
+                {% if application.status == 'approved' %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Approved
+                    </span>
+                {% elif application.status == 'forwarded_to_operator' %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Forwarded to Operator
+                    </span>
+                {% elif application.status == 'rejected' %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Rejected
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending Review
+                    </span>
+                {% endif %}
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Application ID #{{ application.id }} • Submitted on {{ application.created_at|date:"d M Y, h:i A" }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'onboarding:client_list' %}" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                &larr; Back to List
+            </a>
+            <a href="{% url 'onboarding:download_zip' application.id %}" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Download Submission ZIP</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Review Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left 2 Cols: Details -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Brand & Configuration -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">1. Identity &amp; Classification</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Brand Name</span>
+                        <span class="text-xs font-bold text-slate-800 mt-0.5 block">{{ application.brand_name }}</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Bot Name</span>
+                        <span class="text-xs font-bold text-slate-800 mt-0.5 block">{{ application.bot_name }}</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Message Types</span>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% for t in application.get_message_types_list %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">{{ t }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Short Description</span>
+                        <span class="text-xs text-slate-800 mt-0.5 block">{{ application.short_description }}</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Theme Colour Code</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="w-4 h-4 rounded-full border border-slate-300" style="background-color: {{ application.color_code }};"></span>
+                            <span class="text-xs font-mono font-bold text-slate-800">{{ application.color_code }}</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Languages</span>
+                        <span class="text-xs font-semibold text-slate-800 mt-0.5 block">{{ application.languages_supported }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brand SPOC Information -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">2. Brand SPOC Information</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Brand SPOC Name</span>
+                        <span class="text-xs font-semibold text-slate-900 mt-0.5 block">{{ application.brand_spoc_name|default:"Not specified" }}</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Brand SPOC Designation</span>
+                        <span class="text-xs font-semibold text-slate-800 mt-0.5 block">{{ application.brand_spoc_designation|default:"—" }}</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Brand SPOC Email</span>
+                        <span class="text-xs font-semibold text-slate-800 mt-0.5 block font-mono">{{ application.brand_spoc_email|default:"—" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact & Legal -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">3. Public Contacts &amp; Policies</h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Phone ({{ application.primary_phone_label }})</span>
+                            <span class="text-xs font-semibold font-mono text-slate-800 mt-0.5">{{ application.primary_phone }}</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Email ({{ application.primary_email_label }})</span>
+                            <span class="text-xs font-semibold font-mono text-slate-800 mt-0.5">{{ application.primary_email }}</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Website ({{ application.primary_website_label }})</span>
+                            <a href="{{ application.primary_website }}" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 hover:underline mt-0.5 block truncate max-w-md">{{ application.primary_website }}</a>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Terms &amp; Conditions URL</span>
+                        <a href="{{ application.terms_conditions_url }}" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 hover:underline mt-0.5 block truncate">{{ application.terms_conditions_url }}</a>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase block">Privacy Policy URL</span>
+                        <a href="{{ application.privacy_url }}" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 hover:underline mt-0.5 block truncate">{{ application.privacy_url }}</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right 1 Col: Visual Assets & Operator Status -->
+        <div class="space-y-6">
+
+            <!-- Operator Status Card -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Carrier Verification Status</h3>
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-500">Assigned Operator:</span>
+                        <span class="text-xs font-bold text-slate-800">{{ application.operator_name|default:"Vodafone / VI" }}</span>
+                    </div>
+                    {% if application.operator_reference_id %}
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-200">
+                        <span class="text-xs text-slate-500">Carrier Reference:</span>
+                        <span class="text-xs font-mono font-bold text-blue-700">{{ application.operator_reference_id }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if application.admin_notes %}
+                <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 space-y-1">
+                    <span class="font-bold block">Operator Feedback / Notes:</span>
+                    <p class="text-blue-800 leading-relaxed">{{ application.admin_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Bot Logo Preview -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Bot Logo</h3>
+                    <span class="text-[10px] font-mono text-slate-400">224 x 224 px</span>
+                </div>
+                {% if application.bot_logo %}
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center">
+                        <img src="{{ application.bot_logo.url }}" alt="Bot Logo" class="w-24 h-24 rounded-2xl object-cover shadow-sm border-2 border-white">
+                    </div>
+                    <a href="{{ application.bot_logo.url }}" download class="block text-center text-xs font-semibold text-blue-600 hover:underline">
+                        Download Logo File
+                    </a>
+                {% else %}
+                    <p class="text-xs text-slate-400 italic">No logo file attached.</p>
+                {% endif %}
+            </div>
+
+            <!-- Banner Preview -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Header Banner</h3>
+                    <span class="text-[10px] font-mono text-slate-400">1440 x 448 px</span>
+                </div>
+                {% if application.banner_image %}
+                    <div class="rounded-xl overflow-hidden border border-slate-200">
+                        <img src="{{ application.banner_image.url }}" alt="Banner" class="w-full h-28 object-cover">
+                    </div>
+                    <a href="{{ application.banner_image.url }}" download class="block text-center text-xs font-semibold text-blue-600 hover:underline">
+                        Download Banner File
+                    </a>
+                {% else %}
+                    <p class="text-xs text-slate-400 italic">No banner file attached.</p>
+                {% endif %}
+            </div>
+
+            <!-- Opt-in Screenshot Preview -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Opt-in Proof</h3>
+                {% if application.opt_in_screenshot %}
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2 text-center">
+                        <a href="{{ application.opt_in_screenshot.url }}" target="_blank" rel="noopener">
+                            <img src="{{ application.opt_in_screenshot.url }}" alt="Opt-in Screenshot" class="max-h-40 mx-auto rounded object-contain">
+                        </a>
+                    </div>
+                    <a href="{{ application.opt_in_screenshot.url }}" target="_blank" rel="noopener" class="block text-center text-xs font-semibold text-blue-600 hover:underline">
+                        Inspect Opt-in Evidence &rarr;
+                    </a>
+                {% else %}
+                    <p class="text-xs text-slate-400 italic">No opt-in screenshot attached.</p>
+                {% endif %}
+            </div>
+
+            <!-- KYC Documents Preview -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">KYC Verification Files</h3>
+
+                <!-- GST -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800">GST Certificate</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">PDF</span>
+                    </div>
+                    {% if application.gst_certificate %}
+                        <a href="{{ application.gst_certificate.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline mt-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>View / Download GST (PDF)</span>
+                        </a>
+                    {% else %}
+                        <p class="text-xs text-slate-400 italic">No GST certificate attached</p>
+                    {% endif %}
+                </div>
+
+                <!-- PAN -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800">PAN Card</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">KYC Proof</span>
+                    </div>
+                    {% if application.pan_card %}
+                        <a href="{{ application.pan_card.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline mt-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>View / Download PAN Card</span>
+                        </a>
+                    {% else %}
+                        <p class="text-xs text-slate-400 italic">No PAN card attached</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

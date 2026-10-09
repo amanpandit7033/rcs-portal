@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}API & Webhook Settings - RCS Portal{% endblock %}
+{% block header_title %}API Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8" x-data="{ showCreateModal: false, showRegenConfirm: null, showRevokeConfirm: null }">
+
+    <!-- Header & Documentation Links -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+        <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Developer API v1
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">API Credentials & Outbound Webhooks</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl">
+                Authenticate server-to-server messaging requests using your API key in the <code class="text-blue-600 font-mono font-medium">apikey</code> HTTP header.
+                Receive real-time delivery reports via signed webhook callbacks.
+            </p>
+        </div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <a href="{% url 'api:documentation' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span>Interactive Docs</span>
+            </a>
+            <a href="{% url 'swagger-ui' %}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Swagger UI</span>
+            </a>
+            <a href="{% url 'api:v1_postman_export' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Postman JSON</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ONE-TIME RAW KEY REVEAL ALERT -->
+    {% if new_key_info %}
+    <div class="relative overflow-hidden bg-emerald-50/70 border border-emerald-200 rounded-2xl p-6 shadow-xs animate-fade-in" x-data="{ copied: false }">
+        <div class="flex items-start gap-4">
+            <div class="p-2.5 rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-200 flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="text-base font-bold text-slate-900">Save Your API Key Now</h3>
+                <p class="text-xs text-slate-600 mt-1">
+                    This raw secret token will <strong>never be shown again</strong>. Please copy and store it securely in your secret manager.
+                </p>
+                <div class="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" readonly value="{{ new_key_info.raw_key }}" id="rawKeyInput"
+                               class="w-full px-4 py-2.5 bg-white border border-emerald-300 rounded-xl text-emerald-800 font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-2xs font-bold">
+                    </div>
+                    <button type="button"
+                            @click="navigator.clipboard.writeText('{{ new_key_info.raw_key }}'); copied = true; setTimeout(() => copied = false, 2500)"
+                            class="px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 flex-shrink-0 shadow-xs"
+                            :class="copied ? 'bg-emerald-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-500 text-white'">
+                        <span x-show="!copied">Copy Raw Key</span>
+                        <span x-show="copied" x-cloak style="display: none;">Copied to Clipboard!</span>
+                    </button>
+                </div>
+                <div class="mt-2 text-[11px] text-slate-500">
+                    Key label: <strong class="text-slate-800">{{ new_key_info.name }}</strong> &bull; Prefix: <code class="text-slate-700">{{ new_key_info.prefix }}...</code>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- SECTION 1: API KEYS -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+            <div>
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    Active API Credentials
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">Manage bearer tokens used to authenticate requests to the RCS API.</p>
+            </div>
+            <button type="button" @click="showCreateModal = true" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors self-start sm:self-auto">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Generate New Key</span>
+            </button>
+        </div>
+
+        <!-- Keys Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200/90">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="text-[11px] font-semibold uppercase bg-slate-50/80 text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-3.5 font-medium">Key Name</th>
+                        <th class="px-5 py-3.5 font-medium">Prefix</th>
+                        <th class="px-5 py-3.5 font-medium">IP Whitelist</th>
+                        <th class="px-5 py-3.5 font-medium">Created</th>
+                        <th class="px-5 py-3.5 font-medium">Last Used</th>
+                        <th class="px-5 py-3.5 font-medium">Status</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for key in api_keys %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-5 py-4 font-semibold text-slate-900">
+                            {{ key.name }}
+                        </td>
+                        <td class="px-5 py-4 font-mono text-xs text-slate-500">
+                            {{ key.prefix }}••••••••
+                        </td>
+                        <td class="px-5 py-4 text-xs text-slate-500">
+                            {% if key.ip_whitelist %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] border border-slate-200" title="{{ key.ip_whitelist|join:', ' }}">
+                                    {{ key.ip_whitelist|length }} IP{{ key.ip_whitelist|length|pluralize }}
+                                </span>
+                            {% else %}
+                                <span class="text-slate-400 italic">Any (0.0.0.0/0)</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-xs text-slate-500">
+                            {{ key.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="px-5 py-4 text-xs text-slate-500">
+                            {% if key.last_used_at %}
+                                {{ key.last_used_at|date:"M d, H:i" }}
+                            {% else %}
+                                <span class="text-slate-400 italic">Never</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if key.is_active %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Revoked
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            {% if key.is_active %}
+                            <div class="flex items-center justify-end gap-2">
+                                <button type="button" @click="showRegenConfirm = '{{ key.id }}'" class="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
+                                    Regenerate
+                                </button>
+                                <span class="text-slate-300">&bull;</span>
+                                <button type="button" @click="showRevokeConfirm = '{{ key.id }}'" class="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-colors">
+                                    Revoke
+                                </button>
+                            </div>
+                            {% else %}
+                            <span class="text-xs text-slate-400 italic">No actions</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-8 text-center text-slate-400 text-xs">
+                            No API keys generated yet. Click "Generate New Key" above to create your first integration key.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 2: CLIENT WEBHOOK (DLR FORWARDING) -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs" x-data="{ copiedSecret: false }">
+        <div class="mb-6 pb-4 border-b border-slate-100">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Real-Time Delivery Report (DLR) Webhook
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5 max-w-2xl">
+                When carrier delivery reports (delivered, read, failed) are received, our engine forwards the JSON payload to your HTTP endpoint.
+                Callbacks are signed with an <code class="text-blue-600 font-mono font-medium">X-Signature-SHA256</code> HMAC header so you can verify authenticity.
+            </p>
+        </div>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_webhook">
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- URL & Active Status -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div>
+                        <label for="webhookUrl" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Webhook Target URL (HTTPS Recommended)
+                        </label>
+                        <input type="url" id="webhookUrl" name="url" value="{{ webhook.url|default:'' }}" placeholder="https://api.yourdomain.com/webhooks/rcs-dlr/"
+                               class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs transition-all font-medium">
+                        <p class="text-[11px] text-slate-400 mt-1">Your endpoint must return HTTP 200 within 10 seconds. Retries occur with exponential backoff on failure.</p>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-1">
+                        <input type="checkbox" id="webhookActive" name="is_active" {% if webhook.is_active %}checked{% endif %}
+                               class="w-4 h-4 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <label for="webhookActive" class="text-xs text-slate-700 font-semibold cursor-pointer">
+                            Enable Real-time Webhook Dispatch
+                        </label>
+                    </div>
+                </div>
+
+                <!-- HMAC Secret Display Card -->
+                <div class="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">HMAC Signing Secret</span>
+                            <span class="text-[10px] text-blue-700 font-semibold px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">SHA-256</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-3">Use this secret to verify signatures in the <code class="text-blue-600 font-mono">X-Signature-SHA256</code> header.</p>
+                        <div class="relative">
+                            <input type="text" readonly value="{{ webhook.secret }}"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-12 focus:outline-none shadow-2xs">
+                            <button type="button" @click="navigator.clipboard.writeText('{{ webhook.secret }}'); copiedSecret = true; setTimeout(() => copiedSecret = false, 2000)"
+                                    class="absolute right-1.5 top-1.5 px-2.5 py-1 text-[10px] font-bold rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+                                <span x-show="!copiedSecret">Copy</span>
+                                <span x-show="copiedSecret" x-cloak style="display: none;" class="text-emerald-600 font-bold">✓ Copied</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-200 text-[10px] text-slate-400">
+                        Signature format: <code class="font-mono text-slate-600">hmac_sha256(body, secret)</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 flex justify-end border-t border-slate-100">
+                <button type="submit" class="px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
+                    Save Webhook Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- SECTION 3: QUICK CURL EXAMPLE -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 mb-2">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Quick API Request Example
+        </h2>
+        <p class="text-xs text-slate-500 mb-4">Send a single message via curl using your generated API key:</p>
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800 overflow-x-auto text-xs font-mono text-slate-300 shadow-inner">
+            curl -X POST "{{ request.scheme }}://{{ request.get_host }}/api/v1/messages/send/" \<br>
+            &nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+            &nbsp;&nbsp;-H "apikey: <span class="text-emerald-400 font-bold">&lt;YOUR_API_KEY&gt;</span>" \<br>
+            &nbsp;&nbsp;-H "Idempotency-Key: <span class="text-amber-400 font-bold">req_uuid_12345</span>" \<br>
+            &nbsp;&nbsp;-d '{<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"sender_profile_id": 1,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"recipient": "+919876543210",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"message_type": "PROMOTIONAL",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"content_type": "text",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"payload": {"text": "Hello from API!"}<br>
+            &nbsp;&nbsp;}'
+        </div>
+    </div>
+
+    <!-- MODAL: GENERATE NEW KEY -->
+    <template x-teleport="body">
+        <div x-show="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" x-cloak style="display: none;">
+            <div @click.away="showCreateModal = false" class="bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                <h3 class="text-base font-bold text-slate-900">Generate API Key</h3>
+                <p class="text-xs text-slate-500">Create a new key to authenticate your backend servers or microservices.</p>
+
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_key">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Key Name / Label</label>
+                        <input type="text" name="name" required placeholder="e.g. Production Backend"
+                               class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">IP Whitelist (Optional)</label>
+                        <input type="text" name="ip_whitelist" placeholder="Comma-separated, e.g. 192.168.1.1, 10.0.0.1"
+                               class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                        <p class="text-[11px] text-slate-400 mt-1">Leave empty to allow requests from any IP address.</p>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                        <button type="button" @click="showCreateModal = false" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
+                            Generate Key
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL: REGENERATE CONFIRM -->
+    <template x-teleport="body">
+        <template x-if="showRegenConfirm">
+            <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" x-cloak style="display: none;">
+                <div @click.away="showRegenConfirm = null" class="bg-white border border-amber-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                    <div class="flex items-center gap-3 text-amber-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <h3 class="text-base font-bold text-slate-900">Regenerate API Key?</h3>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Regenerating this key will immediately invalidate the current secret. Any active integration using the previous secret will immediately receive <code class="text-rose-600 font-mono">HTTP 401</code>.
+                    </p>
+
+                    <form method="post" class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="regenerate_key">
+                        <input type="hidden" name="key_id" :value="showRegenConfirm">
+                        <button type="button" @click="showRegenConfirm = null" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 shadow-xs transition-colors">
+                            Yes, Regenerate
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </template>
+    </template>
+
+    <!-- MODAL: REVOKE CONFIRM -->
+    <template x-teleport="body">
+        <template x-if="showRevokeConfirm">
+            <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" x-cloak style="display: none;">
+                <div @click.away="showRevokeConfirm = null" class="bg-white border border-rose-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                    <div class="flex items-center gap-3 text-rose-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <h3 class="text-base font-bold text-slate-900">Permanently Revoke Key?</h3>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Are you sure you want to revoke this API key? This action is irreversible. The key will never be able to authenticate requests again.
+                    </p>
+
+                    <form method="post" class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="revoke_key">
+                        <input type="hidden" name="key_id" :value="showRevokeConfirm">
+                        <button type="button" @click="showRevokeConfirm = null" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 shadow-xs transition-colors">
+                            Permanently Revoke
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </template>
+    </template>
+
+</div>
+{% endblock %}

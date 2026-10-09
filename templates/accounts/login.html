@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sign In | RCS Portal{% endblock %}
+
+{% block unauthenticated_layout %}
+<style>
+  [x-cloak]{display:none!important}
+  .fld{width:100%;border:1px solid #e2e8f0;background:#f8fafc;color:#0f172a;border-radius:.75rem;padding:.8rem 1rem;font-size:1rem;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
+  .fld::placeholder{color:#94a3b8}
+  .fld:focus{outline:0;background:#fff;border-color:#2563eb;box-shadow:0 0 0 4px #dbeafe}
+  @media(min-width:640px){.fld{font-size:.9rem}}
+  .fld:-webkit-autofill,.fld:-webkit-autofill:hover{-webkit-box-shadow:0 0 0 1000px #f8fafc inset;-webkit-text-fill-color:#0f172a;caret-color:#0f172a}
+  .fld:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px #fff inset,0 0 0 4px #dbeafe}
+  /* keep the left panel inside one screen so the stats bar is always visible */
+  @media(min-width:1024px) and (max-height:900px){.phone-fit{zoom:.86}}
+  @media(min-width:1024px) and (max-height:800px){.phone-fit{zoom:.74}}
+  @media(min-width:1024px) and (max-height:700px){.phone-fit{zoom:.62}.story-list{display:none}}
+</style>
+
+<div class="min-h-screen w-full flex flex-col lg:grid lg:grid-cols-12 bg-slate-900 selection:bg-blue-600 selection:text-white">
+
+    <!-- LEFT: brand story with live RCS preview -->
+    <section class="order-2 lg:order-1 lg:col-span-7 relative overflow-hidden bg-slate-950 text-white px-6 py-10 sm:p-10 lg:py-8 xl:px-14 xl:py-10 hidden lg:flex flex-col gap-8 lg:gap-6 lg:h-screen">
+        <!-- High-definition enterprise background image with dedicated dark contrast scrim -->
+        <div class="absolute inset-0 z-0 pointer-events-none select-none">
+            <img src="{% static 'images/login_hero_bg.jpg' %}" alt="RCS Telecom Network Background" class="w-full h-full object-cover object-right opacity-70">
+            <!-- Left-side dark contrast shield: deep midnight black behind all text -->
+            <div class="absolute inset-y-0 left-0 w-full lg:w-[68%] bg-gradient-to-r from-slate-950 via-slate-950/98 to-transparent"></div>
+            <!-- Vertical ambient fade -->
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/60"></div>
+        </div>
+
+        <div class="absolute inset-0 pointer-events-none z-1">
+            <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Brand -->
+        <div class="relative z-10 shrink-0 hidden lg:flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-lg shadow-blue-500/20 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo">
+                    <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/>
+                    <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/>
+                    <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/>
+                </svg>
+            </div>
+            <div class="leading-tight">
+                <span class="block font-extrabold text-xl text-white tracking-tight">RCS Portal</span>
+                <span class="block text-xs font-semibold text-cyan-300">Carrier enterprise terminal</span>
+            </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="relative z-10 my-auto min-h-0 grid gap-10 xl:grid-cols-[1fr_auto] xl:items-center">
+            <div class="max-w-lg">
+                <h1 class="text-3xl sm:text-4xl xl:text-[2.65rem] font-black text-white tracking-tight leading-[1.12]">
+                    Messages that feel like an app, right in the SMS inbox.
+                </h1>
+                <p class="mt-4 text-sm sm:text-base text-slate-100 font-normal leading-relaxed">
+                    RCS adds verified brand identity, rich media and one-tap actions to plain SMS. It reaches Android and iOS natively, with no app to install.
+                </p>
+
+                <ul class="story-list mt-7 space-y-4">
+                    <li class="flex items-start gap-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 text-cyan-300 shadow-2xs mt-0.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Verified sender branding</span>
+                            <p class="text-xs sm:text-sm text-slate-200 leading-snug mt-0.5">Your brand name, logo and checkmark build trust and stop spoofing.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 text-cyan-300 shadow-2xs mt-0.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Rich media and carousels</span>
+                            <p class="text-xs sm:text-sm text-slate-200 leading-snug mt-0.5">Send images, video, PDFs and swipeable 10-card carousels up to 105 MB.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 text-cyan-300 shadow-2xs mt-0.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Suggested actions</span>
+                            <p class="text-xs sm:text-sm text-slate-200 leading-snug mt-0.5">One-tap buttons open a link, start a call, add a calendar event or share a location.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0 text-cyan-300 shadow-2xs mt-0.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Real-time delivery and read reports</span>
+                            <p class="text-xs sm:text-sm text-slate-200 leading-snug mt-0.5">Track deliveries, reads and clicks, and get webhook callbacks as they happen.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phone preview -->
+            <div class="phone-fit hidden xl:block relative mx-auto xl:mx-0 w-[17.5rem]" aria-hidden="true">
+                <div class="absolute -inset-8 bg-blue-500/25 blur-3xl rounded-full"></div>
+                <!-- side buttons -->
+                <span class="absolute -left-[3px] top-24 h-7 w-[3px] rounded-l bg-slate-700"></span>
+                <span class="absolute -left-[3px] top-36 h-12 w-[3px] rounded-l bg-slate-700"></span>
+                <span class="absolute -right-[3px] top-32 h-16 w-[3px] rounded-r bg-slate-700"></span>
+
+                <div class="relative rounded-[2.8rem] bg-slate-950 p-[7px] ring-1 ring-white/20 shadow-2xl shadow-blue-950/70">
+                    <div class="relative rounded-[2.3rem] bg-slate-100 overflow-hidden text-slate-800">
+                        <!-- island + status bar -->
+                        <div class="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-5 rounded-full bg-slate-950 z-10"></div>
+                        <div class="bg-white px-6 pt-3 flex items-center justify-between text-[10px] font-bold text-slate-900">
+                            <span>9:41</span>
+                            <span class="flex items-center gap-1">
+                                <span class="flex items-end gap-px h-2.5"><i class="w-[2px] h-1 bg-slate-900"></i><i class="w-[2px] h-1.5 bg-slate-900"></i><i class="w-[2px] h-2 bg-slate-900"></i><i class="w-[2px] h-2.5 bg-slate-900"></i></span>
+                                <span class="relative w-5 h-2.5 rounded-[3px] border border-slate-900"><i class="absolute inset-[1px] right-[3px] rounded-[1px] bg-slate-900"></i></span>
+                            </span>
+                        </div>
+                        <!-- chat header -->
+                        <div class="bg-white px-3 pt-4 pb-3 flex items-center gap-2 border-b border-slate-200">
+                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                            <span class="w-9 h-9 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center ring-2 ring-blue-100">R</span>
+                            <div class="leading-tight flex-1">
+                                <p class="text-xs font-bold text-slate-900 flex items-center gap-1">RCS Portal
+                                    <svg class="w-3.5 h-3.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </p>
+                                <p class="text-[10px] text-slate-500">Verified business</p>
+                            </div>
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        </div>
+
+                        <!-- conversation -->
+                        <div class="px-3 py-3 space-y-2.5">
+                            <p class="text-center text-[10px] font-medium text-slate-400">Today 10:45 AM</p>
+                            <p class="max-w-[82%] rounded-2xl rounded-tl-md bg-white px-3 py-2 text-xs leading-snug shadow-sm">Hi Aman, your order is on its way.</p>
+
+                            <div class="rounded-2xl bg-white shadow-sm overflow-hidden">
+                                <div class="relative h-28 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 overflow-hidden">
+                                    <svg viewBox="0 0 240 112" class="absolute inset-0 w-full h-full" fill="none">
+                                        <path d="M10 92 C60 92 70 62 120 62 S190 38 232 24" stroke="#fff" stroke-opacity=".5" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
+                                        <circle cx="232" cy="24" r="6" fill="#fff"/><circle cx="232" cy="24" r="12" fill="#fff" fill-opacity=".25"/>
+                                        <polygon points="84,46 100,34 160,34 144,46" fill="#bfdbfe"/>
+                                        <rect x="84" y="46" width="60" height="46" fill="#eff6ff"/>
+                                        <polygon points="144,46 160,34 160,80 144,92" fill="#93c5fd"/>
+                                        <rect x="108" y="46" width="12" height="46" fill="#3b82f6"/>
+                                        <polygon points="108,46 124,34 136,34 120,46" fill="#60a5fa"/>
+                                    </svg>
+                                    <span class="absolute top-2 left-2 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">Out for delivery</span>
+                                </div>
+                                <div class="p-3 pb-2">
+                                    <p class="text-xs font-bold text-slate-900">Order APX-98214</p>
+                                    <p class="text-[11px] text-slate-500">Arriving today by 6 pm</p>
+                                    <div class="mt-2.5 flex gap-1"><i class="h-1 flex-1 rounded-full bg-blue-600"></i><i class="h-1 flex-1 rounded-full bg-blue-600"></i><i class="h-1 flex-1 rounded-full bg-blue-100"></i></div>
+                                    <div class="mt-1 flex justify-between text-[9px] text-slate-400"><span>Packed</span><span>Shipped</span><span>Delivered</span></div>
+                                </div>
+                                <div class="px-3 pb-3 flex gap-1.5">
+                                    <span class="flex-1 text-center text-[11px] font-semibold text-white bg-blue-600 rounded-full py-1.5">Track order</span>
+                                    <span class="flex-1 text-center text-[11px] font-semibold text-blue-700 border border-blue-200 rounded-full py-1.5">Call support</span>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-1.5 overflow-hidden">
+                                <span class="shrink-0 text-[11px] font-medium text-blue-700 bg-white border border-blue-200 rounded-full px-3 py-1">Reschedule</span>
+                                <span class="shrink-0 text-[11px] font-medium text-blue-700 bg-white border border-blue-200 rounded-full px-3 py-1">Change address</span>
+                            </div>
+                            <p class="text-right text-[10px] text-slate-400 flex justify-end items-center gap-1">Read
+                                <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            </p>
+                        </div>
+
+                        <!-- composer -->
+                        <div class="bg-white border-t border-slate-200 px-3 pt-2.5 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-base leading-none">+</span>
+                                <span class="flex-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] text-slate-400">RCS message</span>
+                            </div>
+                            <div class="mx-auto mt-2.5 h-1 w-24 rounded-full bg-slate-900/80"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <dl class="relative z-10 shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10 backdrop-blur-xs">
+            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Open rate</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">98%</dd></div>
+            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Active users</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">2.5B+</dd></div>
+            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Higher CTR</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">35x</dd></div>
+            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Native inbox</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">100%</dd></div>
+        </dl>
+    </section>
+
+    <!-- RIGHT: sign-in -->
+    <main class="order-1 lg:order-2 lg:col-span-5 bg-white text-slate-900 p-6 sm:p-10 xl:p-14 flex flex-col min-h-screen" x-data="{ showPassword: false }">
+        <div class="my-auto w-full max-w-sm mx-auto py-4 sm:py-8">
+            <div class="lg:hidden flex items-center gap-3 mb-8">
+                <div class="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/></svg>
+                </div>
+                <div class="leading-tight">
+                    <span class="block font-extrabold text-lg text-slate-900 tracking-tight">RCS Portal</span>
+                    <span class="block text-xs text-slate-500">Carrier enterprise terminal</span>
+                </div>
+            </div>
+            <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight">Sign in</h2>
+            <p class="text-sm text-slate-500 mt-2">Manage your RCS campaigns, templates, wallet and developer API.</p>
+
+            {% if messages %}
+            <div class="space-y-3 mt-6">
+                {% for message in messages %}
+                <div role="alert" class="p-3.5 rounded-xl border text-sm font-medium flex items-start gap-2.5 {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-700{% elif message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700{% else %}bg-blue-50 border-blue-200 text-blue-700{% endif %}">
+                    <svg class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div role="alert" class="mt-6 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium space-y-1">
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'accounts:login' %}" class="mt-7 space-y-5">
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+                <div>
+                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-1.5">Username</label>
+                    <input type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}"
+                           value="{{ form.username.value|default:'' }}" required autofocus autocomplete="username"
+                           placeholder="Enter your username" class="fld">
+                    {% if form.username.errors %}<p class="text-sm text-rose-600 mt-1.5 font-medium">{{ form.username.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="{{ form.password.id_for_label }}" class="block text-sm font-semibold text-slate-700">Password</label>
+                        <a href="{% url 'accounts:password_reset' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
+                    </div>
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}"
+                               required autocomplete="current-password" placeholder="Enter your password" class="fld pr-12">
+                        <button type="button" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                                class="absolute inset-y-0 right-0 px-3.5 flex items-center text-slate-400 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-blue-600 rounded-r-xl cursor-pointer">
+                            <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            <svg x-show="showPassword" x-cloak style="display:none" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}<p class="text-sm text-rose-600 mt-1.5 font-medium">{{ form.password.errors.0 }}</p>{% endif %}
+                </div>
+
+                <button type="submit" class="w-full py-3.5 px-5 rounded-xl text-base sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-lg shadow-blue-600/25 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200 transition-colors cursor-pointer">
+                    Sign in
+                </button>
+            </form>
+
+            <p class="mt-6 text-sm text-slate-500 text-center">
+                Need credentials? <a href="mailto:desk@azmobia.com" class="font-semibold text-blue-600 hover:text-blue-700 hover:underline">Contact us</a>
+            </p>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+            <span class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Bank-grade 256-bit TLS encryption
+            </span>
+            <span>&copy; 2026 RCS Portal &bull; All rights reserved</span>
+        </div>
+    </main>
+</div>
+{% endblock unauthenticated_layout %}

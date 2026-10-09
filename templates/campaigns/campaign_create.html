@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}Create Campaign - RCS Portal{% endblock %}
+{% block header_title %}New Campaign{% endblock %}
+
+{% block content %}
+<script id="templates-json-data" type="application/json">{{ templates_json|default:'{}'|safe }}</script>
+<script id="senders-json-data" type="application/json">
+{
+    {% for sp in sender_profiles %}
+    "{{ sp.id }}": "{{ sp.sender_profile_name|escapejs }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+}
+</script>
+
+<script>
+function campaignCreator() {
+    let rawTemplates = {};
+    let rawSenders = {};
+    try {
+        const tElem = document.getElementById('templates-json-data');
+        if (tElem) {
+            rawTemplates = JSON.parse(tElem.textContent || '{}');
+        }
+        const sElem = document.getElementById('senders-json-data');
+        if (sElem) {
+            rawSenders = JSON.parse(sElem.textContent || '{}');
+        }
+    } catch (e) {
+        console.error('Error parsing campaign data:', e);
+    }
+
+    return {
+        templatesData: rawTemplates,
+        senderProfilesMap: rawSenders,
+        selectedTemplateId: '',
+        senderProfileId: '',
+        messageType: 'PROMOTIONAL',
+        timingMode: 'now',
+        inputMode: 'paste',
+        pastedText: '',
+
+        get currentTemplate() {
+            return this.templatesData[this.selectedTemplateId] || null;
+        },
+
+        get detectedCount() {
+            if (!this.pastedText) return 0;
+            const items = this.pastedText.split(/[\r\n,;]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+            return items.length;
+        },
+
+        get senderName() {
+            if (this.senderProfileId && this.senderProfilesMap[this.senderProfileId]) {
+                return this.senderProfilesMap[this.senderProfileId];
+            }
+            if (this.currentTemplate && this.currentTemplate.sender_profile_name) {
+                return this.currentTemplate.sender_profile_name;
+            }
+            return 'Verified RCS Sender';
+        },
+
+        onTemplateChange() {
+            const t = this.currentTemplate;
+            if (t) {
+                if (t.sender_profile_id && this.senderProfilesMap[t.sender_profile_id]) {
+                    this.senderProfileId = t.sender_profile_id;
+                }
+                if (t.message_type) {
+                    this.messageType = t.message_type;
+                }
+            }
+        }
+    };
+}
+</script>
+
+<div x-data="campaignCreator()" class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header & Available Wallet Balance -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Create &amp; Dispatch Campaign</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Define your campaign setup, choose an approved template with live preview, and send immediately.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-100 text-xs shadow-2xs">
+                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                <span class="text-slate-600 font-medium">Available Balance:</span>
+                <span class="font-mono font-bold text-slate-900">₹{{ current_balance|floatformat:2 }}</span>
+            </div>
+            <a href="{% url 'campaigns:campaign_list' %}" class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                &larr; All Campaigns
+            </a>
+        </div>
+    </div>
+
+    <!-- Main 2-Column Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+        <!-- LEFT COLUMN: Campaign Creation Form (7 Cols) -->
+        <div class="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs">
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                <input type="hidden" name="input_mode" :value="inputMode">
+
+                <!-- 1. Campaign Name -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Campaign Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="name" required placeholder="e.g. Festive Flash Sale Offer"
+                           class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                </div>
+
+                <!-- 2. Sender Profile & Intent / Message Type -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Sender Bot / Profile <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="sender_profile" x-model="senderProfileId" required class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                            <option value="">-- Choose Sender Bot --</option>
+                            {% for sp in sender_profiles %}
+                            <option value="{{ sp.id }}">{{ sp.sender_profile_name }} ({{ sp.sender_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Message Intent / Category <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="message_type" x-model="messageType" required class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                            <option value="PROMOTIONAL">Promotional (Bulk Queue)</option>
+                            <option value="TRANSACTIONAL">Transactional (Alerts &amp; Updates)</option>
+                            <option value="OTP">OTP (High Priority)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Approved Template Selection with Interactive Trigger -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            Select Approved Template
+                        </label>
+                        <span class="text-[11px] text-blue-600 font-semibold flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            Live Phone Preview Active
+                        </span>
+                    </div>
+
+                    <select name="template"
+                            x-model="selectedTemplateId"
+                            @change="onTemplateChange()"
+                            class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                        <option value="">-- Select Template (Optional) --</option>
+                        {% for t in templates %}
+                        <option value="{{ t.id }}">{{ t.name }} ({{ t.get_template_type_display }}) - {{ t.message_type }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Template Placeholders Auto-Mapping Box -->
+                    <template x-if="currentTemplate && currentTemplate.placeholders && currentTemplate.placeholders.length > 0">
+                        <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    Template Variables Detected
+                                </span>
+                                <span class="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full" x-text="currentTemplate.placeholders.length + ' variable(s)'"></span>
+                            </div>
+                            <p class="text-[11px] text-blue-800 leading-relaxed">
+                                Auto-maps matching columns from your recipient file, or supply fallback default values below:
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                <template x-for="p in currentTemplate.placeholders" :key="p">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-mono font-bold text-slate-700" x-text="'[' + p + ']'"></label>
+                                        <input type="text" :name="'placeholder_' + p" :placeholder="'Default value or column name'"
+                                               class="w-full bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs">
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- 4. Recipient Input: Dual Mode Tabs (Paste Numbers vs Upload File) -->
+                <div class="space-y-3 pt-2 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            Recipient Contacts <span class="text-rose-500">*</span>
+                        </label>
+
+                        <!-- Tab Switcher -->
+                        <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 text-xs font-semibold">
+                            <button type="button"
+                                    @click="inputMode = 'paste'"
+                                    :class="inputMode === 'paste' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Paste Numbers</span>
+                            </button>
+                            <button type="button"
+                                    @click="inputMode = 'file'"
+                                    :class="inputMode === 'file' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+                                    class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                <span>Upload File (CSV/Excel)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mode 1: Paste Numbers Textarea -->
+                    <div x-show="inputMode === 'paste'" class="space-y-2">
+                        <div class="relative">
+                            <textarea
+                                name="recipient_numbers"
+                                x-model="pastedText"
+                                rows="6"
+                                placeholder="Paste mobile numbers here (one per line, e.g.)&#10;9876543210&#10;9876543211&#10;+91 9876543212"
+                                class="w-full bg-white border border-slate-200 rounded-2xl p-4 text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs leading-relaxed"
+                            ></textarea>
+
+                            <!-- Live Counter Pill -->
+                            <div class="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-600 shadow-2xs pointer-events-none">
+                                <span class="w-2 h-2 rounded-full transition-colors" :class="detectedCount > 0 ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+                                <span class="font-semibold text-slate-900" x-text="detectedCount">0</span>
+                                <span x-text="detectedCount === 1 ? 'number' : 'numbers'">numbers</span>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-400">
+                            Supports 10-digit Indian numbers with or without +91 / 0 prefix. Duplicates and invalid formats are cleaned automatically.
+                        </p>
+                    </div>
+
+                    <!-- Mode 2: Upload CSV / Excel File -->
+                    <div x-show="inputMode === 'file'" x-cloak style="display: none;" class="space-y-2">
+                        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-blue-500 transition-colors bg-slate-50/50">
+                            <svg class="w-8 h-8 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <input type="file" name="file" accept=".csv, .xlsx, .xls" class="block w-full max-w-xs mx-auto text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer shadow-2xs">
+                            <p class="text-[11px] text-slate-400 mt-2">Upload .csv or .xlsx file. Mobile number columns (e.g. Mobile, Phone, Number) are auto-detected instantly.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Delivery Timing (Send Now vs Schedule) -->
+                <div class="pt-3 border-t border-slate-100 space-y-3">
+                    <label class="block text-xs font-semibold text-slate-700">Delivery Timing</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all"
+                               :class="timingMode === 'now' ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/10' : 'border-slate-200 bg-white hover:bg-slate-50'">
+                            <input type="radio" name="action_type" value="now" x-model="timingMode" class="text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="block text-xs font-bold text-slate-900">Send Immediately</span>
+                                <span class="block text-[11px] text-slate-500">Queue contacts and dispatch right away</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all"
+                               :class="timingMode === 'schedule' ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/10' : 'border-slate-200 bg-white hover:bg-slate-50'">
+                            <input type="radio" name="action_type" value="schedule" x-model="timingMode" class="text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="block text-xs font-bold text-slate-900">Schedule for Later</span>
+                                <span class="block text-[11px] text-slate-500">Set future date &amp; dispatch time</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div x-show="timingMode === 'schedule'" x-cloak style="display: none;" class="pt-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pick Scheduled Time</label>
+                        <input type="datetime-local" name="scheduled_at"
+                               class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    </div>
+                </div>
+
+                <!-- Direct Send Button (No Step 2/3) -->
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                    <a href="{% url 'campaigns:campaign_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all active:scale-[0.99]">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <span x-text="timingMode === 'schedule' ? 'Schedule Campaign' : 'Send Campaign Now'">Send Campaign Now</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- RIGHT COLUMN: Interactive iPhone 17 Pro Max Template Preview Box (5 Cols) -->
+        <div class="lg:col-span-5 sticky top-20 flex flex-col items-center">
+
+            <!-- Minimal Live Preview Header -->
+            <div class="w-full max-w-[305px] flex items-center justify-between px-2 mb-2.5">
+                <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Device Preview
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-semibold">
+                    <svg class="w-2.5 h-2.5 fill-current text-slate-800" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.77-11.64-14.18-5.87-9.35-10.43-20.08-13.68-32.18-3.25-12.1-4.88-23.77-4.88-35.01 0-14.58 3.58-26.65 10.74-36.21 7.16-9.56 16.27-14.43 27.33-14.61 4.7 0 9.87 1.15 15.51 3.44 5.64 2.29 9.68 3.48 12.12 3.58 1.95 0 6.13-1.28 12.54-3.83 6.41-2.55 11.83-3.69 16.27-3.41 12.54.85 22.47 5.76 29.8 14.73-10.96 6.64-16.32 15.74-16.08 27.29.24 9.13 3.73 16.74 10.47 22.82 6.74 6.08 14.77 9.54 24.08 10.37-2.12 6.74-4.64 13.3-7.56 19.68zM119.22 31.84c0-7.31 2.65-14.11 7.95-20.4 5.3-6.29 11.75-10.3 19.35-12.04.47 1.45.71 2.87.71 4.26 0 7.31-2.73 14.28-8.19 20.91-5.46 6.63-12.05 10.53-19.77 11.7-.05-1.45-.05-2.92-.05-4.43z"/></svg>
+                    iPhone 17 Pro Max
+                </span>
+            </div>
+
+            <!-- Hardware Chassis -->
+            <div class="relative w-full max-w-[305px] select-none">
+                <!-- Hardware Buttons -->
+                <div class="absolute -left-[3px] top-[85px] w-[3px] h-5 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[115px] w-[3px] h-9 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[165px] w-[3px] h-9 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -right-[3px] top-[125px] w-[3px] h-12 bg-slate-600 rounded-r-xs shadow-2xs"></div>
+                <div class="absolute -right-[3px] top-[200px] w-[3px] h-8 bg-slate-500 rounded-r-xs shadow-2xs"></div>
+
+                <!-- Titanium Outer Frame -->
+                <div class="w-full rounded-[48px] bg-gradient-to-b from-[#3a3d45] via-[#202227] to-[#15161a] p-[7px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)_inset]">
+                    <!-- Screen Container -->
+                    <div class="rounded-[42px] overflow-hidden bg-[#f4f5f7] flex flex-col h-[540px] relative shadow-inner">
+
+                        <!-- iOS Status Bar & Dynamic Island -->
+                        <div class="relative z-30 pt-2.5 px-4 pb-1.5 flex items-center justify-between text-[10px] text-slate-800 font-semibold select-none bg-white/80 backdrop-blur-md border-b border-slate-100">
+                            <span class="w-10 text-left font-bold text-[11px] text-slate-900 tracking-tight">9:41</span>
+                            <div class="w-20 h-[20px] bg-black rounded-full flex items-center justify-between px-2 shadow-xs">
+                                <div class="w-2 h-2 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center">
+                                    <div class="w-0.5 h-0.5 rounded-full bg-blue-900/90"></div>
+                                </div>
+                                <div class="w-1 h-1 rounded-full bg-[#0a0f18]"></div>
+                            </div>
+                            <div class="w-10 flex items-center justify-end gap-1 text-slate-900">
+                                <span class="text-[8px] font-extrabold tracking-tighter">5G</span>
+                                <div class="w-[16px] h-[8px] border border-slate-800 rounded-[2px] p-[1px] flex items-center">
+                                    <div class="w-full h-full bg-slate-900 rounded-[0.5px]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bot Verified Header -->
+                        <div class="px-4 py-2 bg-white border-b border-slate-200/80 flex items-center gap-2.5 shadow-2xs">
+                            <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shadow-xs">
+                                RCS
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1">
+                                    <span class="font-semibold text-xs text-slate-900 truncate" x-text="senderName">Verified RCS Sender</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="text-[9px] text-slate-400 block -mt-0.5">RCS Verified Business</span>
+                            </div>
+                        </div>
+
+                        <!-- Chat Body Screen (Scrollable) -->
+                        <div class="flex-1 p-3 overflow-y-auto no-scrollbar space-y-3 bg-[#f8fafc]">
+                            <div class="text-center">
+                                <span class="px-2 py-0.5 rounded-full bg-slate-200/70 text-[9px] font-semibold text-slate-500">Today</span>
+                            </div>
+
+                            <!-- STATE A: No Template Selected -->
+                            <template x-if="!currentTemplate">
+                                <div class="py-16 px-4 text-center space-y-3">
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-500 shadow-2xs">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <h4 class="text-xs font-bold text-slate-700">No Template Selected</h4>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed max-w-[200px] mx-auto">
+                                            Choose an approved RCS template from the dropdown to preview your cards, media, and action buttons.
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- STATE B: Template Selected -> Render Live RCS Component -->
+                            <template x-if="currentTemplate">
+                                <div class="space-y-2">
+
+                                    <!-- 1. Text Message -->
+                                    <template x-if="currentTemplate.template_type === 'text_message'">
+                                        <div class="space-y-2">
+                                            <div class="max-w-[88%] rounded-2xl rounded-tl-xs bg-white text-slate-900 p-3 shadow-xs border border-slate-200/80 text-xs whitespace-pre-wrap leading-relaxed">
+                                                <span x-text="currentTemplate.text_message_content || 'No text content defined.'"></span>
+                                                <div class="text-[9px] text-slate-400 text-right mt-1">9:41 AM &bull; RCS</div>
+                                            </div>
+                                            <!-- Buttons -->
+                                            <div class="space-y-1.5 pt-1">
+                                                <template x-for="(btn, i) in currentTemplate.suggestions" :key="i">
+                                                    <div class="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate"
+                                                         x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- 2. Text Message with Media -->
+                                    <template x-if="currentTemplate.template_type === 'text_message_with_media'">
+                                        <div class="space-y-2">
+                                            <div class="max-w-[90%] rounded-2xl rounded-tl-xs bg-white text-slate-900 shadow-xs border border-slate-200/80 overflow-hidden text-xs">
+                                                <!-- Media on Top -->
+                                                <template x-if="currentTemplate.media_order === 'media_at_top'">
+                                                    <div>
+                                                        <div class="w-full h-32 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                            <template x-if="currentTemplate.document_url">
+                                                                <img :src="currentTemplate.document_url" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
+                                                            </template>
+                                                            <template x-if="!currentTemplate.document_url">
+                                                                <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
+                                                            </template>
+                                                        </div>
+                                                        <div class="p-3 whitespace-pre-wrap leading-relaxed">
+                                                            <span x-text="currentTemplate.text_message_content || ''"></span>
+                                                            <div class="text-[9px] text-slate-400 text-right mt-1">9:41 AM &bull; RCS</div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <!-- Text on Top -->
+                                                <template x-if="currentTemplate.media_order === 'text_message_at_top'">
+                                                    <div>
+                                                        <div class="p-3 whitespace-pre-wrap leading-relaxed">
+                                                            <span x-text="currentTemplate.text_message_content || ''"></span>
+                                                        </div>
+                                                        <div class="w-full h-32 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                            <template x-if="currentTemplate.document_url">
+                                                                <img :src="currentTemplate.document_url" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
+                                                            </template>
+                                                            <template x-if="!currentTemplate.document_url">
+                                                                <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
+                                                            </template>
+                                                        </div>
+                                                        <div class="px-3 py-1.5 text-[9px] text-slate-400 text-right">9:41 AM &bull; RCS</div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <!-- Buttons -->
+                                            <div class="space-y-1.5 pt-1">
+                                                <template x-for="(btn, i) in currentTemplate.suggestions" :key="i">
+                                                    <div class="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate"
+                                                         x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- 3. Rich Card -->
+                                    <template x-if="currentTemplate.template_type === 'rich_card'">
+                                        <div class="space-y-2">
+                                            <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs"
+                                                 :class="currentTemplate.card_orientation === 'HORIZONTAL' ? 'flex flex-row items-stretch' : 'flex flex-col'">
+                                                <!-- Media -->
+                                                <div class="bg-slate-100 flex items-center justify-center overflow-hidden"
+                                                     :class="{
+                                                         'w-24 flex-shrink-0': currentTemplate.card_orientation === 'HORIZONTAL',
+                                                         'w-full h-24': currentTemplate.card_orientation === 'VERTICAL' && currentTemplate.card_height === 'SHORT_HEIGHT',
+                                                         'w-full h-32': currentTemplate.card_orientation === 'VERTICAL' && currentTemplate.card_height === 'MEDIUM_HEIGHT',
+                                                         'w-full h-40': currentTemplate.card_orientation === 'VERTICAL' && currentTemplate.card_height === 'TALL_HEIGHT'
+                                                     }">
+                                                    <template x-if="currentTemplate.card_media_url">
+                                                        <img :src="currentTemplate.card_media_url" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/e2e8f0/64748b?text=Rich+Card+Media';">
+                                                    </template>
+                                                    <template x-if="!currentTemplate.card_media_url">
+                                                        <span class="text-slate-400 text-xs font-medium">Card Image</span>
+                                                    </template>
+                                                </div>
+                                                <!-- Content -->
+                                                <div class="p-3 flex-1 flex flex-col justify-between">
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-900" x-text="currentTemplate.card_title || 'Card Title'"></h4>
+                                                        <p class="text-[11px] text-slate-600 mt-1 leading-snug" x-text="currentTemplate.card_description || 'Card description...'"></p>
+                                                    </div>
+                                                    <div class="text-[9px] text-slate-400 text-right mt-2">9:41 AM</div>
+                                                </div>
+                                            </div>
+                                            <!-- Buttons -->
+                                            <div class="space-y-1.5 pt-1">
+                                                <template x-for="(btn, i) in currentTemplate.suggestions" :key="i">
+                                                    <div class="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate"
+                                                         x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- 4. Carousel -->
+                                    <template x-if="currentTemplate.template_type === 'carousel'">
+                                        <div class="space-y-2">
+                                            <div class="overflow-x-auto no-scrollbar flex gap-2 pb-2 -mx-1 px-1">
+                                                <template x-for="(c, cIndex) in currentTemplate.carousel_cards" :key="cIndex">
+                                                    <div class="flex-shrink-0 rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs flex flex-col"
+                                                         :class="currentTemplate.carousel_width === 'SMALL_WIDTH' ? 'w-40' : 'w-48'">
+                                                        <div class="bg-slate-100 flex items-center justify-center overflow-hidden"
+                                                             :class="currentTemplate.carousel_height === 'SHORT_HEIGHT' ? 'h-20' : 'h-28'">
+                                                            <template x-if="c.mediaUrl">
+                                                                <img :src="c.mediaUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x300/e2e8f0/64748b?text=Card+' + (cIndex+1);">
+                                                            </template>
+                                                            <template x-if="!c.mediaUrl">
+                                                                <span class="text-slate-400 text-[10px] font-medium" x-text="'Card ' + (cIndex+1)"></span>
+                                                            </template>
+                                                        </div>
+                                                        <div class="p-2.5 flex-1 flex flex-col justify-between">
+                                                            <div>
+                                                                <h5 class="font-bold text-[11px] text-slate-900 truncate" x-text="c.cardTitle || ('Card ' + (cIndex+1))"></h5>
+                                                                <p class="text-[10px] text-slate-500 mt-0.5 line-clamp-2" x-text="c.cardDescription || ''"></p>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Card Action Buttons -->
+                                                        <template x-if="c.suggestions && c.suggestions.length > 0">
+                                                            <div class="border-t border-slate-100 p-1.5 space-y-1">
+                                                                <template x-for="(btn, bi) in c.suggestions" :key="bi">
+                                                                    <div class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-semibold text-center truncate"
+                                                                         x-text="btn.displayText || 'Select'"></div>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                </div>
+                            </template>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Metadata Badges Footer -->
+            <template x-if="currentTemplate">
+                <div class="mt-3 flex flex-wrap items-center justify-center gap-1.5 max-w-[305px]">
+                    <span class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10px] font-semibold text-slate-700 capitalize shadow-2xs"
+                          x-text="currentTemplate.template_type.replace(/_/g, ' ')"></span>
+                    <span class="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-[10px] font-semibold text-blue-700 shadow-2xs"
+                          x-text="currentTemplate.message_type"></span>
+                    <template x-if="currentTemplate.placeholders && currentTemplate.placeholders.length > 0">
+                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-[10px] font-semibold text-indigo-700 shadow-2xs"
+                              x-text="currentTemplate.placeholders.length + ' Variables'"></span>
+                    </template>
+                </div>
+            </template>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

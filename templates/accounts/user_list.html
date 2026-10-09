@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+{% block header_title %}User Management{% endblock %}
+
+{% block content %}
+<script id="users-directory-data" type="application/json">
+{{ users_json|safe }}
+</script>
+
+<script>
+function accountDirectoryManager() {
+    let parsedUsers = {};
+    try {
+        const el = document.getElementById('users-directory-data');
+        if (el && el.textContent) {
+            parsedUsers = JSON.parse(el.textContent);
+        }
+    } catch (e) {
+        console.error('Error parsing users data:', e);
+    }
+
+    return {
+        showModal: {% if open_modal or form.errors %}true{% else %}false{% endif %},
+        showEditModal: false,
+        showRatesModal: false,
+        showSendersModal: false,
+        usersMap: parsedUsers,
+        editUser: {},
+        ratesUser: { rates: {} },
+        sendersUser: { senders: [] },
+
+        init() {
+            const editId = '{{ open_edit_id|default:"" }}';
+            const ratesId = '{{ open_rates_id|default:"" }}';
+            const sendersId = '{{ open_senders_id|default:"" }}';
+            if (editId && this.usersMap[editId]) {
+                this.openEdit(editId);
+            } else if (ratesId && this.usersMap[ratesId]) {
+                this.openRates(ratesId);
+            } else if (sendersId && this.usersMap[sendersId]) {
+                this.openSenders(sendersId);
+            }
+        },
+
+        openEdit(userId) {
+            const u = this.usersMap[String(userId)];
+            if (!u) return;
+            this.editUser = JSON.parse(JSON.stringify(u));
+            this.editUser.password = '';
+            this.showEditModal = true;
+        },
+
+        openRates(userId) {
+            const u = this.usersMap[String(userId)];
+            if (!u) return;
+            this.ratesUser = JSON.parse(JSON.stringify(u));
+            if (!this.ratesUser.rates) {
+                this.ratesUser.rates = {
+                    promotional_rate: '0.2500',
+                    promotional_cost_rate: '0.1800',
+                    transactional_rate: '0.2000',
+                    transactional_cost_rate: '0.1500',
+                    otp_rate: '0.1500',
+                    otp_cost_rate: '0.1000'
+                };
+            }
+            this.showRatesModal = true;
+        },
+
+        openSenders(userId) {
+            const u = this.usersMap[String(userId)];
+            if (!u) return;
+            this.sendersUser = JSON.parse(JSON.stringify(u));
+            if (!this.sendersUser.senders) {
+                this.sendersUser.senders = [];
+            }
+            this.showSendersModal = true;
+        }
+    };
+}
+</script>
+
+<div class="space-y-6" x-data="accountDirectoryManager()">
+
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">System Accounts Directory</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage administrators, partner resellers, and enterprise client partitions.</p>
+        </div>
+        <button type="button"
+                @click="showModal = true"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Create New Account</span>
+        </button>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Role Tabs -->
+        <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold text-slate-600">
+            <a href="{% url 'accounts:user_list' %}" class="px-3 py-1.5 rounded-lg transition-all {% if not current_role %}bg-white text-slate-900 shadow-2xs{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+                All Roles
+            </a>
+            <a href="{% url 'accounts:user_list' %}?role=admin" class="px-3 py-1.5 rounded-lg transition-all {% if current_role == 'admin' %}bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+                Admins
+            </a>
+            <a href="{% url 'accounts:user_list' %}?role=reseller" class="px-3 py-1.5 rounded-lg transition-all {% if current_role == 'reseller' %}bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+                Resellers
+            </a>
+            <a href="{% url 'accounts:user_list' %}?role=user" class="px-3 py-1.5 rounded-lg transition-all {% if current_role == 'user' %}bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs{% else %}text-slate-500 hover:text-slate-900{% endif %}">
+                Clients
+            </a>
+        </div>
+
+        <!-- Search input -->
+        <form method="get" class="flex items-center gap-2">
+            {% if current_role %}<input type="hidden" name="role" value="{{ current_role }}">{% endif %}
+            <div class="relative">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search email, company..." class="w-64 px-3.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+            </div>
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer">
+                Search
+            </button>
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="text-[11px] font-semibold uppercase bg-slate-50/80 text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-3.5 font-medium">User / Company</th>
+                        <th class="px-5 py-3.5 font-medium">Role &amp; Hierarchy</th>
+                        <th class="px-5 py-3.5 font-medium">Wallet Balance</th>
+                        <th class="px-5 py-3.5 font-medium">Status</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for u in users_list %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-5 py-4">
+                            <div class="font-semibold text-slate-900">{{ u.company_name|default:u.get_full_name|default:u.username }}</div>
+                            <div class="text-[11px] text-blue-600 font-semibold font-mono">@{{ u.username }}</div>
+                            {% if u.email %}<div class="text-[11px] text-slate-500 font-mono">{{ u.email }}</div>{% endif %}
+                            {% if u.phone %}<div class="text-[10px] text-slate-400">{{ u.phone }}</div>{% endif %}
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if u.is_superadmin %}
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Superadmin</span>
+                            {% elif u.is_reseller %}
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Reseller</span>
+                            {% else %}
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">User</span>
+                                {% if u.parent_reseller %}
+                                    <div class="text-[10px] text-slate-400 mt-1">Under: {{ u.parent_reseller.company_name|default:u.parent_reseller.username }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4">
+                            <span class="font-mono font-bold text-slate-900">
+                                {{ u.wallet.formatted_balance|default:"₹ 0.00" }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if u.is_active %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Suspended
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <div class="inline-flex items-center gap-1.5">
+                                <button type="button"
+                                        @click="openEdit('{{ u.id }}')"
+                                        class="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                                        title="Edit Account"
+                                        aria-label="Edit Account">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button type="button"
+                                        @click="openRates('{{ u.id }}')"
+                                        class="p-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 transition-colors shadow-2xs cursor-pointer"
+                                        title="Rate Plans"
+                                        aria-label="Rate Plans">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </button>
+                                <button type="button"
+                                        @click="openSenders('{{ u.id }}')"
+                                        class="p-2 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+                                        title="Sender Profiles"
+                                        aria-label="Sender Profiles">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                </button>
+                                <form method="post" action="{% url 'accounts:toggle_user_status' u.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="p-2 rounded-xl {% if u.is_active %}bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200{% else %}bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200{% endif %} transition-colors shadow-2xs cursor-pointer"
+                                            title="{% if u.is_active %}Suspend Account{% else %}Activate Account{% endif %}"
+                                            aria-label="{% if u.is_active %}Suspend Account{% else %}Activate Account{% endif %}"
+                                            onclick="return confirm('Change status for {{ u.email }}?')">
+                                        {% if u.is_active %}
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                        {% else %}
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-5 py-8 text-center text-slate-400 text-xs">
+                            No accounts match the current filter or search criteria.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 1. Create New Account Modal Dialog Box -->
+    <div x-show="showModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         @keydown.escape.window="showModal = false">
+        <div x-show="showModal"
+             x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+             @click="showModal = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div x-show="showModal"
+                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-2xl border border-slate-100 flex flex-col max-h-[90vh]"
+                 @click.stop>
+                <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 tracking-tight">Create New Account</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Configure account credentials, roles, and enterprise tax details.</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="showModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form method="post" action="{% url 'accounts:user_list' %}" class="overflow-y-auto p-6 space-y-4">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                        {% for err in form.non_field_errors %}<p>{{ err }}</p>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username <span class="text-rose-500">*</span></label>
+                            {{ form.username }}
+                            {% if form.username.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.username.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email Address</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Initial Password <span class="text-rose-500">*</span></label>
+                            {{ form.password }}
+                            {% if form.password.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.password.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Access Role <span class="text-rose-500">*</span></label>
+                            {{ form.role }}
+                            {% if form.role.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.role.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Parent Reseller (Optional)</label>
+                            {{ form.parent_reseller }}
+                            {% if form.parent_reseller.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.parent_reseller.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Company Name</label>
+                            {{ form.company_name }}
+                            {% if form.company_name.errors %}<p class="text-xs text-rose-500 mt-1">{{ form.company_name.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number</label>
+                            {{ form.phone }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">State</label>
+                            {{ form.state }}
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">GSTIN</label>
+                            {{ form.GSTIN }}
+                        </div>
+                        <div class="sm:col-span-2 flex items-center gap-2 pt-1">
+                            {{ form.is_active }}
+                            <label for="{{ form.is_active.id_for_label }}" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                                Account is Active and authorized to dispatch messages
+                            </label>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button type="button" @click="showModal = false" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer">
+                            <span>Create Account</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Edit Account Modal Dialog Box -->
+    <div x-show="showEditModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         @keydown.escape.window="showEditModal = false">
+        <div x-show="showEditModal"
+             x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+             @click="showEditModal = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div x-show="showEditModal"
+                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-2xl border border-slate-100 flex flex-col max-h-[90vh]"
+                 @click.stop>
+                <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 tracking-tight">Edit Account: <span x-text="'@' + editUser.username" class="font-mono text-blue-600"></span></h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Modify profile credentials, company identity, and access state.</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="showEditModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form method="post" :action="'/accounts/users/' + editUser.id + '/edit/'" class="overflow-y-auto p-6 space-y-4">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username <span class="text-rose-500">*</span></label>
+                            <input type="text" name="username" x-model="editUser.username" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email Address</label>
+                            <input type="email" name="email" x-model="editUser.email" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Access Role <span class="text-rose-500">*</span></label>
+                            <select name="role" x-model="editUser.role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                                <option value="user">User</option>
+                                <option value="reseller">Reseller</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Company Name</label>
+                            <input type="text" name="company_name" x-model="editUser.company_name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">First Name</label>
+                            <input type="text" name="first_name" x-model="editUser.first_name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Last Name</label>
+                            <input type="text" name="last_name" x-model="editUser.last_name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number</label>
+                            <input type="text" name="phone" x-model="editUser.phone" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">State</label>
+                            <input type="text" name="state" x-model="editUser.state" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">GSTIN</label>
+                            <input type="text" name="GSTIN" x-model="editUser.GSTIN" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div class="sm:col-span-2" x-data="{ showNewPassword: false }">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                                New Password <span class="text-slate-400 font-normal">(Leave blank to keep existing password unchanged)</span>
+                            </label>
+                            <div class="relative">
+                                <input :type="showNewPassword ? 'text' : 'password'"
+                                       name="password"
+                                       x-model="editUser.password"
+                                       autocomplete="new-password"
+                                       placeholder="Enter new password to reset, or leave blank to keep unchanged..."
+                                       class="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                                <button type="button"
+                                        @click="showNewPassword = !showNewPassword"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                                        tabindex="-1"
+                                        title="Show / Hide Password">
+                                    <svg x-show="!showNewPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    <svg x-show="showNewPassword" x-cloak class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">If blank, user's current password remains unchanged. Entering a new password sets it immediately without requiring current password.</p>
+                        </div>
+                        <div class="sm:col-span-2 flex items-center gap-2 pt-1">
+                            <input type="checkbox" name="is_active" id="edit_is_active" x-model="editUser.is_active" class="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                            <label for="edit_is_active" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                                Account is Active and authorized to dispatch messages
+                            </label>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button type="button" @click="showEditModal = false" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer">
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Manage Rates Modal Dialog Box -->
+    <div x-show="showRatesModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         @keydown.escape.window="showRatesModal = false">
+        <div x-show="showRatesModal"
+             x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+             @click="showRatesModal = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div x-show="showRatesModal"
+                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-xl border border-slate-100 flex flex-col max-h-[90vh]"
+                 @click.stop>
+                <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 tracking-tight">Rate Plan Configuration</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Configure per-message selling &amp; carrier cost rates for <strong x-text="ratesUser.company_name || ratesUser.username" class="text-slate-800"></strong></p>
+                        </div>
+                    </div>
+                    <button type="button" @click="showRatesModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form method="post" :action="'/wallet/rates/' + ratesUser.id + '/'" class="overflow-y-auto p-6 space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'accounts:user_list' %}">
+
+                    <!-- Promotional Section -->
+                    <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-100/80 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                            <span class="text-xs font-bold text-blue-900 uppercase tracking-wider">Promotional RCS</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                                <input type="number" step="0.0001" min="0.0001" name="promotional_rate" :value="ratesUser.rates ? ratesUser.rates.promotional_rate : '0.2500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
+                                <input type="number" step="0.0001" min="0.0000" name="promotional_cost_rate" :value="ratesUser.rates ? ratesUser.rates.promotional_cost_rate : '0.1800'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactional Section -->
+                    <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/80 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Transactional RCS</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                                <input type="number" step="0.0001" min="0.0001" name="transactional_rate" :value="ratesUser.rates ? ratesUser.rates.transactional_rate : '0.2000'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
+                                <input type="number" step="0.0001" min="0.0000" name="transactional_cost_rate" :value="ratesUser.rates ? ratesUser.rates.transactional_cost_rate : '0.1500'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OTP Section -->
+                    <div class="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/80 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                            <span class="text-xs font-bold text-amber-900 uppercase tracking-wider">OTP / Authentication</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                                <input type="number" step="0.0001" min="0.0001" name="otp_rate" :value="ratesUser.rates ? ratesUser.rates.otp_rate : '0.1500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
+                                <input type="number" step="0.0001" min="0.0000" name="otp_cost_rate" :value="ratesUser.rates ? ratesUser.rates.otp_cost_rate : '0.1000'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button type="button" @click="showRatesModal = false" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer">
+                            <span>Save Rate Plans</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Sender Profiles Modal Dialog Box -->
+    <div x-show="showSendersModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         @keydown.escape.window="showSendersModal = false">
+        <div x-show="showSendersModal"
+             x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+             @click="showSendersModal = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div x-show="showSendersModal"
+                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-2xl border border-slate-100 flex flex-col max-h-[90vh]"
+                 @click.stop>
+                <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 tracking-tight">Approved Sender Profiles</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Carrier-registered sender bot identities for <strong x-text="sendersUser.company_name || sendersUser.username" class="text-slate-800"></strong></p>
+                        </div>
+                    </div>
+                    <button type="button" @click="showSendersModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="overflow-y-auto p-6 space-y-6">
+                    <!-- Assign New Profile Form -->
+                    <div class="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80">
+                        <h4 class="text-xs font-bold text-slate-900 mb-3">Assign New Sender Profile</h4>
+                        <form method="post" :action="'/wallet/senders/' + sendersUser.id + '/'" class="space-y-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" :value="'{% url 'accounts:user_list' %}?open_senders=' + sendersUser.id">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-700 mb-1">Sender / Bot ID <span class="text-rose-500">*</span></label>
+                                    <input type="text" name="sender_id" required placeholder="e.g. acme_bot_01" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-700 mb-1">Sender Display Name <span class="text-rose-500">*</span></label>
+                                    <input type="text" name="sender_profile_name" required placeholder="e.g. Acme Verified Brand" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-1">
+                                <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" name="is_active" checked class="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    <span>Active</span>
+                                </label>
+                                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors cursor-pointer">
+                                    + Assign Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Current Sender Profiles Table -->
+                    <div class="space-y-2">
+                        <h4 class="text-xs font-bold text-slate-900">Registered Sender Profiles</h4>
+                        <div class="rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-50/80 text-slate-400 font-semibold uppercase text-[10px] border-b border-slate-100">
+                                    <tr>
+                                        <th class="px-4 py-3">Display Name</th>
+                                        <th class="px-4 py-3">Bot ID</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-slate-700">
+                                    <template x-for="p in sendersUser.senders" :key="p.id">
+                                        <tr class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="px-4 py-3 font-semibold text-slate-900" x-text="p.sender_profile_name"></td>
+                                            <td class="px-4 py-3 font-mono text-blue-600" x-text="p.sender_id"></td>
+                                            <td class="px-4 py-3">
+                                                <span :class="p.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'" class="px-2 py-0.5 rounded-full text-[10px] font-semibold border inline-flex items-center gap-1" x-text="p.is_active ? 'Active' : 'Suspended'"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <form method="post" :action="'/wallet/senders/toggle/' + p.id + '/'" class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="next" :value="'{% url 'accounts:user_list' %}?open_senders=' + sendersUser.id">
+                                                    <button type="submit" :class="p.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'" class="px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors shadow-2xs cursor-pointer" x-text="p.is_active ? 'Suspend' : 'Activate'"></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="!sendersUser.senders || sendersUser.senders.length === 0">
+                                        <td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">
+                                            No sender profiles registered for this account yet.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+                    <button type="button" @click="showSendersModal = false" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

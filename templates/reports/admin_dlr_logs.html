@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}DLR Webhook Logs - RCS Portal{% endblock %}
+{% block header_title %}Carrier DLR Logs{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ showSimulator: false }">
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">DLR Webhook Logs</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Raw delivery report events received from carrier, parser extraction audit, and reprocessor.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button type="button" @click="showSimulator = !showSimulator" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-xs transition-all text-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span>Simulate DLR</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Simulate DLR Card (Collapsible) -->
+    <div x-show="showSimulator" x-cloak style="display: none;" class="bg-white border border-blue-200 rounded-2xl p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Development DLR Simulator
+            </h3>
+            <button @click="showSimulator = false" class="text-slate-400 hover:text-slate-700 font-bold text-base leading-none">&times;</button>
+        </div>
+
+        <form method="post" action="{% url 'reports:admin_dlr_logs' %}" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="simulate">
+
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Carrier Message ID <span class="text-rose-500">*</span></label>
+                <input type="text" name="carrier_id" placeholder="e.g. onex-carrier-12345" required
+                       class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Delivery Status</label>
+                <select name="status" class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    <option value="delivered">DELIVERED</option>
+                    <option value="read">READ</option>
+                    <option value="failed">FAILED</option>
+                    <option value="sent">SENT</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-colors">
+                    Trigger Simulated Event
+                </button>
+            </div>
+
+            <div class="sm:col-span-4">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Failure Reason (Used if status is FAILED)</label>
+                <input type="text" name="reason" placeholder="Handset subscriber inactive / DND blocked"
+                       class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+            </div>
+        </form>
+    </div>
+
+    <!-- DLR Table Card -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th scope="col" class="px-5 py-3.5 font-medium">DLR #</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Carrier Message ID</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Matched Internal ID</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Extracted Status</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Processing State</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Received At</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for log in dlr_logs %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-5 py-4 font-mono font-medium text-slate-500">#{{ log.id }}</td>
+                        <td class="px-5 py-4 font-mono text-slate-900 font-semibold">{{ log.onextel_message_id|default:"-" }}</td>
+                        <td class="px-5 py-4 font-mono">
+                            {% if log.message %}
+                            <a href="{% url 'messaging:message_detail' log.message.id %}" class="text-blue-600 hover:text-blue-700 font-semibold">
+                                {{ log.message.id }}
+                            </a>
+                            {% else %}
+                            <span class="text-slate-400 italic">No match</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 font-mono font-bold uppercase text-slate-900">
+                            {{ log.status_extracted|default:"-" }}
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if log.processed %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Processed
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="{{ log.error_message }}">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Pending / Error
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-slate-500 font-mono">
+                            {{ log.received_at|date:"M d, H:i:s" }}
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <form method="post" action="{% url 'reports:admin_dlr_logs' %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reprocess">
+                                <input type="hidden" name="dlr_id" value="{{ log.id }}">
+                                <button type="submit" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs" title="Reprocess DLR">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-10 text-center text-slate-400">
+                            No DLR webhook logs received yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

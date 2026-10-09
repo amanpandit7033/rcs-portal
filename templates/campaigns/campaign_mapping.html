@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Map Columns - Step 2{% endblock %}
+{% block header_title %}Column Mapping{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Breadcrumb Steps -->
+    <div class="flex items-center gap-2 text-xs font-semibold text-slate-400">
+        <span class="text-slate-400">1. Upload & Setup</span>
+        <span class="text-slate-300">&rarr;</span>
+        <span class="text-blue-600 font-bold">2. Map Columns</span>
+        <span class="text-slate-300">&rarr;</span>
+        <span class="text-slate-400">3. Reserve & Launch</span>
+    </div>
+
+    <!-- Preview Table Card -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-900 tracking-tight">File Preview (First 10 Rows)</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Check detected headers and sample values to align your recipient mapping.</p>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-mono font-medium border border-slate-200">
+                {{ headers|length }} Columns Detected
+            </span>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 overflow-x-auto max-h-64">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50/90 text-slate-500 font-semibold border-b border-slate-200 sticky top-0">
+                        {% for h in headers %}
+                        <th class="p-3 whitespace-nowrap">{{ h }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for row in preview_rows %}
+                    <tr class="hover:bg-slate-50/50">
+                        {% for cell in row %}
+                        <td class="p-3 whitespace-nowrap font-mono text-[11px]">{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ headers|length|default:1 }}" class="p-4 text-center text-slate-400">No rows detected in file preview.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mapping Form Card -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-6">
+        <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Configure Column Mappings</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Specify which column contains destination mobile numbers, and map any required template variables.</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Mobile Column (Mandatory) -->
+            <div class="p-4 rounded-xl bg-blue-50/50 border border-blue-200/80 max-w-xl">
+                <label class="block text-xs font-semibold text-blue-900 mb-1.5">
+                    Recipient Mobile Number Column <span class="text-rose-500">*</span>
+                </label>
+                <select name="mobile_col" required class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    <option value="">-- Choose Mobile Column --</option>
+                    {% for h in headers %}
+                    <option value="{{ h }}" {% if h == 'mobile_number' or headers|length == 1 or 'mobile' in h|lower or 'phone' in h|lower %}selected{% endif %}>{{ h }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-[11px] text-slate-500 mt-1.5">Numbers are automatically sanitized to 10-digit Indian formats. Invalid records and duplicates are quarantined.</p>
+            </div>
+
+            <!-- Template Placeholders (if applicable) -->
+            {% if placeholders %}
+            <div class="space-y-4">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                    Template Custom Parameters Mapping ({{ campaign.template.name }})
+                </h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for p in placeholders %}
+                    <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                        <label class="block text-xs font-mono font-semibold text-blue-700 mb-1.5">
+                            [{{ p }}] Parameter
+                        </label>
+                        <select name="placeholder_{{ p }}" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                            <option value="">-- Leave Blank / None --</option>
+                            {% for h in headers %}
+                            <option value="{{ h }}">{{ h }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-1">Populates customParams for [{{ p }}]</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <a href="{% url 'campaigns:campaign_list' %}" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors">
+                    Start Stream Parsing &rarr;
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1130 @@
+{% extends "base.html" %}
+
+{% block title %}RCS Template Builder{% endblock %}
+{% block header_title %}Template Studio{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Custom scrollbar for preview */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="rcsBuilder()" x-init="init()" class="space-y-6">
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'templates_mgmt:template_list' %}" class="p-2 text-slate-500 hover:text-slate-900 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">RCS Template Builder</h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Author interactive, carrier-compliant Rich Communication messages.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Banner (if client validation fails) -->
+    <div x-show="clientError" x-cloak style="display: none;" class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between shadow-2xs">
+        <div class="flex items-center gap-2.5">
+            <svg class="w-4 h-4 flex-shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span x-text="clientError"></span>
+        </div>
+        <button @click="clientError = ''" class="text-rose-400 hover:text-rose-600 text-sm font-bold">&times;</button>
+    </div>
+
+    <!-- Main Workspace: Form & Phone Preview Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left 7 Cols: Configuration Form & Card Editor -->
+        <div class="lg:col-span-7 space-y-6">
+            
+            <!-- Step 1: Core Configuration -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">1</span>
+                    Template Settings
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Template Name -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Template Unique Name <span class="text-rose-500">*</span>
+                            <span class="text-slate-400 font-normal">(alphanumeric & underscore only)</span>
+                        </label>
+                        <input type="text" x-model="name" placeholder="e.g. order_delivery_update_v1"
+                               class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                    </div>
+
+                    <!-- Sender Profile -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Sender Profile / Bot <span class="text-rose-500">*</span>
+                        </label>
+                        <select x-model="sender_profile_id" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="">Select Sender Profile...</option>
+                            {% for sp in sender_profiles %}
+                            <option value="{{ sp.id }}">{{ sp.sender_profile_name }} ({{ sp.sender_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Message Type (Promotional / Transactional / OTP) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Message Category <span class="text-rose-500">*</span>
+                        </label>
+                        <select x-model="message_type" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            {% for code, label in message_types %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Template Type Selector Cards -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2">
+                        Template Layout Architecture <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button type="button" @click="template_type = 'text_message'"
+                                :class="template_type === 'text_message' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
+                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                            <span class="text-xs">Text Message</span>
+                        </button>
+
+                        <button type="button" @click="template_type = 'text_message_with_media'"
+                                :class="template_type === 'text_message_with_media' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
+                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs">Text + Media</span>
+                        </button>
+
+                        <button type="button" @click="template_type = 'rich_card'"
+                                :class="template_type === 'rich_card' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
+                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                            <span class="text-xs">Rich Card</span>
+                        </button>
+
+                        <button type="button" @click="template_type = 'carousel'"
+                                :class="template_type === 'carousel' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
+                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            <span class="text-xs">Carousel</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Content Details based on template_type -->
+
+            <!-- TYPE 1: TEXT MESSAGE -->
+            <div x-show="template_type === 'text_message'" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
+                    Message Content
+                </h3>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-700">Message Body <span class="text-rose-500">*</span></label>
+                        <span class="text-[11px] text-slate-400">Insert custom params like <code class="text-blue-600 font-mono">[name]</code></span>
+                    </div>
+                    <textarea x-model="text_message_content" rows="4" placeholder="Hello [customer_name], your package [tracking_code] has been dispatched."
+                              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- TYPE 2: TEXT MESSAGE WITH MEDIA -->
+            <div x-show="template_type === 'text_message_with_media'" x-cloak style="display: none;" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
+                    Media & Text Layout
+                </h3>
+
+                <!-- Message Order -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Content Layout Order</label>
+                        <select x-model="media_order" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="media_at_top">Media at Top (Default)</option>
+                            <option value="text_message_at_top">Text Message at Top</option>
+                        </select>
+                    </div>
+
+                    <!-- Media Upload Helper -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Media Asset File</label>
+                        <input type="file" @change="uploadMediaFile($event, 'documentUrl')"
+                               class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Document / Media URL -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Public Document / Media URL <span class="text-rose-500">*</span></label>
+                    <input type="url" x-model="documentUrl" placeholder="https://example.com/banner.jpg"
+                           class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </div>
+
+                <!-- Text Content -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Message Text <span class="text-rose-500">*</span></label>
+                    <textarea x-model="text_message_content" rows="3" placeholder="Special promotion for [customer_name]!"
+                              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- TYPE 3: RICH CARD STANDALONE -->
+            <div x-show="template_type === 'rich_card'" x-cloak style="display: none;" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
+                    Rich Card Configuration
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Card Orientation</label>
+                        <select x-model="card_orientation" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="VERTICAL">VERTICAL</option>
+                            <option value="HORIZONTAL">HORIZONTAL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Media Height</label>
+                        <select x-model="card_height" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="SHORT_HEIGHT">SHORT_HEIGHT</option>
+                            <option value="MEDIUM_HEIGHT">MEDIUM_HEIGHT</option>
+                            <option value="TALL_HEIGHT">TALL_HEIGHT</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Media Upload / URL -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-700">Media URL (Image or Video) <span class="text-rose-500">*</span></label>
+                        <input type="file" @change="uploadMediaFile($event, 'richCardMedia')"
+                               class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer">
+                    </div>
+                    <input type="url" x-model="standalone.mediaUrl" placeholder="https://example.com/product.png"
+                           class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </div>
+
+                <!-- Card Title & Description -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Card Title <span class="text-rose-500">*</span></label>
+                    <input type="text" x-model="standalone.cardTitle" placeholder="Exclusive Festive Offer"
+                           class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Card Description <span class="text-rose-500">*</span></label>
+                    <textarea x-model="standalone.cardDescription" rows="3" placeholder="Get up to 50% discount on all purchases today for [customer_name]."
+                              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- TYPE 4: CAROUSEL -->
+            <div x-show="template_type === 'carousel'" x-cloak style="display: none;" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
+                        Carousel Configuration (2 - 10 Cards)
+                    </h3>
+                    <button type="button" @click="addCarouselCard()" :disabled="carouselCards.length >= 10"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold disabled:opacity-40 transition-colors shadow-2xs">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Card (<span x-text="carouselCards.length"></span>/10)
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Card Width</label>
+                        <select x-model="carousel_width" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="MEDIUM_WIDTH">MEDIUM_WIDTH (Default)</option>
+                            <option value="SMALL_WIDTH">SMALL_WIDTH</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Card Height</label>
+                        <select x-model="carousel_height" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                            <option value="SHORT_HEIGHT">SHORT_HEIGHT</option>
+                            <option value="TALL_HEIGHT">TALL_HEIGHT (Default)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Cards List -->
+                <div class="space-y-4">
+                    <template x-for="(card, cardIdx) in carouselCards" :key="cardIdx">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-600 uppercase tracking-wider" x-text="'Card #' + (cardIdx + 1)"></span>
+                                <button type="button" @click="removeCarouselCard(cardIdx)" x-show="carouselCards.length > 2" x-cloak style="display: none;"
+                                        class="text-xs text-rose-500 hover:text-rose-700 flex items-center gap-1 font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    Remove
+                                </button>
+                            </div>
+
+                            <!-- Media Upload / URL -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-[11px] font-semibold text-slate-600">Media URL <span class="text-rose-500">*</span></label>
+                                    <input type="file" @change="uploadCarouselMedia($event, cardIdx)"
+                                           class="text-[11px] text-slate-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-blue-50 file:text-blue-700 cursor-pointer">
+                                </div>
+                                <input type="url" x-model="card.mediaUrl" placeholder="https://example.com/card.jpg"
+                                       class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Title <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="card.cardTitle" placeholder="Product / Deal Title"
+                                           class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 font-medium">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Description <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="card.cardDescription" placeholder="Short description or pricing"
+                                           class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                </div>
+                            </div>
+
+                            <!-- Per-card Suggestions -->
+                            <div class="pt-2 border-t border-slate-200/80">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[11px] font-semibold text-slate-600">Card Buttons (0-4)</span>
+                                    <button type="button" @click="addCardSuggestion(cardIdx)" :disabled="card.suggestions.length >= 4"
+                                            class="text-[11px] text-blue-600 hover:text-blue-800 font-bold disabled:opacity-40">
+                                        + Add Button
+                                    </button>
+                                </div>
+                                <div class="space-y-2">
+                                    <template x-for="(btn, btnIdx) in card.suggestions" :key="btnIdx">
+                                        <div class="p-2.5 rounded-lg bg-white border border-slate-200 space-y-2 shadow-2xs">
+                                            <div class="flex items-center justify-between">
+                                                <select x-model="btn.type" class="px-2 py-1 bg-white border border-slate-200 rounded text-[11px] text-slate-800">
+                                                    <option value="reply">Quick Reply</option>
+                                                    <option value="url_action">Open URL (url_action)</option>
+                                                    <option value="dialer_action">Dial Phone (dialer_action)</option>
+                                                    <option value="view_location_latlong">View Location (Lat/Long)</option>
+                                                    <option value="view_location_query">Search Location (Query)</option>
+                                                    <option value="share_location">Share My Location</option>
+                                                    <option value="calendar_event">Calendar Event</option>
+                                                </select>
+                                                <button type="button" @click="removeCardSuggestion(cardIdx, btnIdx)" class="text-rose-500 hover:text-rose-700 text-xs font-bold">&times;</button>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <input type="text" x-model="btn.displayText" placeholder="Button Text (Required)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                                <input type="text" x-model="btn.postback" placeholder="Postback Value (Required)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs font-mono text-slate-900">
+                                            </div>
+                                            <!-- Dynamic fields per type -->
+                                            <div x-show="btn.type === 'url_action'" x-cloak style="display: none;">
+                                                <input type="url" x-model="btn.url" placeholder="https://example.com" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900 font-mono">
+                                            </div>
+                                            <div x-show="btn.type === 'dialer_action'" x-cloak style="display: none;">
+                                                <input type="text" x-model="btn.phoneNumber" placeholder="+919876543210" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900 font-mono">
+                                            </div>
+                                            <div x-show="btn.type === 'view_location_latlong'" x-cloak style="display: none;" class="grid grid-cols-3 gap-1">
+                                                <input type="text" x-model="btn.label" placeholder="Label" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                                <input type="text" x-model="btn.latitude" placeholder="Lat (e.g. 28.6139)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                                <input type="text" x-model="btn.longitude" placeholder="Long (e.g. 77.2090)" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                            </div>
+                                            <div x-show="btn.type === 'view_location_query'" x-cloak style="display: none;">
+                                                <input type="text" x-model="btn.query" placeholder="Location query (e.g. Connaught Place, New Delhi)" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                            </div>
+                                            <div x-show="btn.type === 'calendar_event'" x-cloak style="display: none;" class="space-y-1.5">
+                                                <div class="grid grid-cols-2 gap-1.5">
+                                                    <input type="text" x-model="btn.title" placeholder="Event Title" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                                    <input type="text" x-model="btn.timeZone" placeholder="Asia/Kolkata" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900 font-mono">
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-1.5">
+                                                    <input type="text" x-model="btn.startTime" placeholder="2026-10-10T10:00:00Z" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900 font-mono">
+                                                    <input type="text" x-model="btn.endTime" placeholder="2026-10-10T11:00:00Z" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900 font-mono">
+                                                </div>
+                                                <input type="text" x-model="btn.description" placeholder="Event Description" class="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-900">
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Step 3: Top-level Suggestions (for non-carousel or message-level buttons) -->
+            <div x-show="template_type !== 'carousel'" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">3</span>
+                        Interactive Suggestions / Buttons (0 - 4)
+                    </h3>
+                    <button type="button" @click="addSuggestion()" :disabled="suggestions.length >= 4"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold disabled:opacity-40 transition-colors shadow-2xs">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Suggestion
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <template x-for="(btn, idx) in suggestions" :key="idx">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-600" x-text="'Button #' + (idx + 1)"></span>
+                                <div class="flex items-center gap-3">
+                                    <select x-model="btn.type" class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-800">
+                                        <option value="reply">Quick Reply</option>
+                                        <option value="url_action">Open URL (url_action)</option>
+                                        <option value="dialer_action">Dial Phone (dialer_action)</option>
+                                        <option value="view_location_latlong">View Location (Lat/Long)</option>
+                                        <option value="view_location_query">Search Location (Query)</option>
+                                        <option value="share_location">Share My Location</option>
+                                        <option value="calendar_event">Calendar Event</option>
+                                    </select>
+                                    <button type="button" @click="removeSuggestion(idx)" class="text-rose-500 hover:text-rose-700 text-base font-bold">&times;</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Display Text <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="btn.displayText" placeholder="e.g. Track Order"
+                                           class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 font-medium">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Postback Payload <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="btn.postback" placeholder="TRACK_ORDER"
+                                           class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                                </div>
+                            </div>
+
+                            <!-- Specific fields per suggestion type -->
+                            <div x-show="btn.type === 'url_action'" x-cloak style="display: none;">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">URL <span class="text-rose-500">*</span></label>
+                                <input type="url" x-model="btn.url" placeholder="https://example.com/orders/123"
+                                       class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                            </div>
+
+                            <div x-show="btn.type === 'dialer_action'" x-cloak style="display: none;">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number <span class="text-rose-500">*</span></label>
+                                <input type="tel" x-model="btn.phoneNumber" placeholder="+919876543210"
+                                       class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                            </div>
+
+                            <div x-show="btn.type === 'view_location_latlong'" x-cloak style="display: none;" class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Label</label>
+                                    <input type="text" x-model="btn.label" placeholder="Headquarters" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Latitude <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="btn.latitude" placeholder="28.6139" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Longitude <span class="text-rose-500">*</span></label>
+                                    <input type="text" x-model="btn.longitude" placeholder="77.2090" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                </div>
+                            </div>
+
+                            <div x-show="btn.type === 'view_location_query'" x-cloak style="display: none;">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Query <span class="text-rose-500">*</span></label>
+                                <input type="text" x-model="btn.query" placeholder="Connaught Place, New Delhi" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                            </div>
+
+                            <div x-show="btn.type === 'calendar_event'" x-cloak style="display: none;" class="space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Event Title <span class="text-rose-500">*</span></label>
+                                        <input type="text" x-model="btn.title" placeholder="Flash Sale Start" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Timezone</label>
+                                        <input type="text" x-model="btn.timeZone" placeholder="Asia/Kolkata" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Start Time (ISO 8601) <span class="text-rose-500">*</span></label>
+                                        <input type="text" x-model="btn.startTime" placeholder="2026-10-10T10:00:00Z" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">End Time (ISO 8601) <span class="text-rose-500">*</span></label>
+                                        <input type="text" x-model="btn.endTime" placeholder="2026-10-10T11:00:00Z" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Event Description</label>
+                                    <input type="text" x-model="btn.description" placeholder="Reminder for upcoming sale" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Detected Placeholders Visual Feedback -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+                <span class="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Detected Placeholders in Template</span>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="p in detectedPlaceholders" :key="p">
+                        <span class="px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-mono text-xs font-semibold" x-text="'[' + p + ']'"></span>
+                    </template>
+                    <span x-show="detectedPlaceholders.length === 0" class="text-xs text-slate-400 italic">
+                        No placeholders detected. Use <code class="text-blue-600 font-mono">[param_name]</code> in your text to enable personalization.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Bottom Action Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-800">Ready to Submit Template?</h4>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Submits structured message to carrier gateway for instant verification.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'templates_mgmt:template_list' %}" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                        Cancel
+                    </a>
+                    <button @click="submitTemplate()" :disabled="submitting" type="button"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer disabled:opacity-50">
+                        <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <svg x-show="submitting" x-cloak style="display: none;" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="submitting ? 'Submitting to Carrier...' : 'Submit Template'">Submit Template</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right 5 Cols: Interactive Phone Simulator Frame -->
+        <div class="lg:col-span-5 sticky top-20 flex flex-col items-center">
+            <!-- Sleek Minimal Header (No background card) -->
+            <div class="w-full max-w-[305px] flex items-center justify-between px-2 mb-2.5">
+                <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Preview
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-semibold">
+                    <svg class="w-2.5 h-2.5 fill-current text-slate-800" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.77-11.64-14.18-5.87-9.35-10.43-20.08-13.68-32.18-3.25-12.1-4.88-23.77-4.88-35.01 0-14.58 3.58-26.65 10.74-36.21 7.16-9.56 16.27-14.43 27.33-14.61 4.7 0 9.87 1.15 15.51 3.44 5.64 2.29 9.68 3.48 12.12 3.58 1.95 0 6.13-1.28 12.54-3.83 6.41-2.55 11.83-3.69 16.27-3.41 12.54.85 22.47 5.76 29.8 14.73-10.96 6.64-16.32 15.74-16.08 27.29.24 9.13 3.73 16.74 10.47 22.82 6.74 6.08 14.77 9.54 24.08 10.37-2.12 6.74-4.64 13.3-7.56 19.68zM119.22 31.84c0-7.31 2.65-14.11 7.95-20.4 5.3-6.29 11.75-10.3 19.35-12.04.47 1.45.71 2.87.71 4.26 0 7.31-2.73 14.28-8.19 20.91-5.46 6.63-12.05 10.53-19.77 11.7-.05-1.45-.05-2.92-.05-4.43z"/></svg>
+                    iPhone 17 Pro Max
+                </span>
+            </div>
+
+            <!-- iPhone 17 Pro Max Hardware Chassis -->
+            <div class="relative w-full max-w-[305px] select-none">
+                <!-- Left Buttons: Action Button, Volume Up, Volume Down -->
+                <div class="absolute -left-[3px] top-[85px] w-[3px] h-5 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[115px] w-[3px] h-9 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[165px] w-[3px] h-9 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+
+                <!-- Right Buttons: Side Power Button, Camera Control -->
+                <div class="absolute -right-[3px] top-[125px] w-[3px] h-12 bg-slate-600 rounded-r-xs shadow-2xs"></div>
+                <div class="absolute -right-[3px] top-[200px] w-[3px] h-8 bg-slate-500 rounded-r-xs shadow-2xs"></div>
+
+                <!-- Aerospace Titanium Outer Frame -->
+                <div class="w-full rounded-[48px] bg-gradient-to-b from-[#3a3d45] via-[#202227] to-[#15161a] p-[7px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)_inset]">
+                    <!-- OLED Screen Container -->
+                    <div class="rounded-[42px] overflow-hidden bg-[#f4f5f7] flex flex-col h-[540px] relative shadow-inner">
+                        
+                        <!-- iOS Status Bar & Dynamic Island -->
+                        <div class="relative z-30 pt-2.5 px-4 pb-1.5 flex items-center justify-between text-[10px] text-slate-800 font-semibold select-none bg-white/80 backdrop-blur-md border-b border-slate-100">
+                            <!-- Time -->
+                            <span class="w-10 text-left font-bold text-[11px] text-slate-900 tracking-tight">9:41</span>
+                            
+                            <!-- Floating Dynamic Island -->
+                            <div class="w-20 h-[20px] bg-black rounded-full flex items-center justify-between px-2 shadow-xs">
+                                <div class="w-2 h-2 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center">
+                                    <div class="w-0.5 h-0.5 rounded-full bg-blue-900/90"></div>
+                                </div>
+                                <div class="w-1 h-1 rounded-full bg-[#0a0f18]"></div>
+                            </div>
+
+                            <!-- Icons: Cellular, 5G, Battery -->
+                            <div class="w-10 flex items-center justify-end gap-1 text-slate-900">
+                                <svg class="w-2.5 h-2.5 text-slate-900" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.28 19.64 10.58 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 2c3.87 0 7 3.13 7 7 0 1.63-.56 3.13-1.5 4.33l-9.83-9.83C8.87 5.56 10.37 5 12 5zm-5.5 7c0-1.63.56-3.13 1.5-4.33l9.83 9.83c-1.2 .94-2.7 1.5-4.33 1.5-3.87 0-7-3.13-7-7z"/></svg>
+                                <span class="text-[8px] font-extrabold tracking-tighter">5G</span>
+                                <div class="w-[16px] h-[8px] border border-slate-800 rounded-[2px] p-[1px] flex items-center">
+                                    <div class="w-full h-full bg-slate-900 rounded-[0.5px]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bot Chat Header -->
+                        <div class="px-4 py-2.5 bg-white border-b border-slate-200/80 flex items-center gap-3 shadow-2xs">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+                                RCS
+                            </div>
+                            <div class="flex-1 truncate">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-semibold text-xs text-slate-900 truncate" x-text="senderProfileName() || 'Verified RCS Sender'"></span>
+                                    <svg class="w-3.5 h-3.5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="text-[10px] text-slate-400">RCS Business Messaging</span>
+                            </div>
+                        </div>
+
+                        <!-- Chat Body Screen (Scrollable) -->
+                        <div class="flex-1 p-3 overflow-y-auto no-scrollbar space-y-3 bg-[#f8fafc]">
+                            <div class="text-center">
+                                <span class="px-2.5 py-0.5 rounded-full bg-slate-200/80 text-[10px] font-semibold text-slate-600">Today</span>
+                            </div>
+
+                            <!-- 1. Text Message Preview -->
+                            <div x-show="template_type === 'text_message'" class="space-y-2">
+                                <div class="max-w-[85%] rounded-2xl rounded-tl-xs bg-white text-slate-900 p-3 shadow-xs border border-slate-200/80 text-xs whitespace-pre-wrap leading-relaxed">
+                                    <span x-text="text_message_content || 'Type message content in builder...'"></span>
+                                    <div class="text-[9px] text-slate-400 text-right mt-1">9:41 AM &bull; RCS</div>
+                                </div>
+                                <!-- Suggestion Buttons -->
+                                <div class="space-y-1.5 pt-1">
+                                    <template x-for="(btn, i) in suggestions" :key="i">
+                                        <div class="px-3 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs cursor-pointer truncate transition-colors"
+                                             x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 2. Text Message with Media Preview -->
+                            <div x-show="template_type === 'text_message_with_media'" x-cloak style="display: none;" class="space-y-2">
+                                <div class="max-w-[88%] rounded-2xl rounded-tl-xs bg-white text-slate-900 shadow-xs border border-slate-200/80 overflow-hidden text-xs">
+                                    <!-- Order: Media at Top -->
+                                    <template x-if="media_order === 'media_at_top'">
+                                        <div>
+                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                <template x-if="documentUrl">
+                                                    <img :src="documentUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
+                                                </template>
+                                                <template x-if="!documentUrl">
+                                                    <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
+                                                </template>
+                                            </div>
+                                            <div class="p-3 whitespace-pre-wrap leading-relaxed">
+                                                <span x-text="text_message_content || 'Message text goes here...'"></span>
+                                                <div class="text-[9px] text-slate-400 text-right mt-1">9:41 AM &bull; RCS</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <!-- Order: Text at Top -->
+                                    <template x-if="media_order === 'text_message_at_top'">
+                                        <div>
+                                            <div class="p-3 whitespace-pre-wrap leading-relaxed">
+                                                <span x-text="text_message_content || 'Message text goes here...'"></span>
+                                            </div>
+                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                                <template x-if="documentUrl">
+                                                    <img :src="documentUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
+                                                </template>
+                                                <template x-if="!documentUrl">
+                                                    <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
+                                                </template>
+                                            </div>
+                                            <div class="px-3 py-1.5 text-[9px] text-slate-400 text-right">9:41 AM &bull; RCS</div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- Suggestion Buttons -->
+                                <div class="space-y-1.5 pt-1">
+                                    <template x-for="(btn, i) in suggestions" :key="i">
+                                        <div class="px-3 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate transition-colors"
+                                             x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 3. Rich Card Preview -->
+                            <div x-show="template_type === 'rich_card'" x-cloak style="display: none;" class="space-y-2">
+                                <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs"
+                                     :class="card_orientation === 'HORIZONTAL' ? 'flex flex-row items-stretch' : 'flex flex-col'">
+                                    <!-- Card Media -->
+                                    <div class="bg-slate-100 flex items-center justify-center overflow-hidden"
+                                         :class="{
+                                             'w-28 flex-shrink-0': card_orientation === 'HORIZONTAL',
+                                             'w-full h-24': card_orientation === 'VERTICAL' && card_height === 'SHORT_HEIGHT',
+                                             'w-full h-36': card_orientation === 'VERTICAL' && card_height === 'MEDIUM_HEIGHT',
+                                             'w-full h-48': card_orientation === 'VERTICAL' && card_height === 'TALL_HEIGHT'
+                                         }">
+                                        <template x-if="standalone.mediaUrl">
+                                            <img :src="standalone.mediaUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400/e2e8f0/64748b?text=Rich+Card+Media';">
+                                        </template>
+                                        <template x-if="!standalone.mediaUrl">
+                                            <span class="text-slate-400 text-xs font-medium">Card Image</span>
+                                        </template>
+                                    </div>
+                                    <!-- Card Content -->
+                                    <div class="p-3 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <h4 class="font-bold text-xs text-slate-900" x-text="standalone.cardTitle || 'Card Title'"></h4>
+                                            <p class="text-[11px] text-slate-600 mt-1 leading-snug" x-text="standalone.cardDescription || 'Card description here...'"></p>
+                                        </div>
+                                        <div class="text-[9px] text-slate-400 text-right mt-2">9:41 AM</div>
+                                    </div>
+                                </div>
+                                <!-- Suggestion Buttons -->
+                                <div class="space-y-1.5 pt-1">
+                                    <template x-for="(btn, i) in suggestions" :key="i">
+                                        <div class="px-3 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate transition-colors"
+                                             x-text="btn.displayText || ('Button ' + (i+1))"></div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- 4. Carousel Preview -->
+                            <div x-show="template_type === 'carousel'" x-cloak style="display: none;" class="space-y-2">
+                                <div class="overflow-x-auto no-scrollbar flex gap-2.5 pb-2 -mx-1 px-1">
+                                    <template x-for="(c, cIndex) in carouselCards" :key="cIndex">
+                                        <div class="flex-shrink-0 rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs flex flex-col"
+                                             :class="carousel_width === 'SMALL_WIDTH' ? 'w-44' : 'w-52'">
+                                            <!-- Card Image -->
+                                            <div class="bg-slate-100 flex items-center justify-center overflow-hidden"
+                                                 :class="carousel_height === 'SHORT_HEIGHT' ? 'h-24' : 'h-36'">
+                                                <template x-if="c.mediaUrl">
+                                                    <img :src="c.mediaUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x300/e2e8f0/64748b?text=Card+' + (cIndex+1);">
+                                                </template>
+                                                <template x-if="!c.mediaUrl">
+                                                    <span class="text-slate-400 text-xs font-medium" x-text="'Card ' + (cIndex+1)"></span>
+                                                </template>
+                                            </div>
+                                            <!-- Card Text -->
+                                            <div class="p-2.5 flex-1 flex flex-col justify-between">
+                                                <div>
+                                                    <h5 class="font-bold text-xs text-slate-900 truncate" x-text="c.cardTitle || ('Card ' + (cIndex+1))"></h5>
+                                                    <p class="text-[10px] text-slate-600 mt-0.5 line-clamp-2" x-text="c.cardDescription || 'Description'"></p>
+                                                </div>
+                                                <!-- Card action buttons -->
+                                                <div class="mt-2 space-y-1">
+                                                    <template x-for="(btn, bIndex) in c.suggestions" :key="bIndex">
+                                                        <div class="px-2 py-1 rounded-lg bg-slate-50 border border-blue-200 text-blue-700 text-[10px] font-semibold text-center truncate"
+                                                             x-text="btn.displayText || 'Action'"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Bottom Mock Input Field -->
+                        <div class="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2">
+                            <div class="flex-1 py-1.5 px-3 rounded-full bg-slate-100 text-slate-400 text-xs font-medium">
+                                Chatting with RCS...
+                            </div>
+                            <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-2xs">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </div>
+                        </div>
+
+                        <!-- iOS Home Indicator -->
+                        <div class="pt-1 pb-1.5 bg-white flex justify-center items-center shrink-0">
+                            <div class="w-28 h-1 bg-slate-900/35 rounded-full"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function rcsBuilder() {
+    return {
+        // Core fields
+        name: '',
+        sender_profile_id: '',
+        message_type: 'PROMOTIONAL',
+        template_type: 'text_message',
+        submitting: false,
+        clientError: '',
+
+        // Type 1 & 2 content
+        text_message_content: '',
+        documentUrl: '',
+        media_order: 'media_at_top',
+
+        // Type 3 content (Rich Card Standalone)
+        card_orientation: 'VERTICAL',
+        card_height: 'MEDIUM_HEIGHT',
+        standalone: {
+            mediaUrl: '',
+            cardTitle: '',
+            cardDescription: '',
+        },
+
+        // Type 4 content (Carousel)
+        carousel_width: 'MEDIUM_WIDTH',
+        carousel_height: 'TALL_HEIGHT',
+        carouselCards: [
+            { mediaUrl: '', cardTitle: '', cardDescription: '', suggestions: [] },
+            { mediaUrl: '', cardTitle: '', cardDescription: '', suggestions: [] },
+        ],
+
+        // Suggestions / Buttons list
+        suggestions: [],
+
+        init() {
+            // Auto-select first sender profile if available
+            if (!this.sender_profile_id) {
+                const sel = document.querySelector('select[x-model="sender_profile_id"]');
+                if (sel && sel.options && sel.options.length > 1) {
+                    this.sender_profile_id = sel.options[1].value;
+                }
+            }
+        },
+
+        senderProfileName() {
+            const sel = document.querySelector('select[x-model="sender_profile_id"]');
+            if (sel && sel.selectedIndex > 0) {
+                return sel.options[sel.selectedIndex].text.split('(')[0].trim();
+            }
+            return '';
+        },
+
+        get detectedPlaceholders() {
+            let combinedText = '';
+            if (this.template_type === 'text_message' || this.template_type === 'text_message_with_media') {
+                combinedText += this.text_message_content;
+            } else if (this.template_type === 'rich_card') {
+                combinedText += ' ' + (this.standalone.cardTitle || '') + ' ' + (this.standalone.cardDescription || '');
+            } else if (this.template_type === 'carousel') {
+                this.carouselCards.forEach(c => {
+                    combinedText += ' ' + (c.cardTitle || '') + ' ' + (c.cardDescription || '');
+                });
+            }
+
+            const regex = /\[([a-zA-Z0-9_-]+)\]/g;
+            const matches = new Set();
+            let match;
+            while ((match = regex.exec(combinedText)) !== null) {
+                matches.add(match[1]);
+            }
+            return Array.from(matches);
+        },
+
+        // Suggestion management
+        addSuggestion() {
+            if (this.suggestions.length >= 4) return;
+            this.suggestions.push({
+                type: 'reply',
+                displayText: '',
+                postback: '',
+                url: '',
+                phoneNumber: '',
+                label: '',
+                latitude: '',
+                longitude: '',
+                query: '',
+                title: '',
+                description: '',
+                startTime: '',
+                endTime: '',
+                timeZone: 'Asia/Kolkata',
+            });
+        },
+
+        removeSuggestion(idx) {
+            this.suggestions.splice(idx, 1);
+        },
+
+        // Carousel Card management
+        addCarouselCard() {
+            if (this.carouselCards.length >= 10) return;
+            this.carouselCards.push({
+                mediaUrl: '',
+                cardTitle: '',
+                cardDescription: '',
+                suggestions: [],
+            });
+        },
+
+        removeCarouselCard(idx) {
+            if (this.carouselCards.length <= 2) {
+                alert('Carousels require at least 2 cards.');
+                return;
+            }
+            this.carouselCards.splice(idx, 1);
+        },
+
+        addCardSuggestion(cardIdx) {
+            const card = this.carouselCards[cardIdx];
+            if (card.suggestions.length >= 4) return;
+            card.suggestions.push({
+                type: 'reply',
+                displayText: '',
+                postback: '',
+                url: '',
+                phoneNumber: '',
+                label: '',
+                latitude: '',
+                longitude: '',
+                query: '',
+                title: '',
+                description: '',
+                startTime: '',
+                endTime: '',
+                timeZone: 'Asia/Kolkata',
+            });
+        },
+
+        removeCardSuggestion(cardIdx, btnIdx) {
+            this.carouselCards[cardIdx].suggestions.splice(btnIdx, 1);
+        },
+
+        getCSRFToken() {
+            return '{{ csrf_token }}' || (document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1]);
+        },
+
+        // Media Upload AJAX handler
+        uploadMediaFile(event, targetProp) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const csrfToken = this.getCSRFToken();
+
+            fetch("{% url 'templates_mgmt:media_upload' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData,
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (targetProp === 'documentUrl') {
+                        this.documentUrl = data.url;
+                    } else if (targetProp === 'richCardMedia') {
+                        this.standalone.mediaUrl = data.url;
+                    }
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Upload error: ' + err);
+            });
+        },
+
+        uploadCarouselMedia(event, cardIdx) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            const csrfToken = this.getCSRFToken();
+
+            fetch("{% url 'templates_mgmt:media_upload' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData,
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    this.carouselCards[cardIdx].mediaUrl = data.url;
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Upload error: ' + err);
+            });
+        },
+
+        // Helper to format suggestion payload according to OneXtel schema
+        formatSuggestion(s) {
+            const postbackVal = (s.postback && s.postback.trim()) ? s.postback.trim() : (s.displayText || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+            const obj = {
+                suggestionType: s.type,
+                displayText: s.displayText,
+                postback: postbackVal,
+            };
+            if (s.type === 'url_action') {
+                obj.url = s.url;
+            } else if (s.type === 'dialer_action') {
+                obj.phoneNumber = s.phoneNumber;
+            } else if (s.type === 'view_location_latlong') {
+                obj.label = s.label || '';
+                obj.latitude = s.latitude;
+                obj.longitude = s.longitude;
+            } else if (s.type === 'view_location_query') {
+                obj.query = s.query;
+            } else if (s.type === 'calendar_event') {
+                obj.title = s.title;
+                obj.description = s.description || '';
+                obj.startTime = s.startTime;
+                obj.endTime = s.endTime;
+                obj.timeZone = s.timeZone || 'Asia/Kolkata';
+            }
+            return obj;
+        },
+
+        // Assemble clean JSON payload conforming strictly to OneXtel API
+        buildPayload() {
+            const validSuggestions = this.suggestions
+                .filter(s => s.displayText && s.displayText.trim())
+                .map(s => this.formatSuggestion(s));
+
+            if (this.template_type === 'text_message') {
+                return {
+                    templateType: 'text_message',
+                    textMessageContent: this.text_message_content,
+                    suggestions: validSuggestions,
+                };
+            }
+
+            if (this.template_type === 'text_message_with_media') {
+                return {
+                    templateType: 'text_message_with_media',
+                    documentUrl: this.documentUrl,
+                    messageOrder: this.media_order,
+                    textMessageContent: this.text_message_content,
+                    suggestions: validSuggestions,
+                };
+            }
+
+            if (this.template_type === 'rich_card') {
+                return {
+                    templateType: 'rich_card',
+                    height: this.card_height,
+                    orientation: this.card_orientation,
+                    standAlone: {
+                        mediaUrl: this.standalone.mediaUrl,
+                        cardTitle: this.standalone.cardTitle,
+                        cardDescription: this.standalone.cardDescription,
+                        suggestions: validSuggestions,
+                    },
+                };
+            }
+
+            if (this.template_type === 'carousel') {
+                const formattedCards = this.carouselCards.map(c => ({
+                    mediaUrl: c.mediaUrl,
+                    cardTitle: c.cardTitle,
+                    cardDescription: c.cardDescription,
+                    suggestions: (c.suggestions || [])
+                        .filter(s => s.displayText && s.displayText.trim())
+                        .map(s => this.formatSuggestion(s)),
+                }));
+
+                return {
+                    templateType: 'carousel',
+                    width: this.carousel_width,
+                    height: this.carousel_height,
+                    templateState: 'Create',
+                    carouselList: formattedCards,
+                };
+            }
+        },
+
+        // Client-side quick checks & API submission
+        submitTemplate() {
+            this.clientError = '';
+
+            if (!this.name.trim()) {
+                this.clientError = 'Please specify a unique template name.';
+                return;
+            }
+            if (!/^[a-zA-Z0-9_]+$/.test(this.name.trim())) {
+                this.clientError = 'Template name must contain only letters, numbers, and underscores.';
+                return;
+            }
+            if (!this.sender_profile_id) {
+                this.clientError = 'Please select a Sender Profile.';
+                return;
+            }
+
+            // Layout-specific validations
+            if (this.template_type === 'text_message') {
+                if (!this.text_message_content.trim()) {
+                    this.clientError = 'Please enter the message body content.';
+                    return;
+                }
+            } else if (this.template_type === 'text_message_with_media') {
+                if (!this.documentUrl.trim()) {
+                    this.clientError = 'Please enter or upload a valid Media URL.';
+                    return;
+                }
+                if (!this.text_message_content.trim()) {
+                    this.clientError = 'Please enter the message text.';
+                    return;
+                }
+            } else if (this.template_type === 'rich_card') {
+                if (!this.standalone.cardTitle.trim() && !this.standalone.cardDescription.trim()) {
+                    this.clientError = 'Rich Card requires at least a Card Title or Card Description.';
+                    return;
+                }
+            } else if (this.template_type === 'carousel') {
+                if (this.carouselCards.length < 2 || this.carouselCards.length > 10) {
+                    this.clientError = 'Carousel must contain between 2 and 10 cards.';
+                    return;
+                }
+                for (let i = 0; i < this.carouselCards.length; i++) {
+                    const c = this.carouselCards[i];
+                    if (!c.cardTitle.trim() && !c.cardDescription.trim()) {
+                        this.clientError = `Card #${i + 1} requires at least a Title or Description.`;
+                        return;
+                    }
+                }
+            }
+
+            const payload = this.buildPayload();
+            this.submitting = true;
+            const csrfToken = this.getCSRFToken();
+
+            fetch("{% url 'templates_mgmt:template_create' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    name: this.name.trim(),
+                    template_type: this.template_type,
+                    message_type: this.message_type,
+                    sender_profile_id: this.sender_profile_id,
+                    payload: payload,
+                }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.submitting = false;
+                if (data.status === 'success') {
+                    window.location.href = "{% url 'templates_mgmt:template_list' %}";
+                } else {
+                    this.clientError = data.error || 'Server error occurred.';
+                }
+            })
+            .catch(err => {
+                this.submitting = false;
+                this.clientError = 'Request failed: ' + err;
+            });
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#f4f5f7] text-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RCS Portal{% endblock %} | Next-Gen Enterprise Messaging</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Figtree', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 400: '#60a5fa', 500: '#3b82f6',
+                            600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Figtree & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for Analytics & Revenue Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if (window.Chart) {
+            Chart.defaults.font.family = "'Figtree', system-ui, -apple-system, sans-serif";
+        }
+    </script>
+    <style>
+        /* Critical FOUC prevention for Alpine.js, modals and dropdowns (must load before Alpine) */
+        [x-cloak], .fouc-hidden { display: none !important; }
+
+        body, button, input, select, textarea {
+            font-family: 'Figtree', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        code, pre, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Default inputs & forms (other pages rely on these) */
+        input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="range"]),
+        select, textarea {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            border-radius: 0.75rem;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            outline: none;
+        }
+
+        /* App shell */
+        .ic { width: 1.1rem; height: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .nl { display: flex; align-items: center; gap: .75rem; padding: .55rem .75rem; border-radius: .7rem; font-size: .875rem; font-weight: 500; color: #475569; transition: background .15s, color .15s; }
+        .nl .ic { color: #94a3b8; transition: color .15s; }
+        .nl:hover { background: #f8fafc; color: #0f172a; }
+        .nl:hover .ic { color: #475569; }
+        .nl.on { background: #eff6ff; color: #1d4ed8; font-weight: 600; box-shadow: inset 3px 0 0 #2563eb; }
+        .nl.on .ic { color: #2563eb; }
+        .nh { padding: 0 .75rem; margin-bottom: .35rem; font-size: .75rem; font-weight: 600; color: #94a3b8; }
+        .dd { display: block; padding: .5rem 1rem; font-size: .875rem; color: #475569; }
+        .dd:hover { background: #f8fafc; color: #0f172a; }
+        :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+    </style>
+    <!-- Alpine.js & HTMX -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full antialiased bg-[#f4f5f7] text-slate-900">
+
+    <!-- Icon sprite (used by the sidebar, header and public layout) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="rcs-logo" viewBox="0 0 512 512" fill="none">
+            <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/>
+            <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/>
+            <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/>
+        </symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></symbol>
+        <symbol id="i-coin" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></symbol>
+        <symbol id="i-logs" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></symbol>
+        <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></symbol>
+        <symbol id="i-camp" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></symbol>
+        <symbol id="i-code" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></symbol>
+        <symbol id="i-cog" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></symbol>
+        <symbol id="i-out" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></symbol>
+        <symbol id="i-chev" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></symbol>
+        <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h6m-6 4h4"/></symbol>
+    </svg>
+
+    {% if request.user.is_authenticated %}
+    <div class="flex h-screen overflow-hidden" style="height:100dvh" x-data="{ sidebarOpen: false, userMenuOpen: false }" @keydown.escape.window="sidebarOpen = false; userMenuOpen = false">
+
+        <!-- Mobile sidebar backdrop -->
+        <div x-show="sidebarOpen" x-cloak style="display: none;"
+             x-transition:enter="transition-opacity ease-linear duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" @click="sidebarOpen = false"></div>
+
+        <!-- Sidebar -->
+        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+               class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 transition-transform duration-300 ease-in-out lg:static lg:inset-auto flex flex-col shrink-0">
+
+            <div class="h-16 flex items-center justify-between px-5 shrink-0">
+                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3">
+                    <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0"><svg class="w-full h-full"><use href="#rcs-logo"/></svg></span>
+                    <span class="leading-tight">
+                        <span class="block font-extrabold text-lg text-slate-900 tracking-tight">Azmobia</span>
+                        <span class="block text-xs font-medium text-slate-400">RCS Portal</span>
+                    </span>
+                </a>
+                <button @click="sidebarOpen = false" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Close menu"><svg class="ic"><use href="#i-x"/></svg></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-3 py-3 space-y-6">
+                <div>
+                    <p class="nh">Main</p>
+                    <nav class="space-y-1" aria-label="Main">
+                        {% if request.user.is_admin %}
+                            <a href="{% url 'accounts:admin_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'admin_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
+                            <a href="{% url 'onboarding:admin_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Onboarding Requests</a>
+                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
+                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
+                            <a href="{% url 'accounts:user_list' %}" class="nl{% if request.resolver_match.view_name == 'accounts:user_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg>User Management</a>
+                            <a href="{% url 'wallet:assign_credit' %}" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg>Assign Credit</a>
+                            <a href="{% url 'wallet:statement' %}" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg>Wallet</a>
+                            <a href="{% url 'reports:admin_overview' %}" class="nl{% if request.resolver_match.view_name == 'reports:admin_overview' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg>Reports</a>
+
+                        {% elif request.user.is_reseller %}
+                            <a href="{% url 'accounts:reseller_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
+                            <a href="{% url 'onboarding:client_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Bot Onboarding</a>
+                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
+                            <a href="{% url 'accounts:client_list' %}" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg>Clients</a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
+                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
+                            <a href="{% url 'wallet:assign_credit' %}" class="nl{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'transfer' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg>Assign Credit</a>
+                            <a href="{% url 'wallet:statement' %}" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg>Wallet Ledger</a>
+
+                        {% else %}
+                            <a href="{% url 'accounts:user_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'user_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
+                            <a href="{% url 'onboarding:client_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Bot Onboarding</a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
+                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
+                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
+                            <a href="{% url 'reports:user_usage' %}" class="nl{% if request.resolver_match.view_name == 'reports:user_usage' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg>Reports</a>
+                        {% endif %}
+                    </nav>
+                </div>
+
+                <div>
+                    <p class="nh">Settings</p>
+                    <nav class="space-y-1" aria-label="Settings">
+                        <a href="{% url 'accounts:user_profile' %}" class="nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}"><svg class="ic"><use href="#i-user"/></svg>My Profile</a>
+                        {% if request.user.is_admin %}
+                        <a href="{% url 'reports:admin_dlr_logs' %}" class="nl{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Marketplace Sync</a>
+                        {% endif %}
+                        <a href="{% url 'api:settings' %}" class="nl{% if request.resolver_match.view_name == 'api:settings' %} on{% endif %}"><svg class="ic"><use href="#i-code"/></svg>API Collection</a>
+                        {% if request.user.is_superadmin %}
+                        <a href="{% url 'accounts:system_settings' %}" class="nl{% if request.resolver_match.url_name == 'system_settings' %} on{% endif %}"><svg class="ic"><use href="#i-cog"/></svg>Settings</a>
+                        {% endif %}
+                        <a href="{% url 'api:documentation' %}" target="_blank" rel="noopener" class="nl"><svg class="ic"><use href="#i-book"/></svg>Help Center</a>
+                    </nav>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main column -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#f4f5f7]">
+
+            {% if impersonator_user %}
+            <div class="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm text-amber-900">
+                <p class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                    <span><strong>Impersonation active.</strong> You are acting as <strong>{{ request.user.company_name|default:request.user.email }}</strong> (started by {{ impersonator_user.email }}).</span>
+                </p>
+                <form method="post" action="{% url 'accounts:stop_impersonation' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-colors">Exit impersonation</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Top bar -->
+            <header class="h-16 flex items-center justify-between px-5 lg:px-8 bg-[#f4f5f7]/90 backdrop-blur border-b border-slate-200/70 shrink-0 sticky top-0 z-30">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button @click="sidebarOpen = true" class="lg:hidden p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60" aria-label="Open menu"><svg class="ic" style="width:1.4rem;height:1.4rem"><use href="#i-menu"/></svg></button>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">{% block header_title %}Dashboard{% endblock %}</h1>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Wallet balance credit widget before notification -->
+                    <a href="{% url 'wallet:statement' %}" class="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-blue-50 border border-blue-100 hover:border-blue-200 hover:bg-blue-100/60 transition-all text-left shadow-2xs group" title="Wallet Balance">
+                        <div class="flex flex-col">
+                            <span class="mt-0.5 font-mono font-bold text-xs sm:text-sm text-slate-900 leading-none">{{ user_wallet_balance }}</span>
+                        </div>
+                    </a>
+
+                    <button class="p-2.5 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors" title="Notifications" aria-label="Notifications"><svg class="ic" style="width:1rem;height:1rem"><use href="#i-bell"/></svg></button>
+
+                    <div class="relative" @click.outside="userMenuOpen = false">
+                        <button @click="userMenuOpen = !userMenuOpen" :aria-expanded="userMenuOpen" class="flex items-center gap-2 py-1 pl-1 pr-2 rounded-full hover:bg-slate-200/60 transition-colors">
+                            <span class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm border-2 border-white">{{ request.user.company_name|default:request.user.username|slice:":1"|upper }}</span>
+                            <span class="hidden md:block text-sm font-semibold text-slate-700 max-w-[10rem] truncate">{{ request.user.company_name|default:request.user.username }}</span>
+                            <svg class="ic hidden sm:block text-slate-400" style="width:.9rem;height:.9rem"><use href="#i-chev"/></svg>
+                        </button>
+
+                        <div x-show="userMenuOpen" x-cloak style="display: none;"
+                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95"
+                             class="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl py-2 z-50 origin-top-right">
+                            <div class="px-4 pb-2.5 mb-1 border-b border-slate-100">
+                                <p class="text-sm font-semibold text-slate-900 truncate">{{ request.user.company_name|default:request.user.username }}</p>
+                                <p class="text-xs text-blue-600 font-mono truncate">@{{ request.user.username }}</p>
+                                {% if request.user.email %}<p class="text-xs text-slate-400 truncate">{{ request.user.email }}</p>{% endif %}
+                            </div>
+                            <a href="{% url 'accounts:user_profile' %}" class="dd flex items-center justify-between"><span>My Profile</span><svg class="ic text-slate-400" style="width:.85rem;height:.85rem"><use href="#i-user"/></svg></a>
+                            <a href="{% url 'wallet:statement' %}" class="dd flex items-center justify-between"><span>Wallet Balance</span><span class="font-bold font-mono text-emerald-600">{{ user_wallet_balance }}</span></a>
+                            <a href="{% url 'api:settings' %}" class="dd">API &amp; Webhooks</a>
+                            {% if request.user.is_superadmin %}
+                            <a href="{% url 'accounts:system_settings' %}" class="dd">System Settings</a>
+                            {% endif %}
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <form method="post" action="{% url 'accounts:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center justify-between">
+                                    <span>Sign Out</span><svg class="ic" style="width:1rem;height:1rem"><use href="#i-out"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page body -->
+            <main class="flex-1 p-5 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+                {% if messages %}
+                <div class="space-y-3">
+                    {% for message in messages %}
+                    <div x-data="{ show: true }" x-show="show" role="alert" class="p-4 rounded-2xl border flex items-start justify-between gap-3 text-sm font-medium {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-800{% elif message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+                        <span>{{ message }}</span>
+                        <button type="button" @click="show = false" class="opacity-60 hover:opacity-100 shrink-0" aria-label="Dismiss"><svg class="ic" style="width:1rem;height:1rem"><use href="#i-x"/></svg></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+    {% block unauthenticated_layout %}
+    <!-- Public / non-authenticated layout (default for password reset, lockout) -->
+    <div class="relative min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden bg-gradient-to-b from-blue-50 via-[#f8fafc] to-blue-50/40">
+        <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-blue-400/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative w-full max-w-md">
+            <div class="text-center">
+                <span class="inline-flex w-14 h-14 rounded-2xl bg-white border border-blue-100 p-2 shadow-md shadow-blue-500/10 mb-4"><svg class="w-full h-full" aria-label="RCS Logo"><use href="#rcs-logo"/></svg></span>
+                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">RCS Portal</h2>
+                <p class="mt-2 text-sm text-slate-500">Enterprise Rich Communication Services Engine</p>
+            </div>
+
+            <div class="mt-8">
+                {% if messages %}
+                <div class="space-y-3 mb-6">
+                    {% for message in messages %}
+                    <div role="alert" class="p-3.5 rounded-xl border text-sm font-medium {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-800{% elif message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block public_content %}{% endblock %}
+            </div>
+
+            <p class="mt-8 text-center text-xs text-slate-400">&copy; 2026 RCS Portal &bull; All rights reserved</p>
+        </div>
+    </div>
+    {% endblock unauthenticated_layout %}
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

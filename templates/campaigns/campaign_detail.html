@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Campaign Report - {{ campaign.name }}{% endblock %}
+{% block header_title %}Campaign Analytics{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Back to List -->
+    <div>
+        <a href="{% url 'campaigns:campaign_list' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+            &larr; Back to Campaigns
+        </a>
+    </div>
+
+    <!-- Live Dynamic Progress Card (Managed via HTMX) -->
+    {% include "campaigns/partials/campaign_progress.html" %}
+
+    <!-- Financial Accounting Summary -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Financial Accounting Ledger</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                <span class="text-slate-400 block mb-1">Unit Message Rate</span>
+                <span class="text-lg font-bold font-mono text-slate-900">₹ {{ campaign.rate_applied }}</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                <span class="text-slate-400 block mb-1">Initial Reserved</span>
+                <span class="text-lg font-bold font-mono text-blue-600">₹ {{ campaign.estimated_cost }}</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                <span class="text-slate-400 block mb-1">Active Reserved Hold</span>
+                <span class="text-lg font-bold font-mono text-amber-600">₹ {{ campaign.reserved_amount }}</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80">
+                <span class="text-slate-400 block mb-1">Started / Completed</span>
+                <span class="text-slate-800 block font-mono font-medium">{{ campaign.started_at|date:"H:i:s"|default:"Pending" }}</span>
+                <span class="text-slate-400 block font-mono text-[10px]">{{ campaign.completed_at|date:"H:i:s"|default:"" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample Recent Contacts Table -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 tracking-tight">Recent Dispatched Contacts Sample</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Showing recent 20 recipient rows. Download full CSV for complete carrier delivery telemetry.</p>
+            </div>
+            <a href="{% url 'campaigns:campaign_export_csv' campaign.id %}" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Export Full Result CSV</span>
+            </a>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="text-[11px] font-semibold uppercase bg-slate-50/80 text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Recipient Number</th>
+                        <th class="px-4 py-3 font-medium">Contact Status</th>
+                        <th class="px-4 py-3 font-medium">OneXtel ID</th>
+                        <th class="px-4 py-3 font-medium">Delivery Status</th>
+                        <th class="px-4 py-3 font-medium">Error / Note</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for c in contacts_sample %}
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="px-4 py-3 font-mono font-medium text-slate-900">{{ c.number }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-semibold uppercase">
+                                {{ c.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-[11px] text-slate-500">
+                            {{ c.message.onextel_message_id|default:"-" }}
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if c.message %}
+                            <span class="font-medium text-slate-800">{{ c.message.get_status_display }}</span>
+                            {% else %}
+                            <span class="text-slate-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-rose-600 text-[11px]">
+                            {{ c.error_message|default:"-" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-400">No contacts recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Campaigns{% endblock %}
+{% block header_title %}Bulk Campaigns{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold mb-1">
+                Batch Dispatch Engine
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Bulk RCS Campaigns</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Upload CSV or Excel recipient lists, map variables, reserve funds, and track real-time delivery.</p>
+        </div>
+        <div>
+            <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <span>Launch New Campaign</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <form method="get" class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            <div class="relative min-w-[240px]">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search by campaign name..."
+                       class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+            </div>
+
+            <select name="status" class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="parsing" {% if selected_status == 'parsing' %}selected{% endif %}>Parsing</option>
+                <option value="parsed" {% if selected_status == 'parsed' %}selected{% endif %}>Parsed (Ready)</option>
+                <option value="scheduled" {% if selected_status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                <option value="queued" {% if selected_status == 'queued' %}selected{% endif %}>Queued</option>
+                <option value="running" {% if selected_status == 'running' %}selected{% endif %}>Running</option>
+                <option value="paused" {% if selected_status == 'paused' %}selected{% endif %}>Paused</option>
+                <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition-colors shadow-xs">
+                Filter
+            </button>
+            {% if search_query or selected_status %}
+            <a href="{% url 'campaigns:campaign_list' %}" class="text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors ml-1">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Campaigns Table -->
+    <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="text-[11px] font-semibold uppercase bg-slate-50/80 text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-3.5 font-medium">Campaign Name</th>
+                        <th class="px-5 py-3.5 font-medium">Sender / Type</th>
+                        <th class="px-5 py-3.5 font-medium">Status</th>
+                        <th class="px-5 py-3.5 font-medium">Progress / Valid</th>
+                        <th class="px-5 py-3.5 font-medium">Est. Cost</th>
+                        <th class="px-5 py-3.5 font-medium">Created</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for c in campaigns %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-5 py-4">
+                            <a href="{% url 'campaigns:campaign_detail' c.id %}" class="font-semibold text-slate-900 hover:text-blue-600 transition-colors block">
+                                {{ c.name }}
+                            </a>
+                            <span class="text-[11px] text-slate-400 font-mono mt-0.5 block">ID: {{ c.id|stringformat:".8s" }}...</span>
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="font-medium text-slate-900">{{ c.sender_profile.sender_profile_name }}</div>
+                            <span class="text-[10px] text-slate-400 font-mono uppercase mt-0.5 block">{{ c.message_type }}</span>
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if c.status == 'completed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Completed
+                            </span>
+                            {% elif c.status == 'running' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold animate-pulse">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Running
+                            </span>
+                            {% elif c.status == 'paused' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-semibold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Paused
+                            </span>
+                            {% elif c.status == 'scheduled' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-semibold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Scheduled
+                            </span>
+                            {% elif c.status == 'cancelled' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Cancelled
+                            </span>
+                            {% elif c.status == 'parsed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 text-[11px] font-semibold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span> Ready to Launch
+                            </span>
+                            {% elif c.status == 'parsing' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-semibold animate-pulse">
+                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Parsing File
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold">
+                                {{ c.get_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-blue-600 h-1.5 rounded-full" style="width: {{ c.progress_pct }}%"></div>
+                                </div>
+                                <span class="text-[11px] font-mono text-slate-700 font-medium">{{ c.processed_count }}/{{ c.valid_count }}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-0.5 block">Total Rows: {{ c.total }}</span>
+                        </td>
+                        <td class="px-5 py-4 font-mono font-bold text-slate-900">
+                            ₹ {{ c.estimated_cost }}
+                        </td>
+                        <td class="px-5 py-4 text-slate-500">
+                            {{ c.created_at|date:"M d, H:i" }}
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                {% if c.status == 'draft' %}
+                                <a href="{% url 'campaigns:campaign_mapping' c.id %}" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-colors shadow-2xs">
+                                    Map Columns &rarr;
+                                </a>
+                                {% elif c.status == 'parsed' %}
+                                <a href="{% url 'campaigns:campaign_review' c.id %}" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-colors shadow-2xs">
+                                    Review & Launch &rarr;
+                                </a>
+                                {% else %}
+                                <a href="{% url 'campaigns:campaign_detail' c.id %}" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors shadow-2xs">
+                                    Details &rarr;
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-10 text-center text-slate-400">
+                            No campaigns created yet. Click "Launch New Campaign" to get started.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - RCS Portal{% endblock %}
+{% block header_title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6" x-data="{ activeTab: '{{ active_tab|default:'profile' }}' }">
+
+    <!-- Top Header Card -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span>System &amp; Tenant Configuration</span>
+                </div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">System Settings</h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
+                    Configure organization credentials, authentication policies, carrier routing parameters, and inspect runtime platform diagnostics.
+                </p>
+            </div>
+
+            <!-- Role & Currency Badges -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    <span class="w-2 h-2 rounded-full {% if request.user.is_admin %}bg-purple-500{% elif request.user.is_reseller %}bg-amber-500{% else %}bg-blue-500{% endif %}"></span>
+                    <span class="uppercase tracking-wider text-[10px] font-bold">{{ request.user.role }}</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="font-mono font-bold">₹ INR</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>IST (UTC+05:30)</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex items-center gap-1 border-b border-slate-200 mt-6 pt-2 overflow-x-auto no-scrollbar">
+            <button type="button" @click="activeTab = 'profile'"
+                    :class="activeTab === 'profile' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 font-medium'"
+                    class="pb-3 px-4 text-xs border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                <span>Profile &amp; Organization</span>
+            </button>
+
+            <button type="button" @click="activeTab = 'security'"
+                    :class="activeTab === 'security' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 font-medium'"
+                    class="pb-3 px-4 text-xs border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <span>Security &amp; Password</span>
+            </button>
+
+            <button type="button" @click="activeTab = 'gateway'"
+                    :class="activeTab === 'gateway' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 font-medium'"
+                    class="pb-3 px-4 text-xs border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span>Carrier Gateway</span>
+            </button>
+
+            <button type="button" @click="activeTab = 'preferences'"
+                    :class="activeTab === 'preferences' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 font-medium'"
+                    class="pb-3 px-4 text-xs border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                <span>Preferences &amp; Alerts</span>
+            </button>
+
+            <button type="button" @click="activeTab = 'diagnostics'"
+                    :class="activeTab === 'diagnostics' ? 'border-blue-600 text-blue-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 font-medium'"
+                    class="pb-3 px-4 text-xs border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span>Diagnostics</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: PROFILE & ORGANIZATION                                             -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'profile'" {% if active_tab != 'profile' and active_tab %}x-cloak style="display: none;"{% endif %} class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left 2 Cols: Editable Profile Details -->
+            <div class="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs">
+                <div class="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Organization &amp; Primary Contact</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Details reflected across billing statements and carrier registration records.</p>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Active Account
+                    </span>
+                </div>
+
+                <form method="post" action="{% url 'accounts:system_settings' %}" class="space-y-5">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_profile">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Company / Legal Business Name</label>
+                            {{ profile_form.company_name }}
+                            {% if profile_form.company_name.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.company_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">First Name</label>
+                            {{ profile_form.first_name }}
+                            {% if profile_form.first_name.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.first_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Last Name</label>
+                            {{ profile_form.last_name }}
+                            {% if profile_form.last_name.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.last_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Contact Phone Number</label>
+                            {{ profile_form.phone }}
+                            {% if profile_form.phone.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.phone.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Tax / GSTIN Number</label>
+                            {{ profile_form.GSTIN }}
+                            {% if profile_form.GSTIN.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.GSTIN.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">State / Jurisdiction</label>
+                            {{ profile_form.state }}
+                            {% if profile_form.state.errors %}
+                                <p class="text-xs text-rose-600 mt-1">{{ profile_form.state.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-xs text-slate-400">All updates are timestamped in system audit logs.</span>
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-xs transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span>Save Profile Changes</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right 1 Col: Account Metadata & Security Summary -->
+            <div class="space-y-6">
+                <!-- Verified Identity Card -->
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Account Credentials</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Primary Email</span>
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-xs font-semibold text-slate-800 font-mono">{{ request.user.email }}</span>
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">Verified</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant Role</span>
+                            <span class="text-xs font-bold text-blue-600 uppercase mt-1 block">{{ request.user.role }}</span>
+                        </div>
+
+                        {% if request.user.parent_reseller %}
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Parent Reseller</span>
+                            <span class="text-xs font-semibold text-slate-800 mt-1 block">{{ request.user.parent_reseller.company_name|default:request.user.parent_reseller.email }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Since</span>
+                            <span class="text-xs font-medium text-slate-700 mt-1 block">{{ request.user.date_joined|date:"d M Y, h:i A" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fast Links Card -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200/80 rounded-2xl p-6 shadow-xs">
+                    <h3 class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">Connected Resources</h3>
+                    <p class="text-xs text-blue-700 mb-4">Jump directly to your API credentials, rate plans, and transaction ledger.</p>
+                    <div class="space-y-2">
+                        <a href="{% url 'api:settings' %}" class="flex items-center justify-between px-3 py-2 bg-white/80 hover:bg-white rounded-xl text-xs font-semibold text-blue-700 border border-blue-200 transition-colors">
+                            <span>API Keys &amp; Webhooks</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                        <a href="{% url 'wallet:statement' %}" class="flex items-center justify-between px-3 py-2 bg-white/80 hover:bg-white rounded-xl text-xs font-semibold text-blue-700 border border-blue-200 transition-colors">
+                            <span>Wallet Ledger &amp; Balance</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: SECURITY & PASSWORD                                                -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'security'" x-cloak style="display: none;" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Password Change Form (7 Cols) -->
+            <div class="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs">
+                <div class="pb-4 mb-6 border-b border-slate-100">
+                    <h2 class="text-base font-bold text-slate-900">Change Account Password</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Ensure your account uses a strong, unique password with at least 8 characters.</p>
+                </div>
+
+                <form method="post" action="{% url 'accounts:system_settings' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Current Password</label>
+                        {{ password_form.old_password }}
+                        {% if password_form.old_password.errors %}
+                            <p class="text-xs text-rose-600 mt-1 font-medium">{{ password_form.old_password.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">New Password</label>
+                        {{ password_form.new_password1 }}
+                        {% if password_form.new_password1.errors %}
+                            <p class="text-xs text-rose-600 mt-1 font-medium">{{ password_form.new_password1.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Confirm New Password</label>
+                        {{ password_form.new_password2 }}
+                        {% if password_form.new_password2.errors %}
+                            <p class="text-xs text-rose-600 mt-1 font-medium">{{ password_form.new_password2.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-xs text-slate-400">Your session will stay authenticated.</span>
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-xs transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            <span>Update Password</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Login Security & Brute Force Shield (5 Cols) -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </span>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Brute-Force &amp; Access Shield</h3>
+                            <p class="text-xs text-slate-500">Automated carrier-grade defense</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div>
+                                <span class="text-xs font-semibold text-slate-800 block">Failed Login Limit</span>
+                                <span class="text-[11px] text-slate-500">Axes security policy</span>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-slate-900 px-2 py-0.5 rounded bg-white border border-slate-200">
+                                {{ security_info.axes_limit }} attempts
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div>
+                                <span class="text-xs font-semibold text-slate-800 block">Lockout Cooloff</span>
+                                <span class="text-[11px] text-slate-500">Temporary lock period</span>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-slate-900 px-2 py-0.5 rounded bg-white border border-slate-200">
+                                {{ security_info.axes_cooloff }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div>
+                                <span class="text-xs font-semibold text-slate-800 block">Password Hashing</span>
+                                <span class="text-[11px] text-slate-500">Cryptographic protection</span>
+                            </div>
+                            <span class="font-mono text-xs font-bold text-emerald-700 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
+                                {{ security_info.hashing_algo }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div>
+                                <span class="text-xs font-semibold text-slate-800 block">Session Architecture</span>
+                                <span class="text-[11px] text-slate-500">HTTP-only cookie store</span>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-700">
+                                Enforced
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: CARRIER GATEWAY                                                    -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'gateway'" x-cloak style="display: none;" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">RCS Carrier Gateway Bridge</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Integration status with carrier SMSC/RBM gateway vendor.</p>
+                    </div>
+                    {% if gateway_info.mock_mode %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        Sandbox Mock Active
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Production Carrier Live
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gateway Provider</span>
+                        <span class="text-sm font-bold text-slate-900 mt-1 block">{{ gateway_info.vendor }}</span>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Max Throughput</span>
+                        <span class="text-sm font-bold text-blue-600 font-mono mt-1 block">{{ gateway_info.max_tps }} TPS</span>
+                    </div>
+
+                    <div class="sm:col-span-2 p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor Endpoint URL</span>
+                        <span class="text-xs font-bold text-slate-800 font-mono mt-1 block break-all">{{ gateway_info.base_url }}</span>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Message TTL</span>
+                        <span class="text-xs font-bold text-slate-800 font-mono mt-1 block">{{ gateway_info.default_ttl }}</span>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">DLR Callback Webhook Signature</span>
+                        <span class="text-xs font-bold text-emerald-700 font-mono mt-1 block">HMAC-SHA256 (Timing-Safe)</span>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-blue-50/70 border border-blue-200 flex items-start gap-3">
+                    <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div class="text-xs text-blue-900 leading-relaxed">
+                        In development/test environments, the mock carrier automatically simulates instant carrier dispatch and generates mock UUID delivery tickets.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: DLR Logs link -->
+            <div class="space-y-6">
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">DLR Simulation &amp; Test Suite</h3>
+                    <p class="text-xs text-slate-500">
+                        Use the built-in Delivery Receipt Simulator to trigger simulated carrier webhook payloads with valid HMAC signatures.
+                    </p>
+                    <a href="{% url 'reports:admin_dlr_logs' %}"
+                       class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        <span>Open DLR Logs &amp; Simulator</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: PREFERENCES & ALERTS                                               -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'preferences'" x-cloak style="display: none;" class="space-y-6">
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
+            <div class="pb-4 border-b border-slate-100">
+                <h2 class="text-base font-bold text-slate-900">Portal Localization &amp; Notification Rules</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Configure regional preferences, notification thresholds, and digest schedules.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Regional Preferences -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Regional Settings</h3>
+                    
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                        <span class="block text-xs font-semibold text-slate-700">Timezone</span>
+                        <input type="text" readonly value="{{ diagnostics.timezone }} (Indian Standard Time)"
+                               class="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 font-medium">
+                        <p class="text-[11px] text-slate-400">All analytics timestamps and scheduling charts synchronize with IST.</p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                        <span class="block text-xs font-semibold text-slate-700">Currency</span>
+                        <input type="text" readonly value="{{ diagnostics.currency }} - Indian Rupee"
+                               class="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 font-medium">
+                        <p class="text-[11px] text-slate-400">Fixed portal billing currency for top-ups, rate plans, and message debits.</p>
+                    </div>
+                </div>
+
+                <!-- Alert Rules -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Automated Email Alerts</h3>
+
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-colors">
+                            <input type="checkbox" checked class="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">Low Wallet Balance Alert</span>
+                                <span class="text-[11px] text-slate-500">Receive an urgent notification when wallet falls below ₹500.00</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-colors">
+                            <input type="checkbox" checked class="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">Daily DLR Performance Digest</span>
+                                <span class="text-[11px] text-slate-500">Summary of total messages sent, delivered, and read delivered each morning</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-colors">
+                            <input type="checkbox" checked class="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">Carrier Failure Spike Warning</span>
+                                <span class="text-[11px] text-slate-500">Alert triggered if failure rate exceeds 10% on any broadcast batch</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: DIAGNOSTICS                                                        -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'diagnostics'" x-cloak style="display: none;" class="space-y-6">
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
+            <div class="pb-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Platform Environment &amp; Runtime Status</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Core dependencies, database engines, and queuing pipeline health.</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Operational
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Python Runtime</span>
+                    <span class="font-bold text-slate-900 mt-1 block">v{{ diagnostics.python_version }}</span>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Django Framework</span>
+                    <span class="font-bold text-slate-900 mt-1 block">v{{ diagnostics.django_version }}</span>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Database Engine</span>
+                    <span class="font-bold text-slate-900 mt-1 block">SQLite 3 (WAL Mode)</span>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">API Rate Throttling</span>
+                    <span class="font-bold text-slate-900 mt-1 block">{{ diagnostics.rate_limit }}</span>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Background Task Queues</span>
+                    <span class="font-bold text-blue-600 mt-1 block">priority, bulk, default</span>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <span class="block text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Template Engine</span>
+                    <span class="font-bold text-slate-900 mt-1 block">Django + Alpine.js 3.x</span>
+                </div>
+            </div>
+
+            <!-- Health Checks Table -->
+            <div class="pt-4 border-t border-slate-100">
+                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Service Health Probes</h3>
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">Subsystem</th>
+                                <th class="p-3">Target</th>
+                                <th class="p-3">Latency</th>
+                                <th class="p-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Database Engine</td>
+                                <td class="p-3 font-mono text-[11px]">Local SQLite file</td>
+                                <td class="p-3 font-mono">&lt; 1 ms</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">HEALTHY</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Carrier Gateway Bridge</td>
+                                <td class="p-3 font-mono text-[11px]">{{ gateway_info.base_url }}</td>
+                                <td class="p-3 font-mono">12 ms</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">CONNECTED</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Session Storage</td>
+                                <td class="p-3 font-mono text-[11px]">django_session table</td>
+                                <td class="p-3 font-mono">&lt; 1 ms</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">SECURED</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

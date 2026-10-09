@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Message Delivery Logs - RCS Portal{% endblock %}
+{% block header_title %}Message History{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">RCS Message Logs</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Audit dispatched messages, carrier IDs, wallet deductions, and delivery state transitions.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'reports:export_messages_csv' %}?{{ request.GET.urlencode }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs transition-colors shadow-2xs">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>Export CSV</span>
+            </a>
+            <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-xs transition-all text-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <span>New Campaign</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar Card -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-end">
+            <!-- Search -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Search</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Phone, Msg ID, OneXtel..."
+                           class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                </div>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Delivery Status</label>
+                <select name="status" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    <option value="">All Statuses</option>
+                    <option value="queued" {% if request.GET.status == 'queued' %}selected{% endif %}>Queued</option>
+                    <option value="submitted" {% if request.GET.status == 'submitted' %}selected{% endif %}>Submitted to Carrier</option>
+                    <option value="sent" {% if request.GET.status == 'sent' %}selected{% endif %}>Sent</option>
+                    <option value="delivered" {% if request.GET.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="read" {% if request.GET.status == 'read' %}selected{% endif %}>Read</option>
+                    <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+
+            <!-- Message Type Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Intent Channel</label>
+                <select name="message_type" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+                    <option value="">All Intents</option>
+                    <option value="PROMOTIONAL" {% if request.GET.message_type == 'PROMOTIONAL' %}selected{% endif %}>Promotional (Bulk)</option>
+                    <option value="TRANSACTIONAL" {% if request.GET.message_type == 'TRANSACTIONAL' %}selected{% endif %}>Transactional (Priority)</option>
+                    <option value="OTP" {% if request.GET.message_type == 'OTP' %}selected{% endif %}>OTP (Priority)</option>
+                </select>
+            </div>
+
+            <!-- Date Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Date Dispatched</label>
+                <input type="date" name="date" value="{{ request.GET.date|default:'' }}"
+                       class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs font-medium">
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors">
+                    Filter
+                </button>
+                <a href="{% url 'messaging:message_logs' %}" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 transition-colors shadow-2xs">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Card -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Recipient</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Message ID & Carrier Ref</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Content & Intent</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Status</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium text-right">Cost (INR)</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium text-right">Dispatched</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for m in messages_list %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <!-- Recipient Phone & User -->
+                        <td class="px-5 py-4">
+                            <div class="font-mono font-semibold text-slate-900">
+                                {{ m.prefix }} {{ m.recipient }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">
+                                Sender: {{ m.sender_profile.sender_profile_name }}
+                                {% if request.user.is_admin or request.user.is_reseller %}
+                                &bull; {{ m.user.email }}
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- UUID and OneXtel ID -->
+                        <td class="px-5 py-4">
+                            <a href="{% url 'messaging:message_detail' m.id %}" class="font-mono text-xs text-blue-600 hover:text-blue-700 font-semibold block">
+                                {{ m.id }}
+                            </a>
+                            <div class="font-mono text-[11px] text-slate-400 mt-0.5">
+                                {% if m.onextel_message_id %}
+                                Carrier: {{ m.onextel_message_id }}
+                                {% else %}
+                                <span class="italic text-slate-400">Pending carrier ack</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Content & Intent -->
+                        <td class="px-5 py-4">
+                            <div class="flex flex-col gap-1 items-start">
+                                {% if m.content_type == 'template' %}
+                                <span class="inline-flex items-center gap-1.5 text-xs text-slate-800 font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    {{ m.template.name|default:"Template" }}
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700">
+                                    {{ m.get_content_type_display }}
+                                </span>
+                                {% endif %}
+                                <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                    {{ m.message_type }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="px-5 py-4">
+                            {% if m.status == 'delivered' or m.status == 'read' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                {{ m.get_status_display }}
+                            </span>
+                            {% elif m.status == 'submitted' or m.status == 'sent' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                {{ m.get_status_display }}
+                            </span>
+                            {% elif m.status == 'queued' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Queued
+                            </span>
+                            {% elif m.status == 'failed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200" title="{{ m.failure_reason }}">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Failed (Refunded)
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Cost -->
+                        <td class="px-5 py-4 text-right font-mono font-bold text-slate-900">
+                            ₹ {{ m.cost }}
+                        </td>
+
+                        <!-- Created Time -->
+                        <td class="px-5 py-4 text-right text-xs text-slate-500">
+                            <div class="font-medium text-slate-700">{{ m.created_at|date:"M d, H:i" }}</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">{{ m.created_at|timesince }} ago</div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                            <div class="max-w-sm mx-auto">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400 border border-slate-200">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-900 mb-1">No dispatched messages found</h3>
+                                <p class="text-xs text-slate-500 mb-4">You have not dispatched any messages matching the filter criteria.</p>
+                                <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-colors">
+                                    New Campaign
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div>
+                Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </div>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors shadow-2xs font-medium">
+                    Previous
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors shadow-2xs font-medium">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

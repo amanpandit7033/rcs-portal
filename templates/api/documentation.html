@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Developer API Documentation (v1) | RCS Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>[x-cloak] { display: none !important; }</style>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--text:#475569;--mute:#94a3b8;--line:#e2e8f0;--b50:#eff6ff;--b100:#dbeafe;--b400:#60a5fa;--b600:#2563eb;--b700:#1d4ed8;--b900:#1e3a8a;--code:#0f172a;--em:#10b981;--sky:#0369a1;--rose:#e11d48;--amber:#d97706}
+*{box-sizing:border-box;margin:0}
+html{scroll-padding-top:5rem;scroll-behavior:smooth}
+body{font:15px/1.65 'Figtree',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+::selection{background:var(--b600);color:#fff}
+a{color:inherit;text-decoration:none}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
+:focus-visible{outline:2px solid var(--b600);outline-offset:2px;border-radius:6px}
+[x-cloak]{display:none!important}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+
+/* header */
+.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top>div{max-width:84rem;margin:auto;padding:0 1.5rem;height:3.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{display:flex;align-items:center;gap:.7rem}
+.logo{width:2.25rem;height:2.25rem;border-radius:.7rem;background:var(--b50);border:1px solid var(--b100);padding:.25rem}
+.brand b{display:block;font-size:1rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;line-height:1.1}
+.brand small{display:block;font-size:.72rem;color:var(--b600);font-weight:600}
+.pill{font-size:.7rem;font-weight:700;color:var(--b700);background:var(--b50);border:1px solid var(--b100);border-radius:99px;padding:.15rem .6rem}
+.btn{display:inline-flex;align-items:center;gap:.4rem;background:var(--b600);color:#fff;font-weight:600;font-size:.85rem;padding:.5rem 1.1rem;border-radius:.6rem;transition:background .15s}
+.btn:hover{background:var(--b700)}
+.burger{display:none;background:none;border:0;padding:.3rem;color:var(--text);cursor:pointer}
+
+/* layout */
+.wrap{max-width:84rem;margin:auto;padding:0 1.5rem;display:grid;grid-template-columns:15rem minmax(0,1fr);gap:3rem}
+nav.side{position:sticky;top:3.75rem;align-self:start;max-height:calc(100vh - 3.75rem);overflow:auto;padding:2rem 0 2rem;font-size:.85rem}
+nav.side h4{font-size:.75rem;font-weight:700;color:var(--ink);margin:1.4rem 0 .35rem;padding-left:.7rem}
+nav.side h4:first-child{margin-top:0}
+nav.side a{display:flex;align-items:center;gap:.5rem;padding:.3rem .7rem;border-left:2px solid var(--line);color:var(--text);transition:.15s}
+nav.side a:hover{color:var(--b600);border-color:var(--b400);background:var(--b50)}
+.m{font:700 .62rem 'JetBrains Mono',monospace;padding:.1rem .35rem;border-radius:.3rem;border:1px solid;flex:none}
+.post{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.get{background:#f0f9ff;color:var(--sky);border-color:#bae6fd}
+nav.side .p{font-family:'JetBrains Mono',monospace;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* sections */
+main{padding:2.5rem 0 4rem;min-width:0}
+section{padding:3rem 0;border-top:1px solid var(--line)}
+section:first-child{border:0;padding-top:0}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:2rem;align-items:start}
+.cols>.sticky{position:sticky;top:5rem}
+h1{font-size:clamp(2rem,4vw,2.9rem);line-height:1.1;font-weight:800;color:var(--ink);letter-spacing:-.03em;max-width:18ch}
+h2{font-size:1.65rem;font-weight:800;color:var(--ink);letter-spacing:-.02em;line-height:1.2;margin-bottom:.8rem}
+h2 i{font-style:normal;display:block;font-size:.85rem;font-weight:600;color:var(--b600);margin-bottom:.35rem;letter-spacing:0}
+h3{font-size:1rem;font-weight:700;color:var(--ink);margin:1.4rem 0 .5rem}
+p+p,p+.box,.box+p{margin-top:.8rem}
+.lead{font-size:1.05rem;max-width:44rem;margin-top:1rem}
+p code,li code,td code,.inl{font-size:.8em;background:var(--b50);color:var(--b700);border:1px solid var(--b100);border-radius:.35rem;padding:.1rem .35rem}
+strong{color:var(--ink);font-weight:600}
+.ep{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.9rem}
+.ep .m{font-size:.8rem;padding:.25rem .55rem;border-radius:.4rem}
+.ep code{font:600 1.15rem 'JetBrains Mono',monospace;color:var(--ink);background:none;border:0;padding:0}
+.tag{font-size:.8rem;color:var(--mute);margin-bottom:.9rem}
+.box{background:var(--card);border:1px solid var(--line);border-radius:.8rem;padding:1.1rem 1.25rem}
+.note{background:#fffbeb;border-color:#fde68a;color:#78350f;font-size:.88rem}
+.live{background:var(--b50);border-color:var(--b100)}
+.dot{display:inline-block;width:.5rem;height:.5rem;border-radius:99px;background:var(--em);margin-right:.4rem}
+ul{padding-left:1.1rem;margin-top:.5rem}li{margin:.35rem 0}
+
+/* tables */
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:.8rem;margin-top:1rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem;text-align:left}
+th{background:#f1f5f9;color:var(--ink);font-weight:700;font-size:.78rem;padding:.65rem 1rem;border-bottom:1px solid var(--line)}
+td{padding:.7rem 1rem;border-top:1px solid #f1f5f9;vertical-align:top}
+tr:first-child td{border-top:0}
+td:first-child{font:600 .8rem 'JetBrains Mono',monospace;color:var(--b700);white-space:nowrap}
+.req{color:var(--rose);font-weight:700}.opt{color:var(--amber);font-weight:700}.no{color:var(--mute);font-weight:600}
+td.t{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--mute)}
+.c2{color:var(--em)!important}.c4{color:var(--amber)!important}.c5{color:var(--rose)!important}
+
+/* code windows */
+.cw{background:var(--code);border-radius:.9rem;overflow:hidden;border:1px solid #1e293b;box-shadow:0 10px 30px -12px rgba(15,23,42,.35);margin-top:1rem}
+.cols .cw{margin-top:0}.cw+.cw{margin-top:1rem}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.55rem .8rem;background:#111c33;border-bottom:1px solid #1e293b;font-size:.75rem;color:var(--mute)}
+.bar button{background:none;border:0;font:600 .75rem 'Figtree',sans-serif;color:#94a3b8;padding:.25rem .65rem;border-radius:.4rem;cursor:pointer}
+.bar button:hover{color:#fff}
+.bar button.on{background:var(--b600);color:#fff}
+.cw pre{padding:1rem 1.1rem;font-size:.78rem;line-height:1.7;color:#cbd5e1;overflow-x:auto;tab-size:2}
+.k{color:var(--b400)}.s{color:#6ee7b7}.n{color:#fbbf24}.c{color:#64748b}.h{color:#93c5fd}
+.cp{margin-left:auto;background:#1e293b!important}
+
+/* base url */
+.base{display:flex;align-items:center;gap:.6rem;background:var(--code);border-radius:.7rem;padding:.5rem .6rem .5rem 1rem;margin-top:.7rem;color:#93c5fd;font:500 .85rem 'JetBrains Mono',monospace}
+.base span{flex:1;overflow-x:auto;white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;font-size:.82rem;margin-top:.8rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.keys{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.8rem}
+.key{background:#fff;border:1px solid var(--line);border-radius:.6rem;padding:.4rem .8rem;font-size:.8rem;display:flex;gap:.6rem;align-items:center}
+.ok{font-size:.68rem;font-weight:700;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:.3rem;padding:0 .4rem}
+a.lnk{color:var(--b600);font-weight:600;font-size:.85rem}a.lnk:hover{color:var(--b700)}
+.cta{margin-top:3rem;background:linear-gradient(120deg,var(--b600),var(--b700) 60%,var(--b900));color:#dbeafe;border-radius:1.1rem;padding:2rem;display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.cta h3{color:#fff;font-size:1.3rem;margin:0 0 .3rem}.cta p{max-width:34rem;font-size:.9rem}
+.cta a{background:#fff;color:var(--b700);font-weight:700;font-size:.85rem;padding:.65rem 1.2rem;border-radius:.6rem;display:inline-flex;gap:.5rem;align-items:center}
+.cta a:hover{background:var(--b50)}
+
+/* mobile drawer */
+.ov{position:fixed;inset:0;z-index:60;background:rgba(2,6,23,.55)}
+.dr{position:absolute;inset:0 auto 0 0;width:17rem;background:#fff;padding:1.2rem;overflow:auto}
+.dr a{display:block;padding:.45rem .6rem;border-radius:.5rem;font-size:.9rem}
+.dr a:hover{background:var(--b50);color:var(--b600)}
+
+@media(max-width:1100px){.cols{grid-template-columns:1fr}.cols>.sticky{position:static}}
+@media(max-width:900px){.wrap{grid-template-columns:1fr;gap:0}nav.side{display:none}.burger{display:block}.grid2{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body x-data="{ mobileNavOpen: false }">
+
+<header class="top"><div>
+  <div class="brand">
+    <button class="burger" @click="mobileNavOpen = true" aria-label="Open menu"><svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <a href="{% url 'root' %}" class="brand">
+      <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="100%" height="100%" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/></svg></div>
+      <div><b>RCS Portal</b><small>API Reference</small></div>
+    </a>
+    <span class="pill">REST v1.0</span>
+  </div>
+  {% if request.user.is_authenticated %}
+  <a href="{% url 'accounts:dashboard_redirect' %}" class="btn">Open dashboard</a>
+  {% else %}
+  <a href="{% url 'accounts:login' %}" class="btn">Sign in</a>
+  {% endif %}
+</div></header>
+
+<div class="wrap">
+<nav class="side" aria-label="Documentation">
+  <h4>Getting started</h4>
+  <a href="#overview">Overview &amp; base URL</a>
+  <a href="#authentication">Authentication</a>
+  <a href="#throttling">Rate limits</a>
+  <a href="#idempotency">Idempotency-Key</a>
+  <a href="#errors">Errors &amp; status codes</a>
+  <h4>Messages</h4>
+  <a href="#send-message"><span class="m post">POST</span><span class="p">/messages/send</span></a>
+  <a href="#bulk-messages"><span class="m post">POST</span><span class="p">/messages/bulk</span></a>
+  <a href="#message-status"><span class="m get">GET</span><span class="p">/messages/{id}/status</span></a>
+  <a href="#list-messages"><span class="m get">GET</span><span class="p">/messages</span></a>
+  <h4>Templates</h4>
+  <a href="#list-templates"><span class="m get">GET</span><span class="p">/templates</span></a>
+  <h4>Account</h4>
+  <a href="#balance"><span class="m get">GET</span><span class="p">/balance</span></a>
+  <h4>Webhooks</h4>
+  <a href="#webhooks">Delivery callbacks</a>
+  <a href="#hmac-verification">Verify signatures</a>
+</nav>
+
+<main>
+<!-- OVERVIEW -->
+<section id="overview">
+  <span class="pill">REST API v1</span>
+  <h1 style="margin-top:1rem">Send RCS messages from your own code</h1>
+  <p class="lead">Send single, broadcast and personalized RCS messages, check delivery status, list approved templates, read your wallet balance, and receive signed delivery receipts (DLR) in real time.</p>
+  <div class="box" style="margin-top:1.8rem;max-width:44rem" x-data="{ copied: false }">
+    <div style="display:flex;justify-content:space-between;align-items:center"><strong>Production base URL</strong><span class="ok">Active</span></div>
+    <div class="base">
+      <span>{{ base_url }}/api/v1</span>
+      <button type="button" class="bar" style="padding:.3rem .7rem;border:0;border-radius:.4rem;background:#1e293b;color:#cbd5e1;cursor:pointer;font:600 .75rem 'Figtree'" @click="navigator.clipboard.writeText('{{ base_url }}/api/v1'); copied = true; setTimeout(() => copied = false, 2000)">
+        <span x-show="!copied">Copy</span><span x-show="copied" x-cloak style="display: none; color:#6ee7b7">Copied</span>
+      </button>
+    </div>
+    <div class="meta"><span><strong>Format:</strong> JSON (UTF-8)</span><span><strong>HTTPS:</strong> enforced in production</span><span><strong>Delivery:</strong> direct carrier gateway</span></div>
+  </div>
+</section>
+
+<!-- AUTH -->
+<section id="authentication">
+  <div class="cols">
+    <div>
+      <h2><i>Getting started</i>Authentication</h2>
+      <p>Send your secret key in the <code>apikey</code> header on every request to a private endpoint. <code>X-API-Key</code> and <code>Authorization: Bearer &lt;key&gt;</code> work too.</p>
+      <p>Keys start with <code>rcs_</code>. A raw key is shown once when you create it and is stored as a SHA-256 hash.</p>
+      <p>To restrict a key to specific source IPs, add them in Settings. Requests from other IPs return <code>HTTP 401</code>.</p>
+      <p style="margin-top:1rem"><a class="lnk" href="{% url 'api:settings' %}">Manage your API keys &rarr;</a></p>
+    </div>
+    <div class="cw"><div class="bar">Header</div><pre><span class="c">// API key header</span>
+<span class="s">apikey:</span> <span class="h">rcs_live_9x8e7f6d5c4b3a201...</span>
+
+<span class="c">// or standard Bearer</span>
+Authorization: Bearer <span class="h">rcs_live_9x8e7f6d5c4b3a201...</span></pre></div>
+  </div>
+  {% if user_keys %}
+  <div class="box live" style="margin-top:1.5rem">
+    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap"><strong><span class="dot"></span>Your active API keys ({{ user_keys|length }})</strong><a class="lnk" href="{% url 'api:settings' %}">Configure keys &rarr;</a></div>
+    <div class="keys">
+      {% for k in user_keys %}
+      <div class="key"><strong>{{ k.name }}</strong><span class="mono" style="color:var(--mute)">{{ k.prefix }}...</span><span class="ok">Active</span></div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<!-- THROTTLING -->
+<section id="throttling">
+  <h2><i>Getting started</i>Rate limits</h2>
+  <p style="max-width:44rem">Requests are throttled per tenant. The default is <strong>120 requests per minute</strong>. Administrators can raise it for higher throughput.</p>
+  <div class="box note" style="margin-top:1rem;max-width:44rem"><strong style="color:#78350f">HTTP 429 means you went over the limit.</strong> The response carries error code <code style="background:#fef3c7;color:#78350f;border-color:#fcd34d">"throttled"</code>. Retry with exponential backoff.</div>
+</section>
+
+<!-- IDEMPOTENCY -->
+<section id="idempotency">
+  <h2><i>Getting started</i>Idempotency-Key</h2>
+  <p style="max-width:44rem">Add a unique <code>Idempotency-Key</code> header so a retry after a network timeout never sends twice or debits twice.</p>
+  <div class="box" style="margin-top:1rem;max-width:44rem"><strong>When you send the header:</strong>
+    <ul>
+      <li>The first successful response (200&ndash;299) is cached for <strong>24 hours</strong>.</li>
+      <li>Repeat requests return the cached response with <code>X-Idempotency-Status: HIT</code>.</li>
+      <li><strong>No extra wallet debit</strong> and <strong>no duplicate message record</strong> is created.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ERRORS -->
+<section id="errors">
+  <div class="cols">
+    <div>
+      <h2><i>Getting started</i>Errors &amp; status codes</h2>
+      <p>Every non-2xx response uses the same envelope, so one handler covers all endpoints.</p>
+    </div>
+    <div class="cw"><div class="bar">Error response</div><pre>{
+  <span class="k">"error"</span>: {
+    <span class="k">"code"</span>: <span class="s">"insufficient_balance"</span>,
+    <span class="k">"message"</span>: <span class="s">"Insufficient wallet balance to dispatch message."</span>,
+    <span class="k">"details"</span>: {
+      <span class="k">"current_balance"</span>: <span class="s">"0.0000"</span>,
+      <span class="k">"required"</span>: <span class="s">"0.2500"</span>
+    }
+  }
+}</pre></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Code</th><th>Name</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="c2">200 / 201</td><td><strong>Success</strong></td><td>Request processed and messages queued.</td></tr>
+      <tr><td class="c4">400</td><td><strong>Bad Request</strong></td><td>Malformed JSON body or missing required fields.</td></tr>
+      <tr><td class="c5">401</td><td><strong>Unauthorized</strong></td><td>Invalid or revoked API key, or caller IP not on the key's whitelist.</td></tr>
+      <tr><td class="c5">402</td><td><strong>Payment Required</strong></td><td>Prepaid INR wallet balance too low for this dispatch.</td></tr>
+      <tr><td class="c4">404</td><td><strong>Not Found</strong></td><td>Resource not found or belongs to another client tenant.</td></tr>
+      <tr><td class="c4">422</td><td><strong>Unprocessable Entity</strong></td><td>Validation failed, such as an invalid phone format or unapproved template.</td></tr>
+      <tr><td class="c4">429</td><td><strong>Too Many Requests</strong></td><td>Rate limit exceeded for this API key.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- SEND -->
+<section id="send-message" x-data="{ tab: 'curl' }">
+  <div class="ep"><span class="m post">POST</span><code>/api/v1/messages/send/</code></div>
+  <p class="tag">Send to one recipient or up to 100</p>
+  <div class="cols">
+    <div>
+      <p>Adds one or more messages to the sending queue. The returned message IDs are <strong>our internal UUIDs</strong>.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead>
+        <tbody>
+          <tr><td>sender_profile_id</td><td class="t">integer</td><td class="req">Yes</td></tr>
+          <tr><td>message_type</td><td class="t">string</td><td class="req">Yes</td></tr>
+          <tr><td>content_type</td><td class="t">string</td><td class="no">No</td></tr>
+          <tr><td>recipient</td><td class="t">string</td><td class="opt">Optional*</td></tr>
+          <tr><td>recipients</td><td class="t">array[str]</td><td class="opt">Optional*</td></tr>
+          <tr><td>template_id</td><td class="t">integer</td><td class="no">Optional</td></tr>
+          <tr><td>custom_params</td><td class="t">object</td><td class="no">Optional</td></tr>
+          <tr><td>custref1 .. custref6</td><td class="t">string</td><td class="no">Optional</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Field details</h3>
+      <ul>
+        <li><code>sender_profile_id</code>: ID of the carrier-registered bot or sender profile.</li>
+        <li><code>message_type</code>: <code>"PROMOTIONAL"</code>, <code>"TRANSACTIONAL"</code> or <code>"OTP"</code>.</li>
+        <li><code>content_type</code>: <code>"text"</code>, <code>"rich_card"</code>, <code>"carousel"</code> or <code>"template"</code> (default).</li>
+        <li><code>recipient</code>: phone number, 10 digits or E.164 (+91). *Required if <code>recipients</code> is omitted.</li>
+        <li><code>recipients</code>: up to 100 numbers for a broadcast.</li>
+        <li><code>template_id</code>: approved template ID, used with <code>content_type="template"</code>.</li>
+        <li><code>custom_params</code>: values for template placeholders, e.g. <code>{"name": "Aman", "order_id": "9921"}</code>.</li>
+        <li><code>custref1</code> to <code>custref6</code>: your own tracking references, up to 100 characters each.</li>
+      </ul>
+    </div>
+    <div class="sticky">
+      <div class="cw">
+        <div class="bar"><span>
+          <button :class="tab==='curl'&&'on'" @click="tab='curl'">cURL</button>
+          <button :class="tab==='python'&&'on'" @click="tab='python'">Python</button>
+          <button :class="tab==='node'&&'on'" @click="tab='node'">Node.js</button>
+          <button :class="tab==='php'&&'on'" @click="tab='php'">PHP</button></span><span>Request</span></div>
+<pre x-show="tab==='curl'">curl -X POST "{{ base_url }}/api/v1/messages/send/" \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR_API_KEY" \
+  -H "Idempotency-Key: req_981240124" \
+  -d '{
+    "sender_profile_id": 1,
+    "recipient": "9876543210",
+    "message_type": "TRANSACTIONAL",
+    "content_type": "template",
+    "template_id": 12,
+    "custom_params": {
+      "name": "Aman",
+      "order_id": "APX-98214"
+    },
+    "custref1": "ORDER_DISPATCH_98214"
+  }'</pre>
+<pre x-show="tab==='python'" x-cloak style="display: none;">import requests
+
+url = "{{ base_url }}/api/v1/messages/send/"
+headers = {
+    "Content-Type": "application/json",
+    "apikey": "YOUR_API_KEY",
+    "Idempotency-Key": "req_981240124"
+}
+payload = {
+    "sender_profile_id": 1,
+    "recipient": "9876543210",
+    "message_type": "TRANSACTIONAL",
+    "content_type": "template",
+    "template_id": 12,
+    "custom_params": {
+        "name": "Aman",
+        "order_id": "APX-98214"
+    },
+    "custref1": "ORDER_DISPATCH_98214"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.status_code, response.json())</pre>
+<pre x-show="tab==='node'" x-cloak style="display: none;">const response = await fetch("{{ base_url }}/api/v1/messages/send/", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "apikey": "YOUR_API_KEY",
+    "Idempotency-Key": "req_981240124"
+  },
+  body: JSON.stringify({
+    sender_profile_id: 1,
+    recipient: "9876543210",
+    message_type: "TRANSACTIONAL",
+    content_type: "template",
+    template_id: 12,
+    custom_params: { name: "Aman", order_id: "APX-98214" },
+    custref1: "ORDER_DISPATCH_98214"
+  })
+});
+const data = await response.json();
+console.log(data);</pre>
+<pre x-show="tab==='php'" x-cloak style="display: none;">$ch = curl_init("{{ base_url }}/api/v1/messages/send/");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "apikey: YOUR_API_KEY",
+    "Idempotency-Key: req_981240124"
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    "sender_profile_id" => 1,
+    "recipient" => "9876543210",
+    "message_type" => "TRANSACTIONAL",
+    "content_type" => "template",
+    "template_id" => 12,
+    "custom_params" => ["name" => "Aman", "order_id" => "APX-98214"],
+    "custref1" => "ORDER_DISPATCH_98214"
+]));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$result = curl_exec($ch);
+curl_close($ch);</pre>
+      </div>
+      <div class="cw"><div class="bar"><span class="ok">201 Created</span><span>Response</span></div><pre>{
+  <span class="k">"status"</span>: <span class="s">"queued"</span>,
+  <span class="k">"count"</span>: <span class="n">1</span>,
+  <span class="k">"messages"</span>: [
+    {
+      <span class="k">"id"</span>: <span class="s">"e7b2354c-b71a-4d43-982c-4731d1b32f50"</span>, <span class="c">// our internal UUID</span>
+      <span class="k">"recipient"</span>: <span class="s">"9876543210"</span>,
+      <span class="k">"message_type"</span>: <span class="s">"TRANSACTIONAL"</span>,
+      <span class="k">"status"</span>: <span class="s">"queued"</span>,
+      <span class="k">"cost"</span>: <span class="s">"0.2000"</span>,
+      <span class="k">"custref1"</span>: <span class="s">"ORDER_DISPATCH_98214"</span>,
+      <span class="k">"created_at"</span>: <span class="s">"2026-10-06T10:45:00.000Z"</span>
+    }
+  ]
+}</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- BULK -->
+<section id="bulk-messages">
+  <div class="ep"><span class="m post">POST</span><code>/api/v1/messages/bulk/</code></div>
+  <p class="tag">Up to 500 personalized contacts in one batch</p>
+  <div class="cols">
+    <div><p>Sends a batch of up to 500 recipients in a single atomic transaction. Each contact has its own placeholders and tracking references.</p></div>
+    <div class="cw"><div class="bar">cURL</div><pre>curl -X POST "{{ base_url }}/api/v1/messages/bulk/" \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR_API_KEY" \
+  -d '{
+    "sender_profile_id": 1,
+    "message_type": "TRANSACTIONAL",
+    "template_id": 12,
+    "messages": [
+      {
+        "recipient": "9876543211",
+        "custom_params": {"name": "Bob", "order_id": "APX-101"},
+        "custref1": "BATCH_A_01"
+      },
+      {
+        "recipient": "9876543212",
+        "custom_params": {"name": "Alice", "order_id": "APX-102"},
+        "custref1": "BATCH_A_02"
+      }
+    ]
+  }'</pre></div>
+  </div>
+</section>
+
+<!-- STATUS -->
+<section id="message-status">
+  <div class="ep"><span class="m get">GET</span><code>/api/v1/messages/{id}/status/</code></div>
+  <p class="tag">Look up one message by UUID</p>
+  <div class="cols">
+    <div><p>Returns the current delivery status of a message. Statuses move through <code>queued</code>, <code>submitted</code>, <code>sent</code>, <code>delivered</code>, <code>read</code>, or end at <code>failed</code>.</p></div>
+    <div class="cw"><div class="bar">Response</div><pre>{
+  <span class="k">"id"</span>: <span class="s">"e7b2354c-b71a-4d43-982c-4731d1b32f50"</span>,
+  <span class="k">"recipient"</span>: <span class="s">"9876543210"</span>,
+  <span class="k">"status"</span>: <span class="s">"delivered"</span>, <span class="c">// queued | submitted | sent | delivered | read | failed</span>
+  <span class="k">"status_display"</span>: <span class="s">"Delivered"</span>,
+  <span class="k">"cost"</span>: <span class="s">"0.2000"</span>,
+  <span class="k">"failure_reason"</span>: <span class="s">""</span>,
+  <span class="k">"created_at"</span>: <span class="s">"2026-10-06T10:45:00.000Z"</span>,
+  <span class="k">"delivered_at"</span>: <span class="s">"2026-10-06T10:45:04.000Z"</span>,
+  <span class="k">"read_at"</span>: <span class="s">"2026-10-06T10:45:12.000Z"</span>
+}</pre></div>
+  </div>
+</section>
+
+<!-- LIST -->
+<section id="list-messages">
+  <div class="ep"><span class="m get">GET</span><code>/api/v1/messages/</code></div>
+  <p class="tag">Filtered, paginated message log</p>
+  <div class="cols">
+    <div><p>Returns your message history one page at a time. Filter with <code>status</code>, <code>recipient</code>, <code>message_type</code>, <code>date_from</code>, <code>date_to</code> and <code>page</code>.</p></div>
+    <div class="cw"><div class="bar">cURL</div><pre>curl -X GET "{{ base_url }}/api/v1/messages/?status=delivered&amp;page=1" \
+  -H "apikey: YOUR_API_KEY"</pre></div>
+  </div>
+</section>
+
+<!-- TEMPLATES -->
+<section id="list-templates">
+  <div class="ep"><span class="m get">GET</span><code>/api/v1/templates/</code></div>
+  <p class="tag">Approved templates</p>
+  <div class="cols">
+    <div><p>Lists the carrier-approved RCS templates on your account, with the placeholder parameters found in each.</p></div>
+    <div class="cw"><div class="bar">cURL</div><pre>curl -X GET "{{ base_url }}/api/v1/templates/" \
+  -H "apikey: YOUR_API_KEY"</pre></div>
+  </div>
+</section>
+
+<!-- BALANCE -->
+<section id="balance">
+  <div class="ep"><span class="m get">GET</span><code>/api/v1/balance/</code></div>
+  <p class="tag">Prepaid wallet balance</p>
+  <div class="cols">
+    <div><p>Returns your available prepaid balance in Indian rupees (INR).</p></div>
+    <div class="cw"><div class="bar">Response</div><pre>{
+  <span class="k">"balance"</span>: <span class="s">"1450.0000"</span>,
+  <span class="k">"currency"</span>: <span class="s">"INR"</span>,
+  <span class="k">"balance_inr"</span>: <span class="s">"₹1,450.00"</span>
+}</pre></div>
+  </div>
+</section>
+
+<!-- WEBHOOKS -->
+<section id="webhooks">
+  <div class="cols">
+    <div>
+      <h2><i>Webhooks</i>Delivery report callbacks</h2>
+      <p>When a carrier delivers or reads your message, we send the event to your callback URL as an HTTP POST. Each call is signed with HMAC-SHA256 in the <code>X-Signature-SHA256</code> header.</p>
+    </div>
+    <div class="cw"><div class="bar">Example POST payload</div><pre>{
+  <span class="k">"event"</span>: <span class="s">"message.dlr"</span>,
+  <span class="k">"id"</span>: <span class="s">"e7b2354c-b71a-4d43-982c-4731d1b32f50"</span>, <span class="c">// your internal message UUID</span>
+  <span class="k">"recipient"</span>: <span class="s">"9876543210"</span>,
+  <span class="k">"status"</span>: <span class="s">"delivered"</span>, <span class="c">// delivered | read | failed</span>
+  <span class="k">"failure_reason"</span>: <span class="s">""</span>,
+  <span class="k">"delivered_at"</span>: <span class="s">"2026-10-06T10:45:04.000Z"</span>,
+  <span class="k">"read_at"</span>: <span class="s">"2026-10-06T10:45:12.000Z"</span>,
+  <span class="k">"timestamp"</span>: <span class="s">"2026-10-06T10:45:04.120Z"</span>
+}</pre></div>
+  </div>
+
+  <div id="hmac-verification" class="cols" style="margin-top:3rem" x-data="{ lang: 'python' }">
+    <div>
+      <h3 style="margin-top:0;font-size:1.25rem">Verify the signature</h3>
+      <p>Compute the HMAC-SHA256 of the <strong>raw request body</strong> with your secret, then compare it to the header using a constant-time check. Reject the request if they differ.</p>
+    </div>
+    <div class="cw">
+      <div class="bar"><span>
+        <button :class="lang==='python'&&'on'" @click="lang='python'">Python</button>
+        <button :class="lang==='node'&&'on'" @click="lang='node'">Node.js</button>
+        <button :class="lang==='php'&&'on'" @click="lang='php'">PHP</button></span></div>
+<pre x-show="lang==='python'">import hmac
+import hashlib
+
+def verify_webhook_signature(raw_request_body_bytes: bytes, incoming_header_sig: str, secret: str) -> bool:
+    expected_sig = hmac.new(
+        secret.encode("utf-8"),
+        raw_request_body_bytes,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected_sig, incoming_header_sig)</pre>
+<pre x-show="lang==='node'" x-cloak style="display: none;">const crypto = require("crypto");
+
+function verifyWebhookSignature(rawBodyBuffer, incomingSignature, secret) {
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(rawBodyBuffer)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature),
+    Buffer.from(incomingSignature)
+  );
+}</pre>
+<pre x-show="lang==='php'" x-cloak style="display: none;">function verifyWebhookSignature($rawRequestBody, $incomingSignature, $secret) {
+    $expectedSignature = hash_hmac("sha256", $rawRequestBody, $secret);
+    return hash_equals($expectedSignature, $incomingSignature);
+}</pre>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div><h3>Ready to integrate?</h3><p>Import the official Postman collection to try every endpoint with ready-made request bodies and bearer tokens.</p></div>
+    <a href="{% url 'api:v1_postman_export' %}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Postman collection</a>
+  </div>
+</section>
+</main>
+</div>
+
+<!-- Mobile drawer -->
+<div class="ov" x-show="mobileNavOpen" x-cloak style="display: none;" @click="mobileNavOpen = false" @keydown.escape.window="mobileNavOpen = false">
+  <div class="dr" @click.stop>
+    <strong style="display:block;margin-bottom:.8rem;color:var(--ink)">Documentation</strong>
+    <a @click="mobileNavOpen=false" href="#overview">Overview &amp; base URL</a>
+    <a @click="mobileNavOpen=false" href="#authentication">Authentication</a>
+    <a @click="mobileNavOpen=false" href="#throttling">Rate limits</a>
+    <a @click="mobileNavOpen=false" href="#idempotency">Idempotency-Key</a>
+    <a @click="mobileNavOpen=false" href="#errors">Errors &amp; status codes</a>
+    <a @click="mobileNavOpen=false" href="#send-message" class="mono">POST /messages/send</a>
+    <a @click="mobileNavOpen=false" href="#bulk-messages" class="mono">POST /messages/bulk</a>
+    <a @click="mobileNavOpen=false" href="#message-status" class="mono">GET /messages/{id}/status</a>
+    <a @click="mobileNavOpen=false" href="#list-messages" class="mono">GET /messages</a>
+    <a @click="mobileNavOpen=false" href="#list-templates" class="mono">GET /templates</a>
+    <a @click="mobileNavOpen=false" href="#balance" class="mono">GET /balance</a>
+    <a @click="mobileNavOpen=false" href="#webhooks">Delivery callbacks</a>
+    <a @click="mobileNavOpen=false" href="#hmac-verification">Verify signatures</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}RCS Templates{% endblock %}
+{% block header_title %}Templates Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Header Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">RCS Templates</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Design, validate, and manage carrier-approved rich communication templates.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'templates_mgmt:template_create' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-colors group">
+                <svg class="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>New Template</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <!-- Search -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Template Name</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search by name..."
+                           class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                </div>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Approval Status</label>
+                <select name="status" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                    <option value="">All Statuses</option>
+                    <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved (Ready to Send)</option>
+                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending Review</option>
+                    <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+                </select>
+            </div>
+
+            <!-- Template Type Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Template Type</label>
+                <select name="template_type" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                    <option value="">All Types</option>
+                    <option value="text_message" {% if request.GET.template_type == 'text_message' %}selected{% endif %}>Text Message</option>
+                    <option value="text_message_with_media" {% if request.GET.template_type == 'text_message_with_media' %}selected{% endif %}>Text + Media</option>
+                    <option value="rich_card" {% if request.GET.template_type == 'rich_card' %}selected{% endif %}>Rich Card</option>
+                    <option value="carousel" {% if request.GET.template_type == 'carousel' %}selected{% endif %}>Carousel</option>
+                </select>
+            </div>
+
+            <!-- Message Type Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Message Intent</label>
+                <select name="message_type" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                    <option value="">All Intents</option>
+                    <option value="PROMOTIONAL" {% if request.GET.message_type == 'PROMOTIONAL' %}selected{% endif %}>Promotional</option>
+                    <option value="TRANSACTIONAL" {% if request.GET.message_type == 'TRANSACTIONAL' %}selected{% endif %}>Transactional</option>
+                    <option value="OTP" {% if request.GET.message_type == 'OTP' %}selected{% endif %}>OTP</option>
+                </select>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors shadow-xs">
+                    Filter
+                </button>
+                <a href="{% url 'templates_mgmt:template_list' %}" class="px-3.5 py-2 text-slate-500 hover:text-slate-800 text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Templates Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th scope="col" class="px-6 py-3.5">Template Name</th>
+                        <th scope="col" class="px-6 py-3.5">Type & Channel</th>
+                        <th scope="col" class="px-6 py-3.5">Sender Profile</th>
+                        <th scope="col" class="px-6 py-3.5">Status</th>
+                        <th scope="col" class="px-6 py-3.5">Placeholders</th>
+                        <th scope="col" class="px-6 py-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-normal">
+                    {% for item in templates_list %}
+                    <tr class="hover:bg-slate-50/70 transition-colors group">
+                        <!-- Template Name & Owner -->
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'templates_mgmt:template_detail' item.id %}" class="font-mono font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+                                    {{ item.name }}
+                                </a>
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                                <span>Created {{ item.created_at|date:"M d, Y" }}</span>
+                                {% if request.user.is_admin or request.user.is_reseller %}
+                                <span>&bull;</span>
+                                <span class="text-slate-500">By: {{ item.owner.email }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Type & Message Type -->
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1 items-start">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ item.get_template_type_display }}
+                                </span>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    {{ item.message_type }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Sender Profile -->
+                        <td class="px-6 py-4 font-mono text-xs text-slate-700">
+                            {{ item.sender_profile.sender_profile_name }}
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="px-6 py-4">
+                            {% if item.status == 'approved' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Approved
+                            </span>
+                            {% elif item.status == 'pending' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Carrier Review
+                            </span>
+                            {% elif item.status == 'rejected' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Rejected
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                Draft
+                            </span>
+                            {% endif %}
+                            {% if item.onextel_status_raw and item.onextel_status_raw != item.status %}
+                            <div class="text-[10px] text-slate-400 mt-1 font-mono">Raw: {{ item.onextel_status_raw }}</div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Detected Placeholders -->
+                        <td class="px-6 py-4">
+                            {% with params=item.detected_placeholders %}
+                            {% if params %}
+                            <div class="flex flex-wrap gap-1 max-w-xs">
+                                {% for p in params %}
+                                <span class="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-mono text-[10px] font-medium">
+                                    [{{ p }}]
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-[11px] text-slate-400 italic">None</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <!-- Action Buttons -->
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{% url 'templates_mgmt:template_detail' item.id %}" class="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors" title="Inspect Template">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </a>
+
+                                <!-- Sync Button -->
+                                <form method="post" action="{% url 'templates_mgmt:template_refresh' item.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Refresh Approval Status from Carrier">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            <div class="max-w-sm mx-auto">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto mb-3 text-slate-400 shadow-2xs">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-800 mb-1">No RCS templates found</h3>
+                                <p class="text-xs text-slate-500 mb-4">Get started by creating your first carrier-grade rich RCS message template.</p>
+                                <a href="{% url 'templates_mgmt:template_create' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Create Template
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="px-6 py-3.5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div>
+                Showing page <strong class="text-slate-800">{{ page_obj.number }}</strong> of <strong class="text-slate-800">{{ page_obj.paginator.num_pages }}</strong>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors shadow-2xs">
+                    Previous
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors shadow-2xs">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

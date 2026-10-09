@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Rate Plans{% endblock %}
+{% block header_title %}Rate Plans{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header & Back Button -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Rate Plan Configuration</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Configure per-message billing rates and carrier cost baselines for RCS message types.</p>
+        </div>
+        <a href="{% if is_admin %}{% url 'accounts:user_list' %}{% else %}{% url 'accounts:client_list' %}{% endif %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+            &larr; Back
+        </a>
+    </div>
+
+    <!-- Target Account Card -->
+    <div class="p-5 rounded-2xl bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Target Account</span>
+            <div class="text-base font-bold text-slate-900 mt-0.5">{{ target_user.company_name|default:target_user.get_full_name }}</div>
+            <div class="text-xs text-slate-500 font-mono mt-0.5">{{ target_user.email }}</div>
+        </div>
+        {% if target_user.parent_reseller %}
+        <div class="sm:text-right">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Parent Reseller</span>
+            <div class="text-xs font-semibold text-amber-700 mt-0.5">{{ target_user.parent_reseller.company_name|default:target_user.parent_reseller.email }}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Client rates must be &ge; reseller baseline rates</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if reseller_rates %}
+    <!-- Reseller Minimum Baseline Rates Notice -->
+    <div class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-xs text-amber-900 shadow-2xs">
+        <div class="flex items-center gap-2 font-bold mb-1">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>Reseller Minimum Baseline Rates:</span>
+        </div>
+        <ul class="list-disc list-inside space-y-0.5 text-amber-800 ml-6">
+            {% for mtype, rplan in reseller_rates.items %}
+                <li><span class="font-semibold">{{ mtype|title }}:</span> {{ rplan.formatted_rate }} (Client rate must be &ge; {{ rplan.formatted_rate }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Rate Configuration Form -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                {% for err in form.non_field_errors %}
+                    <p>{{ err }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Promotional Rate Plan Section -->
+            <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Promotional RCS</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">Marketing, Rich Carousels & Announcements</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Selling Rate (INR) <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.promotional_rate }}
+                        {% if form.promotional_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.promotional_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% if is_admin %}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Cost Rate (INR) <span class="text-slate-400 font-normal">[Margin Calc]</span>
+                        </label>
+                        {{ form.promotional_cost_rate }}
+                        {% if form.promotional_cost_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.promotional_cost_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Transactional Rate Plan Section -->
+            <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Transactional RCS</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">Order Alerts, Receipts & Status Updates</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Selling Rate (INR) <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.transactional_rate }}
+                        {% if form.transactional_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.transactional_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% if is_admin %}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Cost Rate (INR) <span class="text-slate-400 font-normal">[Margin Calc]</span>
+                        </label>
+                        {{ form.transactional_cost_rate }}
+                        {% if form.transactional_cost_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.transactional_cost_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- OTP Rate Plan Section -->
+            <div class="p-5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">OTP / Authentication</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400">High-Priority Direct Carrier Routing</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Selling Rate (INR) <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.otp_rate }}
+                        {% if form.otp_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.otp_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% if is_admin %}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Cost Rate (INR) <span class="text-slate-400 font-normal">[Margin Calc]</span>
+                        </label>
+                        {{ form.otp_cost_rate }}
+                        {% if form.otp_cost_rate.errors %}
+                            <p class="text-xs text-rose-500 mt-1">{{ form.otp_cost_rate.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <a href="{% if is_admin %}{% url 'accounts:user_list' %}{% else %}{% url 'accounts:client_list' %}{% endif %}" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
+                    Save Rate Plans
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
