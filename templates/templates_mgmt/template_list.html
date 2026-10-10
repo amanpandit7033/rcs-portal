@@ -6,18 +6,99 @@
 {% block content %}
 <div class="space-y-6">
     <!-- Top Header Bar -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4" x-data="{ syncModalOpen: false, syncing: false }">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">RCS Templates</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Design, validate, and manage carrier-approved rich communication templates.</p>
         </div>
         <div class="flex items-center gap-3">
+            <!-- Sync from Carrier Button -->
+            <button type="button" @click="syncModalOpen = true" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Sync Carrier Templates</span>
+            </button>
+
+            <!-- New Template Button -->
             <a href="{% url 'templates_mgmt:template_create' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-colors group">
                 <svg class="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
                 <span>New Template</span>
             </a>
+        </div>
+
+        <!-- Sync Modal Dialog -->
+        <div x-show="syncModalOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="syncModalOpen" @click="if(!syncing) syncModalOpen = false" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="syncModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-200">
+                    <form method="post" action="{% url 'templates_mgmt:template_sync' %}" @submit="syncing = true">
+                        {% csrf_token %}
+                        <div class="bg-white p-6 sm:p-7">
+                            <div class="flex items-center gap-3.5 mb-5">
+                                <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900" id="modal-title">Sync Carrier Templates</h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Fetch and import pre-approved templates directly from OneXtel.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 text-xs">
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1.5">Select Sender Profile</label>
+                                    {% if sender_profiles %}
+                                    <select name="sender_profile_id" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                                        {% if sender_profiles|length > 1 %}
+                                        <option value="">All Active Profiles ({{ sender_profiles|length }})</option>
+                                        {% endif %}
+                                        {% for sp in sender_profiles %}
+                                        <option value="{{ sp.id }}">{{ sp.sender_profile_name }} ({{ sp.sender_id }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                                        No active Sender Profile found on your account. Please ask an administrator to assign a Sender Profile first.
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600 space-y-1.5">
+                                    <p class="font-semibold text-slate-800 flex items-center gap-1.5">
+                                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        Automatic Synchronization Scope
+                                    </p>
+                                    <ul class="list-disc list-inside space-y-1 pl-1 text-[11px] text-slate-500">
+                                        <li>Queries Promotional, Transactional, and OTP categories.</li>
+                                        <li>Imports templates, rich cards, carousels, action buttons, and media URLs.</li>
+                                        <li>Refreshes carrier approval status (Approved, Pending, Rejected).</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                            <button type="button" @click="syncModalOpen = false" :disabled="syncing" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl border border-slate-200 hover:bg-white transition-colors cursor-pointer">
+                                Cancel
+                            </button>
+                            <button type="submit" :disabled="syncing {% if not sender_profiles %}|| true{% endif %}" class="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl shadow-xs transition-colors cursor-pointer">
+                                <svg x-show="syncing" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="syncing ? 'Fetching from Carrier...' : 'Start Sync'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

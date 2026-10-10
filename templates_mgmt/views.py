@@ -16,6 +16,7 @@ from integrations.onextel.client import OneXtelClient, OneXtelClientError
 from wallet.models import SenderProfile
 from .forms import MediaUploadForm, TemplateFilterForm
 from .models import MediaFile, Template
+from .services import sync_sender_profile_templates
 from .validators import validate_template_payload
 
 logger = logging.getLogger(__name__)
@@ -58,8 +59,14 @@ class TemplateListView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["filter_form"] = getattr(self, "filter_form", TemplateFilterForm(self.request.GET, user=self.request.user))
+        user = self.request.user
+        context["filter_form"] = getattr(self, "filter_form", TemplateFilterForm(self.request.GET, user=user))
         context["page_title"] = "RCS Templates Studio"
+        if user.is_admin or user.is_superuser:
+            admin_profiles = SenderProfile.objects.filter(user=user, is_active=True)
+            context["sender_profiles"] = admin_profiles if admin_profiles.exists() else SenderProfile.objects.filter(is_active=True)
+        else:
+            context["sender_profiles"] = SenderProfile.objects.filter(user=user, is_active=True)
         return context
 
 
@@ -262,3 +269,57 @@ class MediaUploadAjaxView(RoleRequiredMixin, View):
             "filename": uploaded_file.name,
             "id": media.id,
         })
+
+
+class TemplateSyncView(RoleRequiredMixin, View):
+    """Sync and import all carrier templates from OneXtel for active sender profiles."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def post(self, request):
+        user = request.user
+        sender_profile_id = request.POST.get("sender_profile_id")
+
+        # Determine target sender profiles
+        if user.is_admin or user.is_superuser:
+            qs = SenderProfile.objects.filter(is_active=True)
+        else:
+            qs = SenderProfile.objects.filter(user=user, is_active=True)
+
+        if sender_profile_id:
+            target_profiles = qs.filter(id=sender_profile_id)
+        else:
+            target_profiles = qs
+
+        if not target_profiles.exists():
+            messages.warning(
+                request,
+                "No active Sender Profile found for your account. Please assign or configure a Sender Profile before syncing templates.",
+            )
+            return redirect("templates_mgmt:template_list")
+
+        total_imported = 0
+        total_updated = 0
+        all_errors = []
+
+        for profile in target_profiles:
+            target_owner = profile.user if profile.user else user
+            res = sync_sender_profile_templates(user=target_owner, sender_profile=profile)
+            total_imported += res["imported"]
+            total_updated += res["updated"]
+            if res["errors"]:
+                all_errors.extend(res["errors"])
+
+        if total_imported > 0 or total_updated > 0:
+            messages.success(
+                request,
+                f"Sync complete! {total_imported} new template(s) imported, {total_updated} existing template(s) updated from carrier.",
+            )
+        else:
+            if all_errors:
+                messages.warning(request, f"Sync completed with warnings: {'; '.join(all_errors[:2])}")
+            else:
+                messages.info(request, "Carrier sync completed. No new or updated templates found on carrier platform.")
+
+        return redirect("templates_mgmt:template_list")
+

@@ -89,18 +89,50 @@ class OneXtelClient:
         """Fetch templates from OneXtel."""
         if self.mock:
             logger.info("OneXtel mock fetch_templates called for %s", template_name or sender_profile)
-            mock_templates = []
             if template_name:
-                mock_templates.append({
+                mock_templates = [{
+                    "name": template_name,
                     "templateName": template_name,
                     "senderProfile": sender_profile,
-                    "status": "APPROVED",
+                    "status": "Approved",
                     "channel": "RCS",
-                })
+                    "type": "text_message",
+                    "textMessageContent": f"Hello [name], this is mock template {template_name}.",
+                    "suggestions": [],
+                }]
+            else:
+                norm_m = (message_type or "promotional").lower()
+                mock_templates = [
+                    {
+                        "name": f"mock_welcome_{norm_m}",
+                        "templateName": f"mock_welcome_{norm_m}",
+                        "senderProfile": sender_profile,
+                        "status": "Approved",
+                        "channel": "RCS",
+                        "type": "text_message",
+                        "textMessageContent": "Welcome to [brand_name]! Your verification code is [code].",
+                        "suggestions": [{"suggestionType": "reply", "displayText": "Verify", "postback": "verify_click"}],
+                    },
+                    {
+                        "name": f"mock_rich_offer_{norm_m}",
+                        "templateName": f"mock_rich_offer_{norm_m}",
+                        "senderProfile": sender_profile,
+                        "status": "Approved",
+                        "channel": "RCS",
+                        "type": "rich_card",
+                        "standAlone": {
+                            "cardTitle": "Exclusive [discount]% Off Deal!",
+                            "cardDescription": "Use code [promo_code] on your order today.",
+                            "mediaUrl": "https://placehold.co/600x400/2563eb/ffffff.png?text=Offer",
+                            "suggestions": [{"suggestionType": "url_action", "displayText": "Claim Offer", "url": "https://example.com/deal", "postback": "claim"}],
+                        },
+                    },
+                ]
             return {
                 "status": "success",
                 "code": 200,
                 "totalCount": len(mock_templates),
+                "data": mock_templates,
                 "templates": mock_templates,
             }
 

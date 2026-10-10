@@ -7,6 +7,7 @@ from .views import (
     TemplateDetailView,
     TemplateListView,
     TemplateRefreshStatusView,
+    TemplateSyncView,
 )
 
 app_name = "templates_mgmt"
@@ -14,6 +15,7 @@ app_name = "templates_mgmt"
 urlpatterns = [
     path("", TemplateListView.as_view(), name="template_list"),
     path("create/", TemplateCreateView.as_view(), name="template_create"),
+    path("sync/", TemplateSyncView.as_view(), name="template_sync"),
     path("<int:pk>/", TemplateDetailView.as_view(), name="template_detail"),
     path("<int:pk>/refresh/", TemplateRefreshStatusView.as_view(), name="template_refresh"),
     path("media/upload/", MediaUploadAjaxView.as_view(), name="media_upload"),
