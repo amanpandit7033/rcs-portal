@@ -181,7 +181,7 @@ ONEXTEL_API_KEY = env("ONEXTEL_API_KEY", default="mock-key")
 ONEXTEL_BASE_URL = env("ONEXTEL_BASE_URL", default="https://api.onexaura.com")
 ONEXTEL_MOCK = env.bool("ONEXTEL_MOCK", default=False)
 ONEXTEL_MAX_TPS = env.int("ONEXTEL_MAX_TPS", default=100)
-ONEXTEL_DLR_SECRET = env("ONEXTEL_DLR_SECRET", default="dev-dlr-secret-token")
+ONEXTEL_DLR_SECRET = env("ONEXTEL_DLR_SECRET", default="")
 ONEXTEL_DLR_IP_ALLOWLIST = env.list("ONEXTEL_DLR_IP_ALLOWLIST", default=[])
 
 # Celery Configuration
