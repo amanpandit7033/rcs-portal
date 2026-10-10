@@ -595,7 +595,7 @@ function accountDirectoryManager() {
                     <!-- Assign New Profile Form -->
                     <div class="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80">
                         <h4 class="text-xs font-bold text-slate-900 mb-3">Assign New Sender Profile</h4>
-                        <form method="post" :action="'/wallet/senders/' + sendersUser.id + '/'" class="space-y-3">
+                        <form method="post" :action="'/wallet/sender-profiles/' + sendersUser.id + '/'" class="space-y-3">
                             {% csrf_token %}
                             <input type="hidden" name="next" :value="'{% url 'accounts:user_list' %}?open_senders=' + sendersUser.id">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -642,7 +642,7 @@ function accountDirectoryManager() {
                                                 <span :class="p.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'" class="px-2 py-0.5 rounded-full text-[10px] font-semibold border inline-flex items-center gap-1" x-text="p.is_active ? 'Active' : 'Suspended'"></span>
                                             </td>
                                             <td class="px-4 py-3 text-right">
-                                                <form method="post" :action="'/wallet/senders/toggle/' + p.id + '/'" class="inline">
+                                                <form method="post" :action="'/wallet/sender-profiles/toggle/' + p.id + '/'" class="inline">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="next" :value="'{% url 'accounts:user_list' %}?open_senders=' + sendersUser.id">
                                                     <button type="submit" :class="p.is_active ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'" class="px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors shadow-2xs cursor-pointer" x-text="p.is_active ? 'Suspend' : 'Activate'"></button>
