@@ -23,7 +23,7 @@ def sync_pending_templates(self):
 
     for template in pending_templates:
         try:
-            profile_name = template.sender_profile.sender_profile_name
+            profile_name = template.sender_profile.sender_id or template.sender_profile.sender_profile_name
             resp = client.fetch_templates(
                 sender_profile=profile_name,
                 template_name=template.name,

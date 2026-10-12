@@ -159,10 +159,11 @@ class TemplateCreateView(RoleRequiredMixin, View):
         data_payload["type"] = template_type
 
         client = OneXtelClient()
+        bot_identifier = sender_profile.sender_id or sender_profile.sender_profile_name
         try:
             resp = client.create_template(
                 data=data_payload,
-                sender_profile_name=sender_profile.sender_profile_name,
+                sender_profile_name=bot_identifier,
                 update_by=user.email,
                 message_type=message_type,
             )
@@ -217,8 +218,9 @@ class TemplateRefreshStatusView(RoleRequiredMixin, View):
         client = OneXtelClient()
 
         try:
+            bot_id = template.sender_profile.sender_id or template.sender_profile.sender_profile_name
             resp = client.fetch_templates(
-                sender_profile=template.sender_profile.sender_profile_name,
+                sender_profile=bot_id,
                 template_name=template.name,
                 message_type=template.message_type,
             )

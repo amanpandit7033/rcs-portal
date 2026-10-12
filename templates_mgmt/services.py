@@ -68,10 +68,10 @@ def sync_sender_profile_templates(
     updated_count = 0
     errors: List[str] = []
 
-    profile_name = sender_profile.sender_profile_name or sender_profile.sender_id
+    profile_name = sender_profile.sender_id or sender_profile.sender_profile_name
 
     for m_type in message_types:
-        page_no = 0
+        page_no = 1
         limit = 50
         while True:
             try:

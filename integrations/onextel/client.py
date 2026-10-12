@@ -137,16 +137,16 @@ class OneXtelClient:
             }
 
         endpoint = f"{self.base_url}/templates/fetch"
+        norm_mtype = str(message_type or "PROMOTIONAL").upper()
+        if norm_mtype not in ["PROMOTIONAL", "TRANSACTIONAL", "OTP"]:
+            norm_mtype = "PROMOTIONAL"
         payload: Dict[str, Any] = {
             "channel": "RCS",
             "senderProfile": sender_profile,
-            "pageNo": page_no,
+            "pageNo": max(1, int(page_no)),
             "limit": limit,
+            "messageType": norm_mtype,
         }
-        norm_mtype = str(message_type or "promotional").lower()
-        if norm_mtype not in ["promotional", "transactional", "otp"]:
-            norm_mtype = "promotional"
-        payload["messageType"] = norm_mtype
         if status:
             payload["status"] = status
         if created_date:
