@@ -18,7 +18,7 @@ from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from .forms import (
     ClientCreateForm,
@@ -30,7 +30,9 @@ from .forms import (
     UserCreateForm,
     UserEditForm,
     UserPasswordChangeForm,
+    WhiteLabelForm,
 )
+from .models import WhiteLabel
 from .mixins import AdminRequiredMixin, ResellerRequiredMixin, UserRequiredMixin
 from wallet.models import Wallet
 from wallet.utils import format_inr
@@ -784,3 +786,69 @@ class UserPasswordResetConfirmView(PasswordResetConfirmView):
 
 class UserPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = "accounts/password_reset_complete.html"
+
+
+# ---------------------------------------------------------------------------
+# White Label Management Views (Admin Only)
+# ---------------------------------------------------------------------------
+
+class WhiteLabelListView(AdminRequiredMixin, ListView):
+    """Admin-only list of white-label domain configurations."""
+    model = WhiteLabel
+    template_name = "accounts/whitelabel_list.html"
+    context_object_name = "whitelabels"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "White Label Management"
+        return context
+
+
+class WhiteLabelCreateView(AdminRequiredMixin, CreateView):
+    """Admin-only creation of white-label configuration."""
+    model = WhiteLabel
+    form_class = WhiteLabelForm
+    template_name = "accounts/whitelabel_form.html"
+    success_url = reverse_lazy("accounts:whitelabel_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"White-label branding for '{form.instance.company_name}' created successfully.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Configure White Label"
+        context["is_create"] = True
+        return context
+
+
+class WhiteLabelUpdateView(AdminRequiredMixin, UpdateView):
+    """Admin-only update of white-label configuration."""
+    model = WhiteLabel
+    form_class = WhiteLabelForm
+    template_name = "accounts/whitelabel_form.html"
+    success_url = reverse_lazy("accounts:whitelabel_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"White-label branding for '{form.instance.company_name}' updated successfully.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = f"Edit White Label: {self.object.company_name}"
+        context["is_create"] = False
+        return context
+
+
+class WhiteLabelDeleteView(AdminRequiredMixin, DeleteView):
+    """Admin-only deletion of white-label configuration."""
+    model = WhiteLabel
+    success_url = reverse_lazy("accounts:whitelabel_list")
+
+    def post(self, request, *args, **kwargs):
+        obj = self.get_object()
+        name = obj.company_name
+        res = super().delete(request, *args, **kwargs)
+        messages.success(request, f"White-label configuration for '{name}' was deleted.")
+        return res
+

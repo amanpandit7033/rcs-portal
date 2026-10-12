@@ -67,6 +67,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "wallet.context_processors.wallet_context",
+                "accounts.context_processors.whitelabel_context",
             ],
         },
     },

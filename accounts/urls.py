@@ -24,6 +24,10 @@ from .views import (
     UserPasswordResetDoneView,
     UserPasswordResetView,
     UserProfileView,
+    WhiteLabelCreateView,
+    WhiteLabelDeleteView,
+    WhiteLabelListView,
+    WhiteLabelUpdateView,
 )
 
 app_name = "accounts"
@@ -47,6 +51,12 @@ urlpatterns = [
     path("users/create/", UserCreateView.as_view(), name="user_create"),
     path("users/<int:pk>/edit/", UserEditView.as_view(), name="user_edit"),
     path("users/<int:user_id>/toggle-status/", ToggleUserActiveView.as_view(), name="toggle_user_status"),
+
+    # Admin: White Label Management
+    path("whitelabel/", WhiteLabelListView.as_view(), name="whitelabel_list"),
+    path("whitelabel/create/", WhiteLabelCreateView.as_view(), name="whitelabel_create"),
+    path("whitelabel/<int:pk>/edit/", WhiteLabelUpdateView.as_view(), name="whitelabel_edit"),
+    path("whitelabel/<int:pk>/delete/", WhiteLabelDeleteView.as_view(), name="whitelabel_delete"),
 
     # Reseller: Client Management
     path("clients/", ClientListView.as_view(), name="client_list"),

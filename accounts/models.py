@@ -134,3 +134,35 @@ class RoleScopedModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class WhiteLabel(models.Model):
+    """White-label configuration managed exclusively by administrators."""
+    company_name = models.CharField("Company Name", max_length=255)
+    pointed_subdomain = models.CharField(
+        "Pointed IP Sub-domain",
+        max_length=255,
+        unique=True,
+        help_text="Pointed IP or Sub-domain (e.g. rcs.yourbrand.com or 152.58.188.93)",
+    )
+    website_url = models.URLField("Website URL", max_length=255, blank=True)
+    support_number = models.CharField("Support Number", max_length=50, blank=True)
+    support_email = models.EmailField("Support Mail ID", blank=True)
+    logo = models.FileField(
+        "Logo",
+        upload_to="whitelabel/logos/",
+        blank=True,
+        null=True,
+        help_text="Brand Logo image (PNG, JPG, SVG, WebP)",
+    )
+    is_active = models.BooleanField("Active", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "White Label"
+        verbose_name_plural = "White Labels"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.company_name} ({self.pointed_subdomain})"

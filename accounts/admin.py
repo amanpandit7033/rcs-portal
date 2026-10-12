@@ -75,3 +75,13 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
+
+
+from .models import WhiteLabel
+
+
+@admin.register(WhiteLabel)
+class WhiteLabelAdmin(admin.ModelAdmin):
+    list_display = ("company_name", "pointed_subdomain", "website_url", "support_number", "support_email", "is_active", "created_at")
+    list_filter = ("is_active", "created_at")
+    search_fields = ("company_name", "pointed_subdomain", "support_email", "support_number")

@@ -358,3 +358,41 @@ class UserPasswordChangeForm(BasePasswordChangeForm):
                 "placeholder": "••••••••",
             })
 
+
+TAILWIND_FILE = (
+    "w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl "
+    "file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 "
+    "hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-200 rounded-xl p-1 bg-white"
+)
+
+
+class WhiteLabelForm(forms.ModelForm):
+    """Admin-only form to configure white-label branding details."""
+
+    class Meta:
+        from .models import WhiteLabel
+        model = WhiteLabel
+        fields = [
+            "company_name",
+            "pointed_subdomain",
+            "website_url",
+            "support_number",
+            "support_email",
+            "logo",
+        ]
+        widgets = {
+            "company_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Your Brand / Company Name"}),
+            "pointed_subdomain": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "rcs.yourbrand.com or 152.58.188.93"}),
+            "website_url": forms.URLInput(attrs={"class": TAILWIND_INPUT, "placeholder": "https://yourbrand.com"}),
+            "support_number": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "+91 9876543210"}),
+            "support_email": forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "support@yourbrand.com"}),
+            "logo": forms.FileInput(attrs={"class": TAILWIND_FILE, "accept": "image/*"}),
+        }
+
+    def clean_pointed_subdomain(self):
+        val = self.cleaned_data.get("pointed_subdomain", "").strip().lower()
+        val = val.replace("https://", "").replace("http://", "").split("/")[0].strip()
+        if not val:
+            raise forms.ValidationError("Please provide a valid pointed IP or sub-domain.")
+        return val
+
