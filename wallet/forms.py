@@ -65,9 +65,8 @@ class AssignCreditForm(forms.Form):
         self.actor = actor
         if actor:
             if actor.is_admin:
-                # Superadmin can add amounts to any User or Reseller
+                # Superadmin can add amounts to any active user (including admin)
                 self.fields["target_user"].queryset = User.objects.filter(
-                    role__in=[User.Role.USER, User.Role.RESELLER],
                     is_active=True,
                 ).select_related("wallet").order_by("role", "company_name", "username")
             elif actor.is_reseller:
