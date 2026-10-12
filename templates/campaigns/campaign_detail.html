@@ -77,13 +77,36 @@
                         </td>
                         <td class="px-4 py-3">
                             {% if c.message %}
-                            <span class="font-medium text-slate-800">{{ c.message.get_status_display }}</span>
+                                {% if c.message.status == 'delivered' or c.message.status == 'read' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold uppercase">
+                                    {{ c.message.get_status_display }}
+                                </span>
+                                {% elif c.message.status == 'failed' or c.status == 'failed' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-semibold uppercase">
+                                    Failed
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold uppercase">
+                                    {{ c.message.get_status_display }}
+                                </span>
+                                {% endif %}
                             {% else %}
                             <span class="text-slate-400">-</span>
                             {% endif %}
                         </td>
-                        <td class="px-4 py-3 text-rose-600 text-[11px]">
-                            {{ c.error_message|default:"-" }}
+                        <td class="px-4 py-3 text-[11px]">
+                            {% with err=c.error_message|default:c.message.failure_reason %}
+                            {% if err %}
+                            <span class="inline-flex items-center gap-1.5 text-rose-600 font-semibold leading-snug" title="{{ err }}">
+                                <svg class="w-3.5 h-3.5 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>{{ err }}</span>
+                            </span>
+                            {% elif c.status == 'failed' or c.message.status == 'failed' %}
+                            <span class="text-rose-600 font-medium">Failed</span>
+                            {% else %}
+                            <span class="text-slate-400">-</span>
+                            {% endif %}
+                            {% endwith %}
                         </td>
                     </tr>
                     {% empty %}

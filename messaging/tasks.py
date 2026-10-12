@@ -174,6 +174,13 @@ def send_message_task(self, message_id: str):
                 logger.critical("Failed to process refund for message %s: %s", message.id, ref_err)
 
         message.save(update_fields=["status", "failure_reason", "is_refunded"])
+        try:
+            message.campaign_contacts.filter(campaign__isnull=False).update(
+                status="failed",
+                error_message=message.failure_reason,
+            )
+        except Exception:
+            pass
         raise e
 
 
@@ -314,6 +321,19 @@ def process_dlr_task(self, dlr_log_id: int):
 
     if fields_to_update:
         message.save(update_fields=list(set(fields_to_update)))
+        if "status" in fields_to_update:
+            try:
+                if message.status == Message.Status.FAILED:
+                    message.campaign_contacts.filter(campaign__isnull=False).update(
+                        status="failed",
+                        error_message=message.failure_reason,
+                    )
+                elif message.status in [Message.Status.DELIVERED, Message.Status.READ]:
+                    message.campaign_contacts.filter(campaign__isnull=False).update(
+                        status="delivered",
+                    )
+            except Exception:
+                pass
 
     dlr_log.processed = True
     dlr_log.processed_at = timezone.now()
