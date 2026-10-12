@@ -20,7 +20,7 @@ class CampaignAdmin(admin.ModelAdmin):
         "user",
         "sender_profile",
         "status",
-        "total_count",
+        "total",
         "valid_count",
         "processed_count",
         "progress_pct",
@@ -31,7 +31,7 @@ class CampaignAdmin(admin.ModelAdmin):
     search_fields = ("name", "id", "user__email", "user__username", "sender_profile__sender_profile_name")
     readonly_fields = (
         "id",
-        "total_count",
+        "total",
         "valid_count",
         "invalid_count",
         "duplicate_count",
@@ -50,7 +50,7 @@ class CampaignAdmin(admin.ModelAdmin):
         }),
         ("Metrics & Processing", {
             "fields": (
-                "total_count",
+                "total",
                 "valid_count",
                 "invalid_count",
                 "duplicate_count",

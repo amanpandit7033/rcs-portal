@@ -77,6 +77,19 @@
         .dd:hover { background: #f8fafc; color: #0f172a; }
         :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+        /* Collapsed Icon-Only Sidebar Mode */
+        @media (min-width: 1024px) {
+            aside.sidebar-collapsed { width: 4.5rem !important; }
+            aside.sidebar-collapsed .nav-text { display: none !important; }
+            aside.sidebar-collapsed .nh { display: none !important; }
+            aside.sidebar-collapsed .logo-text { display: none !important; }
+            aside.sidebar-collapsed .logo-header { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+            aside.sidebar-collapsed .nl { justify-content: center !important; padding: .65rem 0 !important; gap: 0 !important; }
+            aside.sidebar-collapsed .nl .ic { width: 1.25rem !important; height: 1.25rem !important; }
+            aside.sidebar-collapsed .nl.on { box-shadow: none !important; background: #eff6ff !important; border-radius: .75rem !important; }
+            aside.sidebar-collapsed .px-3 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        }
     </style>
     <!-- Alpine.js & HTMX -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -114,7 +127,20 @@
     </svg>
 
     {% if request.user.is_authenticated %}
-    <div class="flex h-screen overflow-hidden" style="height:100dvh" x-data="{ sidebarOpen: false, userMenuOpen: false }" @keydown.escape.window="sidebarOpen = false; userMenuOpen = false">
+    <div class="flex h-screen overflow-hidden" style="height:100dvh"
+         x-data="{
+             sidebarOpen: false,
+             sidebarCollapsed: false,
+             userMenuOpen: false,
+             toggleSidebar() {
+                 if (window.innerWidth < 1024) {
+                     this.sidebarOpen = !this.sidebarOpen;
+                 } else {
+                     this.sidebarCollapsed = !this.sidebarCollapsed;
+                 }
+             }
+         }"
+         @keydown.escape.window="sidebarOpen = false; userMenuOpen = false">
 
         <!-- Mobile sidebar backdrop -->
         <div x-show="sidebarOpen" x-cloak style="display: none;"
@@ -123,13 +149,18 @@
              class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" @click="sidebarOpen = false"></div>
 
         <!-- Sidebar -->
-        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-               class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 transition-transform duration-300 ease-in-out lg:static lg:inset-auto flex flex-col shrink-0">
+        <aside :class="{
+                   'translate-x-0': sidebarOpen,
+                   '-translate-x-full lg:translate-x-0': !sidebarOpen,
+                   'sidebar-collapsed lg:w-[4.5rem]': sidebarCollapsed,
+                   'lg:w-64': !sidebarCollapsed
+               }"
+               class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 transition-all duration-300 ease-in-out lg:static lg:inset-auto flex flex-col shrink-0">
 
-            <div class="h-16 flex items-center justify-between px-5 shrink-0">
-                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3">
+            <div class="h-16 flex items-center justify-between px-5 shrink-0 logo-header">
+                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3" title="Azmobia RCS Portal">
                     <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0"><svg class="w-full h-full"><use href="#rcs-logo"/></svg></span>
-                    <span class="leading-tight">
+                    <span class="logo-text leading-tight">
                         <span class="block font-extrabold text-lg text-slate-900 tracking-tight">Azmobia</span>
                         <span class="block text-xs font-medium text-slate-400">RCS Portal</span>
                     </span>
@@ -142,33 +173,33 @@
                     <p class="nh">Main</p>
                     <nav class="space-y-1" aria-label="Main">
                         {% if request.user.is_admin %}
-                            <a href="{% url 'accounts:admin_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'admin_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
-                            <a href="{% url 'onboarding:admin_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Onboarding Requests</a>
-                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
-                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
-                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
-                            <a href="{% url 'accounts:user_list' %}" class="nl{% if request.resolver_match.view_name == 'accounts:user_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg>User Management</a>
-                            <a href="{% url 'wallet:assign_credit' %}" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg>Assign Credit</a>
-                            <a href="{% url 'wallet:statement' %}" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg>Wallet</a>
-                            <a href="{% url 'reports:admin_overview' %}" class="nl{% if request.resolver_match.view_name == 'reports:admin_overview' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg>Reports</a>
+                            <a href="{% url 'accounts:admin_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'admin_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
+                            <a href="{% url 'onboarding:admin_list' %}" title="Onboarding Requests" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg><span class="nav-text">Onboarding Requests</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Campaigns</span></a>
+                            <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Message Logs</span></a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
+                            <a href="{% url 'accounts:user_list' %}" title="User Management" class="nl{% if request.resolver_match.view_name == 'accounts:user_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">User Management</span></a>
+                            <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
+                            <a href="{% url 'wallet:statement' %}" title="Wallet" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg><span class="nav-text">Wallet</span></a>
+                            <a href="{% url 'reports:admin_overview' %}" title="Reports" class="nl{% if request.resolver_match.view_name == 'reports:admin_overview' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg><span class="nav-text">Reports</span></a>
 
                         {% elif request.user.is_reseller %}
-                            <a href="{% url 'accounts:reseller_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
-                            <a href="{% url 'onboarding:client_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Bot Onboarding</a>
-                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
-                            <a href="{% url 'accounts:client_list' %}" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg>Clients</a>
-                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
-                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
-                            <a href="{% url 'wallet:assign_credit' %}" class="nl{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'transfer' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg>Assign Credit</a>
-                            <a href="{% url 'wallet:statement' %}" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg>Wallet Ledger</a>
+                            <a href="{% url 'accounts:reseller_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
+                            <a href="{% url 'onboarding:client_list' %}" title="Bot Onboarding" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg><span class="nav-text">Bot Onboarding</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Campaigns</span></a>
+                            <a href="{% url 'accounts:client_list' %}" title="Clients" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Clients</span></a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
+                            <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Message Logs</span></a>
+                            <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'transfer' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
+                            <a href="{% url 'wallet:statement' %}" title="Wallet Ledger" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg><span class="nav-text">Wallet Ledger</span></a>
 
                         {% else %}
-                            <a href="{% url 'accounts:user_dashboard' %}" class="nl{% if request.resolver_match.url_name == 'user_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</a>
-                            <a href="{% url 'onboarding:client_list' %}" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg>Bot Onboarding</a>
-                            <a href="{% url 'templates_mgmt:template_list' %}" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg>Templates</a>
-                            <a href="{% url 'campaigns:campaign_list' %}" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Campaigns</a>
-                            <a href="{% url 'messaging:message_logs' %}" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg>Message Logs</a>
-                            <a href="{% url 'reports:user_usage' %}" class="nl{% if request.resolver_match.view_name == 'reports:user_usage' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg>Reports</a>
+                            <a href="{% url 'accounts:user_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'user_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
+                            <a href="{% url 'onboarding:client_list' %}" title="Bot Onboarding" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg><span class="nav-text">Bot Onboarding</span></a>
+                            <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Campaigns</span></a>
+                            <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Message Logs</span></a>
+                            <a href="{% url 'reports:user_usage' %}" title="Reports" class="nl{% if request.resolver_match.view_name == 'reports:user_usage' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg><span class="nav-text">Reports</span></a>
                         {% endif %}
                     </nav>
                 </div>
@@ -176,13 +207,13 @@
                 <div>
                     <p class="nh">Settings</p>
                     <nav class="space-y-1" aria-label="Settings">
-                        <a href="{% url 'accounts:user_profile' %}" class="nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}"><svg class="ic"><use href="#i-user"/></svg>My Profile</a>
+                        <a href="{% url 'accounts:user_profile' %}" title="My Profile" class="nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}"><svg class="ic"><use href="#i-user"/></svg><span class="nav-text">My Profile</span></a>
                         {% if request.user.is_admin %}
-                        <a href="{% url 'reports:admin_dlr_logs' %}" class="nl{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg>Marketplace Sync</a>
+                        <a href="{% url 'reports:admin_dlr_logs' %}" title="Marketplace Sync" class="nl{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Marketplace Sync</span></a>
                         {% endif %}
-                        <a href="{% url 'api:settings' %}" class="nl{% if request.resolver_match.view_name == 'api:settings' %} on{% endif %}"><svg class="ic"><use href="#i-code"/></svg>API Collection</a>
+                        <a href="{% url 'api:settings' %}" title="API Collection" class="nl{% if request.resolver_match.view_name == 'api:settings' %} on{% endif %}"><svg class="ic"><use href="#i-code"/></svg><span class="nav-text">API Collection</span></a>
                         {% if request.user.is_superadmin %}
-                        <a href="{% url 'accounts:system_settings' %}" class="nl{% if request.resolver_match.url_name == 'system_settings' %} on{% endif %}"><svg class="ic"><use href="#i-cog"/></svg>Settings</a>
+                        <a href="{% url 'accounts:system_settings' %}" title="Settings" class="nl{% if request.resolver_match.url_name == 'system_settings' %} on{% endif %}"><svg class="ic"><use href="#i-cog"/></svg><span class="nav-text">Settings</span></a>
                         {% endif %}
                     </nav>
                 </div>
@@ -208,7 +239,12 @@
             <!-- Top bar -->
             <header class="h-16 flex items-center justify-between px-5 lg:px-8 bg-[#f4f5f7]/90 backdrop-blur border-b border-slate-200/70 shrink-0 sticky top-0 z-30">
                 <div class="flex items-center gap-3 min-w-0">
-                    <button @click="sidebarOpen = true" class="lg:hidden p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60" aria-label="Open menu"><svg class="ic" style="width:1.4rem;height:1.4rem"><use href="#i-menu"/></svg></button>
+                    <button @click="toggleSidebar()"
+                            class="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors flex items-center justify-center cursor-pointer"
+                            aria-label="Toggle navigation menu"
+                            title="Toggle menu">
+                        <svg class="ic" style="width:1.35rem;height:1.35rem"><use href="#i-menu"/></svg>
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-2 sm:gap-3">

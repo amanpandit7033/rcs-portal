@@ -30,11 +30,9 @@ class MessageAdmin(admin.ModelAdmin):
     readonly_fields = (
         "id",
         "created_at",
-        "updated_at",
         "submitted_at",
         "delivered_at",
         "read_at",
-        "failed_at",
     )
     fieldsets = (
         ("Routing & Identity", {
@@ -51,11 +49,10 @@ class MessageAdmin(admin.ModelAdmin):
                 "submitted_at",
                 "delivered_at",
                 "read_at",
-                "failed_at",
             )
         }),
         ("Financials & Audit", {
-            "fields": ("cost", "rate_applied", "is_refunded", "created_at", "updated_at")
+            "fields": ("cost", "rate_applied", "is_refunded", "created_at")
         }),
     )
 
