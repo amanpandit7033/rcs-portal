@@ -52,10 +52,24 @@ def build_onextel_rcs_item(message: Message) -> Dict[str, Any]:
     """Assemble single RCS message item for OneXtel /send_sms API."""
     content_message = build_onextel_content_message(message)
 
-    sender_name = message.sender_profile.sender_profile_name if message.sender_profile else ""
+    sender_name = (
+        message.sender_profile.sender_id
+        or message.sender_profile.sender_profile_name
+        if message.sender_profile
+        else ""
+    )
+
+    # Normalize messageType to 'Promotional', 'Transactional', or 'OTP'
+    m_raw = (message.message_type or "PROMOTIONAL").upper()
+    if m_raw == "TRANSACTIONAL":
+        m_type_formatted = "Transactional"
+    elif m_raw == "OTP":
+        m_type_formatted = "OTP"
+    else:
+        m_type_formatted = "Promotional"
 
     item: Dict[str, Any] = {
-        "messageType": message.message_type,
+        "messageType": m_type_formatted,
         "recipient": message.recipient,
         "sender": sender_name,
         "contentMessage": content_message,
