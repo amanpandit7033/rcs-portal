@@ -112,48 +112,96 @@
                     </div>
                 </div>
 
-                <!-- 6. Logo with Live Preview -->
-                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
-                     x-data="{
-                        previewUrl: '{% if form.instance.logo %}{{ form.instance.logo.url }}{% endif %}',
-                        handleFile(e) {
-                            const file = e.target.files[0];
-                            if (file) {
-                                this.previewUrl = URL.createObjectURL(file);
+                <!-- 6. Logos (Full Brand Logo & Square 1:1 Ratio Logo) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Primary / Full Logo -->
+                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
+                         x-data="{
+                            previewUrl: '{% if form.instance.logo %}{{ form.instance.logo.url }}{% endif %}',
+                            handleFile(e) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    this.previewUrl = URL.createObjectURL(file);
+                                }
                             }
-                        }
-                     }">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold text-slate-800">
-                            Logo
-                        </label>
-                        <span class="text-[10px] font-mono font-semibold text-slate-500">PNG, JPG, SVG, WebP</span>
-                    </div>
-
-                    <div>
-                        <input type="file"
-                               name="logo"
-                               id="id_logo"
-                               accept="image/*"
-                               @change="handleFile($event)"
-                               class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-200 rounded-xl p-1 bg-white">
-                    </div>
-
-                    <template x-if="previewUrl">
-                        <div class="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center gap-4">
-                            <div class="w-20 h-12 rounded-lg border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0">
-                                <img :src="previewUrl" alt="Logo preview" class="max-w-full max-h-full object-contain">
-                            </div>
-                            <div class="text-xs space-y-0.5">
-                                <span class="font-bold text-slate-800 block">Logo Live Preview</span>
-                                <span class="text-slate-400 text-[11px] block">This logo will render in the navigation bar and login card.</span>
-                            </div>
+                         }">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-slate-800">
+                                Primary Brand Logo
+                            </label>
+                            <span class="text-[10px] font-mono font-semibold text-slate-500">Horizontal / Full</span>
                         </div>
-                    </template>
 
-                    {% if form.logo.errors %}
-                        <p class="text-xs text-rose-600 mt-1 font-semibold">{{ form.logo.errors.0 }}</p>
-                    {% endif %}
+                        <div>
+                            <input type="file"
+                                   name="logo"
+                                   id="id_logo"
+                                   accept="image/*"
+                                   @change="handleFile($event)"
+                                   class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-200 rounded-xl p-1 bg-white">
+                        </div>
+
+                        <template x-if="previewUrl">
+                            <div class="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
+                                <div class="w-20 h-12 rounded-lg border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0">
+                                    <img :src="previewUrl" alt="Logo preview" class="max-w-full max-h-full object-contain">
+                                </div>
+                                <div class="text-xs space-y-0.5 min-w-0">
+                                    <span class="font-bold text-slate-800 block">Full Logo Preview</span>
+                                    <span class="text-slate-400 text-[11px] block">Renders on expanded sidebar & login.</span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {% if form.logo.errors %}
+                            <p class="text-xs text-rose-600 mt-1 font-semibold">{{ form.logo.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Square Logo (1:1 Ratio) for Toggled / Collapsed Menu -->
+                    <div class="p-4 rounded-xl border border-blue-200/80 bg-blue-50/20 space-y-3"
+                         x-data="{
+                            previewUrl: '{% if form.instance.square_logo %}{{ form.instance.square_logo.url }}{% endif %}',
+                            handleFile(e) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    this.previewUrl = URL.createObjectURL(file);
+                                }
+                            }
+                         }">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>Square Logo (1:1 Ratio)</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">Menu Toggle</span>
+                            </label>
+                            <span class="text-[10px] font-mono font-semibold text-slate-500">1:1 Square</span>
+                        </div>
+
+                        <div>
+                            <input type="file"
+                                   name="square_logo"
+                                   id="id_square_logo"
+                                   accept="image/*"
+                                   @change="handleFile($event)"
+                                   class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-200 rounded-xl p-1 bg-white">
+                        </div>
+
+                        <template x-if="previewUrl">
+                            <div class="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl border border-blue-200 bg-blue-50 p-1 flex items-center justify-center shrink-0">
+                                    <img :src="previewUrl" alt="Square logo preview" class="w-full h-full object-contain">
+                                </div>
+                                <div class="text-xs space-y-0.5 min-w-0">
+                                    <span class="font-bold text-slate-800 block">Collapsed Menu Icon</span>
+                                    <span class="text-slate-400 text-[11px] block">Renders when sidebar menu is toggled.</span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {% if form.square_logo.errors %}
+                            <p class="text-xs text-rose-600 mt-1 font-semibold">{{ form.square_logo.errors.0 }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>

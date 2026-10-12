@@ -39,8 +39,12 @@
                 <!-- Header with logo and active badge -->
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
-                        {% if wl.logo %}
-                            <div class="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                        {% if wl.square_logo %}
+                            <div class="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0 shadow-2xs" title="Square Logo (1:1)">
+                                <img src="{{ wl.square_logo.url }}" alt="{{ wl.company_name }}" class="max-w-full max-h-full object-contain">
+                            </div>
+                        {% elif wl.logo %}
+                            <div class="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 p-1 flex items-center justify-center shrink-0 shadow-2xs" title="Brand Logo">
                                 <img src="{{ wl.logo.url }}" alt="{{ wl.company_name }}" class="max-w-full max-h-full object-contain">
                             </div>
                         {% else %}

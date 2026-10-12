@@ -38,17 +38,13 @@
 
         <!-- Brand -->
         <div class="relative z-10 shrink-0 hidden lg:flex items-center gap-3">
-            {% if whitelabel and whitelabel.logo %}
-                <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name }}" class="h-11 max-w-[160px] object-contain">
-            {% else %}
-                <div class="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-lg shadow-blue-500/20 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo">
-                        <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/>
-                        <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/>
-                        <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/>
-                    </svg>
-                </div>
-            {% endif %}
+            <div class="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-lg shadow-blue-500/20 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo">
+                    <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/>
+                    <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/>
+                    <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/>
+                </svg>
+            </div>
             <div class="leading-tight">
                 <span class="block font-extrabold text-xl text-white tracking-tight">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
                 <span class="block text-xs font-semibold text-cyan-300">Carrier enterprise terminal</span>
@@ -201,17 +197,21 @@
     <!-- RIGHT: sign-in -->
     <main class="order-1 lg:order-2 lg:col-span-5 bg-white text-slate-900 p-6 sm:p-10 xl:p-14 flex flex-col min-h-screen" x-data="{ showPassword: false }">
         <div class="my-auto w-full max-w-sm mx-auto py-4 sm:py-8">
-            <div class="lg:hidden flex items-center gap-3 mb-8">
-                {% if whitelabel and whitelabel.logo %}
-                    <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name }}" class="h-10 max-w-[140px] object-contain">
+            <div class="flex items-center gap-3.5 mb-8">
+                {% if whitelabel.logo %}
+                    <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="h-10 max-h-12 max-w-[160px] object-contain shrink-0">
+                {% elif whitelabel.square_logo %}
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center overflow-hidden shadow-2xs">
+                        <img src="{{ whitelabel.square_logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
+                    </div>
                 {% else %}
-                    <div class="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0">
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/></svg>
                     </div>
                 {% endif %}
                 <div class="leading-tight">
                     <span class="block font-extrabold text-lg text-slate-900 tracking-tight">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
-                    <span class="block text-xs text-slate-500">Carrier enterprise terminal</span>
+                    <span class="block text-xs text-slate-500 font-medium">Carrier enterprise terminal</span>
                 </div>
             </div>
             <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight">Sign in</h2>

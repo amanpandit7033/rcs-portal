@@ -379,6 +379,7 @@ class WhiteLabelForm(forms.ModelForm):
             "support_number",
             "support_email",
             "logo",
+            "square_logo",
         ]
         widgets = {
             "company_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Your Brand / Company Name"}),
@@ -387,6 +388,7 @@ class WhiteLabelForm(forms.ModelForm):
             "support_number": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "+91 9876543210"}),
             "support_email": forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "support@yourbrand.com"}),
             "logo": forms.FileInput(attrs={"class": TAILWIND_FILE, "accept": "image/*"}),
+            "square_logo": forms.FileInput(attrs={"class": TAILWIND_FILE, "accept": "image/*"}),
         }
 
     def clean_pointed_subdomain(self):

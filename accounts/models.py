@@ -155,6 +155,13 @@ class WhiteLabel(models.Model):
         null=True,
         help_text="Brand Logo image (PNG, JPG, SVG, WebP)",
     )
+    square_logo = models.FileField(
+        "Square Logo (1:1)",
+        upload_to="whitelabel/logos/",
+        blank=True,
+        null=True,
+        help_text="Square 1:1 ratio logo / app icon (PNG, JPG, SVG, WebP) shown when sidebar menu is toggled/collapsed",
+    )
     is_active = models.BooleanField("Active", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -84,6 +84,8 @@
             aside.sidebar-collapsed .nav-text { display: none !important; }
             aside.sidebar-collapsed .nh { display: none !important; }
             aside.sidebar-collapsed .logo-text { display: none !important; }
+            aside.sidebar-collapsed .logo-expanded { display: none !important; }
+            aside.sidebar-collapsed .logo-collapsed { display: flex !important; }
             aside.sidebar-collapsed .logo-header { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
             aside.sidebar-collapsed .nl { justify-content: center !important; padding: .65rem 0 !important; gap: 0 !important; }
             aside.sidebar-collapsed .nl .ic { width: 1.25rem !important; height: 1.25rem !important; }
@@ -158,16 +160,36 @@
                class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 transition-all duration-300 ease-in-out lg:static lg:inset-auto flex flex-col shrink-0">
 
             <div class="h-16 flex items-center justify-between px-5 shrink-0 logo-header">
-                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3" title="{{ whitelabel.company_name|default:'RCS Portal' }}">
-                    {% if whitelabel and whitelabel.logo %}
-                        <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name }}" class="h-9 max-w-[140px] object-contain shrink-0">
-                    {% else %}
-                        <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0"><svg class="w-full h-full"><use href="#rcs-logo"/></svg></span>
-                        <span class="logo-text leading-tight">
-                            <span class="block font-extrabold text-lg text-slate-900 tracking-tight">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
-                            <span class="block text-xs font-medium text-slate-400">Enterprise Messaging</span>
-                        </span>
-                    {% endif %}
+                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3 min-w-0" title="{{ whitelabel.company_name|default:'RCS Portal' }}">
+                    <!-- 1. Collapsed logo: displayed ONLY when sidebar is collapsed/toggled -->
+                    <span class="logo-collapsed hidden w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 p-1 shrink-0 items-center justify-center overflow-hidden shadow-2xs">
+                        {% if whitelabel.square_logo %}
+                            <img src="{{ whitelabel.square_logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
+                        {% elif whitelabel.logo %}
+                            <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
+                        {% else %}
+                            <svg class="w-full h-full"><use href="#rcs-logo"/></svg>
+                        {% endif %}
+                    </span>
+
+                    <!-- 2. Expanded logo: displayed when sidebar is open -->
+                    <div class="logo-expanded flex items-center gap-3 min-w-0">
+                        {% if whitelabel.logo %}
+                            <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="h-8 max-h-9 w-auto max-w-[170px] object-contain">
+                        {% else %}
+                            <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
+                                {% if whitelabel.square_logo %}
+                                    <img src="{{ whitelabel.square_logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
+                                {% else %}
+                                    <svg class="w-full h-full"><use href="#rcs-logo"/></svg>
+                                {% endif %}
+                            </span>
+                            <span class="logo-text leading-tight truncate">
+                                <span class="block font-extrabold text-lg text-slate-900 tracking-tight truncate">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
+                                <span class="block text-xs font-medium text-slate-400">Enterprise Messaging</span>
+                            </span>
+                        {% endif %}
+                    </div>
                 </a>
                 <button @click="sidebarOpen = false" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Close menu"><svg class="ic"><use href="#i-x"/></svg></button>
             </div>
