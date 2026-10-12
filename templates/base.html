@@ -184,7 +184,6 @@
                         {% if request.user.is_superadmin %}
                         <a href="{% url 'accounts:system_settings' %}" class="nl{% if request.resolver_match.url_name == 'system_settings' %} on{% endif %}"><svg class="ic"><use href="#i-cog"/></svg>Settings</a>
                         {% endif %}
-                        <a href="{% url 'api:documentation' %}" target="_blank" rel="noopener" class="nl"><svg class="ic"><use href="#i-book"/></svg>Help Center</a>
                     </nav>
                 </div>
             </div>
