@@ -35,14 +35,13 @@ def build_onextel_content_message(message: Message) -> Dict[str, Any]:
 
     if c_type == Message.ContentType.TEMPLATE:
         tpl_code = message.template.name if message.template else ""
-        c_params = message.custom_params or {}
-        custom_params_str = json.dumps(c_params) if isinstance(c_params, dict) else str(c_params)
-        return {
-            "templateMessage": {
-                "templateCode": tpl_code,
-                "customParams": custom_params_str,
-            }
-        }
+        tpl_dict: Dict[str, Any] = {"templateCode": tpl_code}
+        c_params = message.custom_params
+        if c_params and isinstance(c_params, dict) and any(c_params.values()):
+            tpl_dict["customParams"] = json.dumps(c_params)
+        elif isinstance(c_params, str) and c_params.strip() and c_params.strip() not in ["{}", "[]"]:
+            tpl_dict["customParams"] = c_params
+        return {"templateMessage": tpl_dict}
 
     # Fallback to text if unknown
     return {"text": payload.get("text", "")}
