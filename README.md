@@ -84,14 +84,7 @@ Apply migrations to initialize all tables, schemas, and constraints in PostgreSQ
 python manage.py migrate
 ```
 
-### 4. Create Demo Data
-
-Seed 1 Admin, 1 Reseller, and 2 Users under that Reseller:
-```bash
-python manage.py create_demo_data
-```
-
-### 5. Start the Development Server
+### 4. Start the Development Server
 
 ```bash
 python manage.py runserver

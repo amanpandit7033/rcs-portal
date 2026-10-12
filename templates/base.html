@@ -158,14 +158,14 @@
                class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 transition-all duration-300 ease-in-out lg:static lg:inset-auto flex flex-col shrink-0">
 
             <div class="h-16 flex items-center justify-between px-5 shrink-0 logo-header">
-                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3" title="{{ whitelabel.company_name|default:'Azmobia RCS Portal' }}">
+                <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3" title="{{ whitelabel.company_name|default:'RCS Portal' }}">
                     {% if whitelabel and whitelabel.logo %}
                         <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name }}" class="h-9 max-w-[140px] object-contain shrink-0">
                     {% else %}
                         <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0"><svg class="w-full h-full"><use href="#rcs-logo"/></svg></span>
                         <span class="logo-text leading-tight">
-                            <span class="block font-extrabold text-lg text-slate-900 tracking-tight">{{ whitelabel.company_name|default:"Azmobia" }}</span>
-                            <span class="block text-xs font-medium text-slate-400">RCS Portal</span>
+                            <span class="block font-extrabold text-lg text-slate-900 tracking-tight">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
+                            <span class="block text-xs font-medium text-slate-400">Enterprise Messaging</span>
                         </span>
                     {% endif %}
                 </a>
