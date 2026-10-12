@@ -162,7 +162,7 @@
             <div class="h-16 flex items-center justify-between px-5 shrink-0 logo-header">
                 <a href="{% url 'accounts:dashboard_redirect' %}" class="flex items-center gap-3 min-w-0" title="{{ whitelabel.company_name|default:'RCS Portal' }}">
                     <!-- 1. Collapsed logo: displayed ONLY when sidebar is collapsed/toggled -->
-                    <span class="logo-collapsed hidden w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 p-1 shrink-0 items-center justify-center overflow-hidden shadow-2xs">
+                    <span class="logo-collapsed hidden w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 items-center justify-center overflow-hidden shadow-2xs">
                         {% if whitelabel.square_logo %}
                             <img src="{{ whitelabel.square_logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
                         {% elif whitelabel.logo %}
@@ -175,9 +175,9 @@
                     <!-- 2. Expanded logo: displayed when sidebar is open -->
                     <div class="logo-expanded flex items-center gap-3 min-w-0">
                         {% if whitelabel.logo %}
-                            <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="h-8 max-h-9 w-auto max-w-[170px] object-contain">
+                            <img src="{{ whitelabel.logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="h-10 sm:h-11 max-h-12 w-auto max-w-[195px] object-contain object-left">
                         {% else %}
-                            <span class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
+                            <span class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
                                 {% if whitelabel.square_logo %}
                                     <img src="{{ whitelabel.square_logo.url }}" alt="{{ whitelabel.company_name|default:'Logo' }}" class="w-full h-full object-contain">
                                 {% else %}
