@@ -33,8 +33,8 @@ class OneXtelDLRWebhookView(View):
             logger.warning("Rejected DLR webhook from unlisted IP: %s", client_ip)
             return JsonResponse({"error": "Forbidden: IP not allowlisted"}, status=403)
 
-        # 2. Shared Secret Token Authentication
-        configured_secret = getattr(settings, "ONEXTEL_DLR_SECRET", "dev-dlr-secret-token")
+        # 2. Shared Secret Token Authentication (optional)
+        configured_secret = getattr(settings, "ONEXTEL_DLR_SECRET", "")
         incoming_secret = (
             request.headers.get("X-Webhook-Secret")
             or request.headers.get("X-OneXtel-Secret")

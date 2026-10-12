@@ -224,12 +224,17 @@ def process_dlr_task(self, dlr_log_id: int):
     # Match corresponding Message
     message = Message.objects.select_related("user").filter(onextel_message_id=onextel_id).first()
     if not message:
-        # Check by id if internal UUID was reported in reference
-        try:
-            val_uuid = uuid.UUID(str(onextel_id))
-            message = Message.objects.select_related("user").filter(id=val_uuid).first()
-        except (ValueError, TypeError, AttributeError):
-            pass
+        # Check by id if internal UUID was reported in reference or custrefs
+        for ref_cand in [onextel_id, parsed.get("custref1"), parsed.get("custref2")]:
+            if not ref_cand:
+                continue
+            try:
+                val_uuid = uuid.UUID(str(ref_cand))
+                message = Message.objects.select_related("user").filter(id=val_uuid).first()
+                if message:
+                    break
+            except (ValueError, TypeError, AttributeError):
+                pass
 
     if not message:
         logger.warning("No message matched for OneXtel ID '%s'. Marking DLR pending reprocess.", onextel_id)
