@@ -178,10 +178,14 @@
 
                 <!-- Logo -->
                 <div class="space-y-1.5">
-                    <span class="text-[11px] font-bold text-slate-600 block">Bot Logo (224x224 px)</span>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-700 block">Bot Logo</span>
+                        <span class="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">224 × 224 px (1:1)</span>
+                    </div>
                     {% if application.bot_logo %}
-                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center">
-                            <img src="{{ application.bot_logo.url }}" alt="Logo" class="w-20 h-20 rounded-xl object-cover border border-white shadow-xs">
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center gap-1.5">
+                            <img src="{{ application.bot_logo.url }}" alt="Logo" class="w-24 h-24 aspect-square rounded-xl object-cover border border-white shadow-xs">
+                            <span class="text-[10px] font-mono text-slate-400">Carrier Spec: 224 × 224 px</span>
                         </div>
                         <a href="{{ application.bot_logo.url }}" download class="block text-center text-xs font-semibold text-blue-600 hover:underline">Download Logo File</a>
                     {% else %}
@@ -191,10 +195,17 @@
 
                 <!-- Banner -->
                 <div class="space-y-1.5 pt-2 border-t border-slate-100">
-                    <span class="text-[11px] font-bold text-slate-600 block">Header Banner (1440x448 px)</span>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-700 block">Header Banner</span>
+                        <span class="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">1440 × 448 px (3.2:1)</span>
+                    </div>
                     {% if application.banner_image %}
-                        <div class="rounded-xl overflow-hidden border border-slate-200">
-                            <img src="{{ application.banner_image.url }}" alt="Banner" class="w-full h-24 object-cover">
+                        <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-2xs">
+                            <img src="{{ application.banner_image.url }}" alt="Banner" class="w-full aspect-[1440/448] object-cover">
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
+                            <span>Carrier Spec: 1440 × 448 px</span>
+                            <span>Ratio: 3.2:1</span>
                         </div>
                         <a href="{{ application.banner_image.url }}" download class="block text-center text-xs font-semibold text-blue-600 hover:underline">Download Banner File</a>
                     {% else %}

@@ -23,11 +23,12 @@ class OnboardingApplicationForm(forms.ModelForm):
         ("OTP", "OTP"),
     ]
 
-    bot_message_types = forms.MultipleChoiceField(
+    bot_message_type = forms.ChoiceField(
         choices=MESSAGE_TYPE_CHOICES,
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "rounded text-blue-600 focus:ring-blue-500"}),
+        widget=forms.RadioSelect(attrs={"class": "text-blue-600 focus:ring-blue-500"}),
         label="Bot Message Type",
-        help_text="Select one or more message categories your bot will transmit.",
+        help_text="Select one message category your bot will transmit (only one at a time).",
+        initial="Promotional",
     )
 
     class Meta:
@@ -74,7 +75,7 @@ class OnboardingApplicationForm(forms.ModelForm):
             "bot_logo": forms.FileInput(attrs={"class": TAILWIND_FILE, "accept": "image/png,image/jpeg,image/jpg"}),
             "banner_image": forms.FileInput(attrs={"class": TAILWIND_FILE, "accept": "image/png,image/jpeg,image/jpg"}),
             "short_description": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Brief description of bot utility (max 100 chars)", "maxlength": "100"}),
-            "color_code": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "#2563EB", "type": "color"}),
+            "color_code": forms.TextInput(attrs={"class": TAILWIND_INPUT + " font-mono uppercase font-bold", "placeholder": "#2563EB"}),
             "primary_phone": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "+91 9876543210"}),
             "primary_phone_label": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Support Phone", "maxlength": "25"}),
             "primary_email": forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "support@brand.com"}),
@@ -92,7 +93,9 @@ class OnboardingApplicationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if self.instance and self.instance.pk and self.instance.bot_message_type:
-            self.fields["bot_message_types"].initial = self.instance.get_message_types_list()
+            raw_val = self.instance.bot_message_type.split(",")[0].strip()
+            if raw_val in dict(self.MESSAGE_TYPE_CHOICES):
+                self.fields["bot_message_type"].initial = raw_val
 
         # Set requirements for KYC docs & Brand SPOC
         self.fields["brand_spoc_name"].required = True
@@ -140,6 +143,59 @@ class OnboardingApplicationForm(forms.ModelForm):
                     raise forms.ValidationError("PAN Card must be a PDF, JPG, or PNG file.")
         return f
 
+    def clean_bot_logo(self):
+        f = self.cleaned_data.get("bot_logo")
+        from django.core.files.uploadedfile import UploadedFile
+        if f and isinstance(f, UploadedFile):
+            if hasattr(f, "size") and f.size > 2 * 1024 * 1024:
+                raise forms.ValidationError("Bot logo file size must not exceed 2 MB.")
+            from PIL import Image
+            try:
+                f.seek(0)
+                img = Image.open(f)
+                w, h = img.size
+                if w != 224 or h != 224:
+                    raise forms.ValidationError(
+                        f"Bot logo resolution must be exactly 224 x 224 px (1:1 square). Uploaded image resolution is {w} x {h} px."
+                    )
+                f.seek(0)
+            except forms.ValidationError:
+                raise
+            except Exception:
+                raise forms.ValidationError("Invalid image file. Please upload a valid PNG, JPG, or JPEG image.")
+        return f
+
+    def clean_banner_image(self):
+        f = self.cleaned_data.get("banner_image")
+        from django.core.files.uploadedfile import UploadedFile
+        if f and isinstance(f, UploadedFile):
+            if hasattr(f, "size") and f.size > 5 * 1024 * 1024:
+                raise forms.ValidationError("Banner image file size must not exceed 5 MB.")
+            from PIL import Image
+            try:
+                f.seek(0)
+                img = Image.open(f)
+                w, h = img.size
+                if w != 1440 or h != 448:
+                    raise forms.ValidationError(
+                        f"Banner image resolution must be exactly 1440 x 448 px (3.2:1 aspect ratio). Uploaded image resolution is {w} x {h} px."
+                    )
+                f.seek(0)
+            except forms.ValidationError:
+                raise
+            except Exception:
+                raise forms.ValidationError("Invalid image file. Please upload a valid PNG, JPG, or JPEG image.")
+        return f
+
+    def clean_color_code(self):
+        color = self.cleaned_data.get("color_code", "").strip()
+        if color and not color.startswith("#"):
+            color = f"#{color}"
+        import re
+        if not re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", color):
+            raise forms.ValidationError("Please provide a valid HEX color code (e.g. #2563EB).")
+        return color.upper()
+
     def clean_bot_name(self):
         bot_name = self.cleaned_data.get("bot_name", "").strip()
         if not any(c.isalpha() for c in bot_name):
@@ -150,8 +206,7 @@ class OnboardingApplicationForm(forms.ModelForm):
         instance = super().save(commit=False)
         if self.user:
             instance.user = self.user
-        types = self.cleaned_data.get("bot_message_types", [])
-        instance.bot_message_type = ", ".join(types)
+        instance.bot_message_type = self.cleaned_data.get("bot_message_type", "Promotional")
         if commit:
             instance.save()
         return instance
