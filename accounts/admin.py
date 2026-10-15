@@ -77,7 +77,7 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
-from .models import WhiteLabel, WhitelistNumber
+from .models import WhiteLabel, WhitelistNumber, UserKYC
 
 
 @admin.register(WhiteLabel)
@@ -92,4 +92,12 @@ class WhitelistNumberAdmin(admin.ModelAdmin):
     list_display = ("user", "phone_number", "description", "created_by", "created_at")
     list_filter = ("user", "created_at")
     search_fields = ("phone_number", "description", "user__username")
+
+
+@admin.register(UserKYC)
+class UserKYCAdmin(admin.ModelAdmin):
+    list_display = ("user", "company_name", "person_name", "phone", "email", "pan_card", "status", "updated_at")
+    list_filter = ("status", "created_at", "updated_at")
+    search_fields = ("user__username", "company_name", "person_name", "email", "phone", "pan_card", "aadhar", "gst_number")
+
 

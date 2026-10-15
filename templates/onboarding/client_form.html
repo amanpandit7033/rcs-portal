@@ -141,7 +141,7 @@
                 <!-- Upgraded Colour Code Studio -->
                 <div class="sm:col-span-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
                      x-data="{
-                        color: '{{ form.color_code.value|default:form.instance.color_code|default:'#2563EB' }}',
+                        color: '{{ form.color_code.value|default:form.instance.color_code|default:'#283891' }}',
                         setColor(val) {
                             this.color = val;
                         }
@@ -185,7 +185,7 @@
                                            x-model="color"
                                            maxlength="7"
                                            class="w-full pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-mono text-xs uppercase font-bold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 shadow-2xs"
-                                           placeholder="#2563EB">
+                                            placeholder="#283891">
                                 </div>
                             </div>
 
@@ -193,10 +193,10 @@
                             <div class="space-y-1">
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recommended Carrier Palettes</span>
                                 <div class="flex flex-wrap items-center gap-1.5">
-                                    <button type="button" @click="setColor('#2563EB')" class="w-6 h-6 rounded-lg bg-[#2563EB] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Royal Blue (#2563EB)"></button>
+                                    <button type="button" @click="setColor('#283891')" class="w-6 h-6 rounded-lg bg-[#283891] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Navy Primary (#283891)"></button>
+                                    <button type="button" @click="setColor('#39b54a')" class="w-6 h-6 rounded-lg bg-[#39b54a] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Green Secondary (#39b54a)"></button>
                                     <button type="button" @click="setColor('#4F46E5')" class="w-6 h-6 rounded-lg bg-[#4F46E5] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Deep Indigo (#4F46E5)"></button>
                                     <button type="button" @click="setColor('#7C3AED')" class="w-6 h-6 rounded-lg bg-[#7C3AED] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Purple (#7C3AED)"></button>
-                                    <button type="button" @click="setColor('#059669')" class="w-6 h-6 rounded-lg bg-[#059669] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Emerald (#059669)"></button>
                                     <button type="button" @click="setColor('#0891B2')" class="w-6 h-6 rounded-lg bg-[#0891B2] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Cyan (#0891B2)"></button>
                                     <button type="button" @click="setColor('#D97706')" class="w-6 h-6 rounded-lg bg-[#D97706] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Amber (#D97706)"></button>
                                     <button type="button" @click="setColor('#E11D48')" class="w-6 h-6 rounded-lg bg-[#E11D48] border border-white shadow-2xs hover:scale-110 transition-transform cursor-pointer" title="Rose (#E11D48)"></button>

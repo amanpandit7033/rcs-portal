@@ -8,17 +8,17 @@
   [x-cloak]{display:none!important}
   .fld{width:100%;border:1px solid #e2e8f0;background:#f8fafc;color:#0f172a;border-radius:.75rem;padding:.8rem 1rem;font-size:1rem;font-weight:500;transition:border-color .15s,box-shadow .15s,background .15s}
   .fld::placeholder{color:#94a3b8}
-  .fld:focus{outline:0;background:#fff;border-color:#2563eb;box-shadow:0 0 0 4px #dbeafe}
+  .fld:focus{outline:0;background:#fff;border-color:#283891;box-shadow:0 0 0 4px #dce2f5}
   @media(min-width:640px){.fld{font-size:.9rem}}
   .fld:-webkit-autofill,.fld:-webkit-autofill:hover{-webkit-box-shadow:0 0 0 1000px #f8fafc inset;-webkit-text-fill-color:#0f172a;caret-color:#0f172a}
-  .fld:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px #fff inset,0 0 0 4px #dbeafe}
+  .fld:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px #fff inset,0 0 0 4px #dce2f5}
   /* keep the left panel inside one screen so the stats bar is always visible */
   @media(min-width:1024px) and (max-height:900px){.phone-fit{zoom:.86}}
   @media(min-width:1024px) and (max-height:800px){.phone-fit{zoom:.74}}
   @media(min-width:1024px) and (max-height:700px){.phone-fit{zoom:.62}.story-list{display:none}}
 </style>
 
-<div class="min-h-screen w-full flex flex-col lg:grid lg:grid-cols-12 bg-slate-900 selection:bg-blue-600 selection:text-white">
+<div class="min-h-screen w-full flex flex-col lg:grid lg:grid-cols-12 bg-slate-900 selection:bg-[#283891] selection:text-white">
 
     <!-- LEFT: brand story with live RCS preview -->
     <section class="order-2 lg:order-1 lg:col-span-7 relative overflow-hidden bg-slate-950 text-white px-6 py-10 sm:p-10 lg:py-8 xl:px-14 xl:py-10 hidden lg:flex flex-col gap-8 lg:gap-6 lg:h-screen">
@@ -32,24 +32,25 @@
         </div>
 
         <div class="absolute inset-0 pointer-events-none z-1">
-            <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -top-32 -left-32 w-96 h-96 bg-[#283891]/25 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-[#39b54a]/20 rounded-full blur-3xl"></div>
         </div>
 
         <!-- Brand -->
         <div class="relative z-10 shrink-0 hidden lg:flex items-center gap-3">
             <div class="w-11 h-11 rounded-2xl bg-white p-1.5 shadow-lg shadow-blue-500/20 shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo">
-                    <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/>
-                    <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/>
-                    <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/>
+                    <path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#94a9e3"/>
+                    <path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#39b54a"/>
+                    <path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#283891"/>
                 </svg>
             </div>
             <div class="leading-tight">
                 <span class="block font-extrabold text-xl text-white tracking-tight">{{ whitelabel.company_name|default:"RCS Portal" }}</span>
-                <span class="block text-xs font-semibold text-cyan-300">Carrier enterprise terminal</span>
+                <span class="block text-xs font-semibold text-[#39b54a]">Carrier enterprise terminal</span>
             </div>
         </div>
+
 
         <!-- Hero -->
         <div class="relative z-10 my-auto min-h-0 grid gap-10 xl:grid-cols-[1fr_auto] xl:items-center">
@@ -143,11 +144,11 @@
                                     <svg viewBox="0 0 240 112" class="absolute inset-0 w-full h-full" fill="none">
                                         <path d="M10 92 C60 92 70 62 120 62 S190 38 232 24" stroke="#fff" stroke-opacity=".5" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
                                         <circle cx="232" cy="24" r="6" fill="#fff"/><circle cx="232" cy="24" r="12" fill="#fff" fill-opacity=".25"/>
-                                        <polygon points="84,46 100,34 160,34 144,46" fill="#bfdbfe"/>
-                                        <rect x="84" y="46" width="60" height="46" fill="#eff6ff"/>
-                                        <polygon points="144,46 160,34 160,80 144,92" fill="#93c5fd"/>
-                                        <rect x="108" y="46" width="12" height="46" fill="#3b82f6"/>
-                                        <polygon points="108,46 124,34 136,34 120,46" fill="#60a5fa"/>
+                                        <polygon points="84,46 100,34 160,34 144,46" fill="#bdcaee"/>
+                                        <rect x="84" y="46" width="60" height="46" fill="#eef1fa"/>
+                                        <polygon points="144,46 160,34 160,80 144,92" fill="#94a9e3"/>
+                                        <rect x="108" y="46" width="12" height="46" fill="#283891"/>
+                                        <polygon points="108,46 124,34 136,34 120,46" fill="#6782d4"/>
                                     </svg>
                                     <span class="absolute top-2 left-2 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">Out for delivery</span>
                                 </div>
@@ -187,10 +188,10 @@
 
         <!-- Stats -->
         <dl class="relative z-10 shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10 backdrop-blur-xs">
-            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Open rate</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">98%</dd></div>
-            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Active users</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">2.5B+</dd></div>
-            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Higher CTR</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">35x</dd></div>
-            <div><dt class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">Native inbox</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">100%</dd></div>
+            <div><dt class="text-[11px] font-semibold text-[#39b54a] uppercase tracking-wider">Open rate</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">98%</dd></div>
+            <div><dt class="text-[11px] font-semibold text-[#39b54a] uppercase tracking-wider">Active users</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">2.5B+</dd></div>
+            <div><dt class="text-[11px] font-semibold text-[#39b54a] uppercase tracking-wider">Higher CTR</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">35x</dd></div>
+            <div><dt class="text-[11px] font-semibold text-[#39b54a] uppercase tracking-wider">Native inbox</dt><dd class="text-2xl font-black text-white tracking-tight leading-none mt-1">100%</dd></div>
         </dl>
     </section>
 
@@ -206,10 +207,11 @@
                     </div>
                 {% else %}
                     <div class="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 p-2 shrink-0 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" class="w-full h-full" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#94a9e3"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#39b54a"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#283891"/></svg>
                     </div>
                 {% endif %}
             </div>
+
             <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight">Sign in</h2>
             <p class="text-sm text-slate-500 mt-2">Manage your RCS campaigns, templates, wallet and developer API.</p>
 

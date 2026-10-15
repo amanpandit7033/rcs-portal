@@ -29,11 +29,13 @@ from .forms import (
     SetPasswordForm,
     UserCreateForm,
     UserEditForm,
+    UserKYCForm,
     UserPasswordChangeForm,
     WhiteLabelForm,
     WhitelistNumberForm,
 )
-from .models import WhiteLabel, WhitelistNumber
+from .models import WhiteLabel, WhitelistNumber, UserKYC
+
 from .mixins import AdminRequiredMixin, ResellerRequiredMixin, UserRequiredMixin
 from wallet.models import Wallet
 from wallet.utils import format_inr
@@ -978,6 +980,150 @@ class WhitelistDeleteView(AdminRequiredMixin, DeleteView):
         res = super().delete(request, *args, **kwargs)
         messages.success(request, f"Number '{num}' removed from {uname}'s whitelist.")
         return res
+
+
+# ---------------------------------------------------------------------------
+# KYC Management Views
+# ---------------------------------------------------------------------------
+
+class UserKYCView(LoginRequiredMixin, View):
+    """View for every user to submit, view, and update their KYC details."""
+    template_name = "accounts/kyc_details.html"
+
+    def get(self, request, *args, **kwargs):
+        kyc = getattr(request.user, "kyc", None)
+        if kyc:
+            form = UserKYCForm(instance=kyc)
+        else:
+            initial_data = {
+                "company_name": request.user.company_name,
+                "person_name": request.user.get_full_name(),
+                "email": request.user.email,
+                "phone": request.user.phone,
+                "gst_number": request.user.GSTIN,
+            }
+            form = UserKYCForm(initial=initial_data)
+
+        all_kycs = None
+        if request.user.is_admin:
+            all_kycs = UserKYC.objects.select_related("user").order_by("-updated_at")
+
+        context = {
+            "page_title": "KYC Verification",
+            "form": form,
+            "kyc": kyc,
+            "all_kycs": all_kycs,
+            "active_tab": request.GET.get("tab", "my_kyc"),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        kyc = getattr(request.user, "kyc", None)
+        if kyc:
+            form = UserKYCForm(request.POST, instance=kyc)
+        else:
+            form = UserKYCForm(request.POST)
+
+        if form.is_valid():
+            kyc_obj = form.save(commit=False)
+            kyc_obj.user = request.user
+            if not kyc or kyc.status != UserKYC.Status.VERIFIED:
+                kyc_obj.status = UserKYC.Status.PENDING
+            kyc_obj.save()
+
+            # Keep user profile fields aligned if helpful
+            user_updated = False
+            if not request.user.company_name and kyc_obj.company_name:
+                request.user.company_name = kyc_obj.company_name
+                user_updated = True
+            if not request.user.phone and kyc_obj.phone:
+                request.user.phone = kyc_obj.phone
+                user_updated = True
+            if not request.user.GSTIN and kyc_obj.gst_number:
+                request.user.GSTIN = kyc_obj.gst_number
+                user_updated = True
+            if user_updated:
+                request.user.save(update_fields=["company_name", "phone", "GSTIN"])
+
+            messages.success(request, "KYC details saved successfully.")
+            return redirect("accounts:kyc_details")
+
+        all_kycs = None
+        if request.user.is_admin:
+            all_kycs = UserKYC.objects.select_related("user").order_by("-updated_at")
+
+        context = {
+            "page_title": "KYC Verification",
+            "form": form,
+            "kyc": kyc,
+            "all_kycs": all_kycs,
+            "active_tab": "my_kyc",
+        }
+        return render(request, self.template_name, context)
+
+
+class UpdateKYCStatusView(AdminRequiredMixin, View):
+    """Admin-only action to change status of a user's KYC (approve / reject)."""
+
+    def post(self, request, pk, *args, **kwargs):
+        kyc = get_object_or_404(UserKYC, pk=pk)
+        new_status = request.POST.get("status")
+        remarks = request.POST.get("remarks", "").strip()
+        next_url = request.POST.get("next") or request.GET.get("next")
+
+        if new_status in [UserKYC.Status.VERIFIED, UserKYC.Status.REJECTED, UserKYC.Status.PENDING]:
+            kyc.status = new_status
+            if remarks:
+                kyc.remarks = remarks
+            kyc.save(update_fields=["status", "remarks", "updated_at"])
+            messages.success(request, f"KYC for {kyc.user.username} updated to '{kyc.get_status_display()}'.")
+        else:
+            messages.error(request, "Invalid KYC status specified.")
+
+        if next_url:
+            return redirect(next_url)
+        return redirect("accounts:admin_kyc_list")
+
+
+class AdminKYCListView(AdminRequiredMixin, ListView):
+    """Dedicated Admin view to inspect and manage all submitted user KYCs across the platform."""
+    model = UserKYC
+    template_name = "accounts/admin_kyc_list.html"
+    context_object_name = "kyc_list"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = UserKYC.objects.select_related("user").order_by("-updated_at")
+        search = self.request.GET.get("q", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(company_name__icontains=search)
+                | Q(person_name__icontains=search)
+                | Q(user__username__icontains=search)
+                | Q(pan_card__icontains=search)
+                | Q(aadhar__icontains=search)
+                | Q(phone__icontains=search)
+                | Q(email__icontains=search)
+                | Q(gst_number__icontains=search)
+            )
+        status_filter = self.request.GET.get("status", "").strip()
+        if status_filter in [UserKYC.Status.PENDING, UserKYC.Status.VERIFIED, UserKYC.Status.REJECTED]:
+            qs = qs.filter(status=status_filter)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        all_qs = UserKYC.objects.all()
+        context["search_query"] = self.request.GET.get("q", "")
+        context["status_filter"] = self.request.GET.get("status", "")
+        context["total_count"] = all_qs.count()
+        context["pending_count"] = all_qs.filter(status=UserKYC.Status.PENDING).count()
+        context["verified_count"] = all_qs.filter(status=UserKYC.Status.VERIFIED).count()
+        context["rejected_count"] = all_qs.filter(status=UserKYC.Status.REJECTED).count()
+        context["page_title"] = "KYC Requests Directory"
+        return context
+
+
 
 
 

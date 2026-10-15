@@ -10,8 +10,9 @@
 <style>[x-cloak] { display: none !important; }</style>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
-:root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--text:#475569;--mute:#94a3b8;--line:#e2e8f0;--b50:#eff6ff;--b100:#dbeafe;--b400:#60a5fa;--b600:#2563eb;--b700:#1d4ed8;--b900:#1e3a8a;--code:#0f172a;--em:#10b981;--sky:#0369a1;--rose:#e11d48;--amber:#d97706}
+:root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--text:#475569;--mute:#94a3b8;--line:#e2e8f0;--b50:#eef1fa;--b100:#dce2f5;--b400:#6782d4;--b600:#283891;--b700:#1f2c73;--b900:#141c46;--code:#0f172a;--em:#39b54a;--sky:#0369a1;--rose:#e11d48;--amber:#d97706}
 *{box-sizing:border-box;margin:0}
+
 html{scroll-padding-top:5rem;scroll-behavior:smooth}
 body{font:15px/1.65 'Figtree',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
 ::selection{background:var(--b600);color:#fff}
@@ -122,7 +123,8 @@ a.lnk{color:var(--b600);font-weight:600;font-size:.85rem}a.lnk:hover{color:var(-
   <div class="brand">
     <button class="burger" @click="mobileNavOpen = true" aria-label="Open menu"><svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <a href="{% url 'root' %}" class="brand">
-      <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="100%" height="100%" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#7baaf7"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#4d82f7"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#0057cc"/></svg></div>
+      <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="100%" height="100%" aria-label="RCS Logo"><path d="M156.4 329.1C69.9 329.1 0 255.4 0 164.6S69.9 0 156.4 0h162.7c86.4 0 156.4 73.8 156.4 164.6s-69.9 164.6-156.4 164.6z" fill="#94a9e3"/><path d="M261.8 395.6V496c0 8.7-7 16-15.5 16-4.1 0-8.1-1.7-10.9-4.7L83 350.2c-29.9-30.5-46.4-72.3-46.4-115.6 0-89.1 69.9-161.4 156.4-161.4h162.7c86.4 0 156.4 72.4 156.4 161.4S442.1 396 355.6 396h-93.8z" fill="#39b54a"/><path d="M155.6 329.1h163.1c86.6 0 156.7-75.5 156.7-168.4 0-11-1.1-21.6-2.8-32.2-28.5-34.1-70.1-55.4-116.2-55.4H193.3c-86.6 0-156.7 75.5-156.7 168.4 0 11 1.1 21.6 2.8 31.9 28.5 34.1 70.1 55.7 116.2 55.7" fill="#283891"/></svg></div>
+
       <div><b>RCS Portal</b><small>API Reference</small></div>
     </a>
     <span class="pill">REST v1.0</span>

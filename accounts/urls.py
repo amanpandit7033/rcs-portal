@@ -24,6 +24,9 @@ from .views import (
     UserPasswordResetDoneView,
     UserPasswordResetView,
     UserProfileView,
+    UserKYCView,
+    AdminKYCListView,
+    UpdateKYCStatusView,
     WhiteLabelCreateView,
     WhiteLabelDeleteView,
     WhiteLabelListView,
@@ -39,14 +42,19 @@ urlpatterns = [
     path("login/", UserLoginView.as_view(), name="login"),
     path("logout/", UserLogoutView.as_view(), name="logout"),
 
-    # Dashboards, Profile & Settings
+    # Dashboards, Profile, Settings & KYC
     path("dashboard/", DashboardRedirectView.as_view(), name="dashboard_redirect"),
     path("dashboard/admin/", AdminDashboardView.as_view(), name="admin_dashboard"),
     path("dashboard/reseller/", ResellerDashboardView.as_view(), name="reseller_dashboard"),
     path("dashboard/user/", UserDashboardView.as_view(), name="user_dashboard"),
     path("profile/", UserProfileView.as_view(), name="user_profile"),
+    path("kyc/", UserKYCView.as_view(), name="kyc_details"),
+    path("kyc/all/", AdminKYCListView.as_view(), name="admin_kyc_list"),
+    path("kyc/<int:pk>/status/", UpdateKYCStatusView.as_view(), name="update_kyc_status"),
     path("settings/", SystemSettingsView.as_view(), name="system_settings"),
     path("coming-soon/", ComingSoonView.as_view(), name="coming_soon"),
+
+
 
     # Admin: Users & Resellers Management
     path("users/", UserListView.as_view(), name="user_list"),

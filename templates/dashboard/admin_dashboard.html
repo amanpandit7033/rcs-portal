@@ -98,11 +98,11 @@
                     </div>
                     <div class="flex items-center gap-4 mt-1.5 text-xs">
                         <span class="flex items-center gap-1.5 text-slate-500">
-                            <span class="w-2.5 h-2.5 rounded-full bg-[#c7d2fe]"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#bdcaee]"></span>
                             Sent
                         </span>
                         <span class="flex items-center gap-1.5 text-slate-500">
-                            <span class="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#39b54a]"></span>
                             Delivered
                         </span>
                         <span class="flex items-center gap-1.5 text-slate-500">
@@ -328,7 +328,7 @@
                         {
                             label: 'Sent',
                             data: sentData,
-                            backgroundColor: '#c7d2fe',
+                            backgroundColor: '#bdcaee',
                             borderRadius: 6,
                             barPercentage: 0.55,
                             categoryPercentage: 0.75,
@@ -336,7 +336,7 @@
                         {
                             label: 'Delivered',
                             data: deliveredData,
-                            backgroundColor: '#10b981',
+                            backgroundColor: '#39b54a',
                             borderRadius: 6,
                             barPercentage: 0.55,
                             categoryPercentage: 0.75,
@@ -400,7 +400,7 @@
                     labels: donutLabels,
                     datasets: [{
                         data: totalSum > 0 ? donutData : [1, 1, 1],
-                        backgroundColor: totalSum > 0 ? ['#3b82f6', '#10b981', '#f59e0b'] : ['#f1f5f9', '#f1f5f9', '#f1f5f9'],
+                        backgroundColor: totalSum > 0 ? ['#283891', '#39b54a', '#f59e0b'] : ['#f1f5f9', '#f1f5f9', '#f1f5f9'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]

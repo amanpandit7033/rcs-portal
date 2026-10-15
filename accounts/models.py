@@ -235,3 +235,46 @@ class WhitelistNumber(models.Model):
     def __str__(self):
         return f"{self.user.username}: {self.phone_number} ({self.description})" if self.description else f"{self.user.username}: {self.phone_number}"
 
+
+class UserKYC(models.Model):
+    """KYC (Know Your Customer) details submitted by an account."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending Verification"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="kyc",
+    )
+    company_name = models.CharField("Company Name", max_length=255)
+    person_name = models.CharField("Person Name", max_length=150)
+    gst_number = models.CharField("GST Number", max_length=20, blank=True)
+    pan_card = models.CharField("PAN Card", max_length=20)
+    aadhar = models.CharField("Aadhar", max_length=20)
+    email = models.EmailField("Email", max_length=254)
+    phone = models.CharField("Phone Number", max_length=20)
+    company_website = models.URLField("Website of Company", max_length=255, blank=True)
+
+    status = models.CharField(
+        "KYC Status",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    remarks = models.TextField("Remarks", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "User KYC"
+        verbose_name_plural = "User KYCs"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"KYC: {self.user.username} ({self.company_name}) - {self.get_status_display()}"
+
+

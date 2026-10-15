@@ -449,3 +449,48 @@ class WhiteLabelForm(forms.ModelForm):
             raise forms.ValidationError("Please provide a valid pointed IP or sub-domain.")
         return val
 
+
+class UserKYCForm(forms.ModelForm):
+    """Form for users to enter and update their KYC details."""
+
+    class Meta:
+        from .models import UserKYC
+        model = UserKYC
+        fields = [
+            "company_name",
+            "person_name",
+            "gst_number",
+            "pan_card",
+            "aadhar",
+            "email",
+            "phone",
+            "company_website",
+        ]
+        widgets = {
+            "company_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. Acme Technologies Pvt Ltd"}),
+            "person_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. John Doe"}),
+            "gst_number": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 27ABCDE1234F1Z5 (Optional)"}),
+            "pan_card": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. ABCDE1234F"}),
+            "aadhar": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 1234 5678 9012"}),
+            "email": forms.EmailInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. contact@acme.com"}),
+            "phone": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. +91 9876543210"}),
+            "company_website": forms.URLInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. https://www.acme.com (Optional)"}),
+        }
+
+    def clean_pan_card(self):
+        val = self.cleaned_data.get("pan_card", "").strip().upper()
+        if not val:
+            raise forms.ValidationError("PAN card number is required.")
+        return val
+
+    def clean_gst_number(self):
+        val = self.cleaned_data.get("gst_number", "").strip().upper()
+        return val
+
+    def clean_aadhar(self):
+        val = self.cleaned_data.get("aadhar", "").strip()
+        if not val:
+            raise forms.ValidationError("Aadhar number is required.")
+        return val
+
+
