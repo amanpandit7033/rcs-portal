@@ -247,7 +247,6 @@
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label for="{{ form.password.id_for_label }}" class="block text-sm font-semibold text-slate-700">Password</label>
-                        <a href="{% url 'accounts:password_reset' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
                     </div>
                     <div class="relative">
                         <input :type="showPassword ? 'text' : 'password'" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}"

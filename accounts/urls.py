@@ -19,11 +19,8 @@ from .views import (
     UserListView,
     UserLoginView,
     UserLogoutView,
-    UserPasswordResetCompleteView,
-    UserPasswordResetConfirmView,
-    UserPasswordResetDoneView,
-    UserPasswordResetView,
     UserProfileView,
+    LoginHistoryListView,
     UserKYCView,
     AdminKYCListView,
     UpdateKYCStatusView,
@@ -48,6 +45,7 @@ urlpatterns = [
     path("dashboard/reseller/", ResellerDashboardView.as_view(), name="reseller_dashboard"),
     path("dashboard/user/", UserDashboardView.as_view(), name="user_dashboard"),
     path("profile/", UserProfileView.as_view(), name="user_profile"),
+    path("login-history/", LoginHistoryListView.as_view(), name="login_history"),
     path("kyc/", UserKYCView.as_view(), name="kyc_details"),
     path("kyc/all/", AdminKYCListView.as_view(), name="admin_kyc_list"),
     path("kyc/<int:pk>/status/", UpdateKYCStatusView.as_view(), name="update_kyc_status"),
@@ -81,10 +79,4 @@ urlpatterns = [
     # Impersonation Flow ("Login as Client")
     path("clients/<int:client_id>/impersonate/", ImpersonateClientView.as_view(), name="impersonate_client"),
     path("impersonate/stop/", StopImpersonationView.as_view(), name="stop_impersonation"),
-
-    # Password Reset
-    path("password-reset/", UserPasswordResetView.as_view(), name="password_reset"),
-    path("password-reset/done/", UserPasswordResetDoneView.as_view(), name="password_reset_done"),
-    path("reset/<uidb64>/<token>/", UserPasswordResetConfirmView.as_view(), name="password_reset_confirm"),
-    path("reset/done/", UserPasswordResetCompleteView.as_view(), name="password_reset_complete"),
 ]

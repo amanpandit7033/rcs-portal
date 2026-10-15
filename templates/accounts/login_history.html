@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Login History | RCS Portal{% endblock %}
+{% block header_title %}Login History{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Header & Breadcrumb -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-xs text-slate-400 mb-1">
+                <span>Security</span>
+                <span>/</span>
+                <span class="text-slate-600 font-semibold">Login History</span>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Login Activity &amp; Audit Logs</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                {% if is_admin_view %}
+                    System-wide audit trail of authentication events, user IP addresses, browser clients, and timestamps.
+                {% else %}
+                    Audit trail of all sign-ins to your account, recording IP addresses, browser clients, and access timestamps.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-secondary-700 text-xs font-semibold">
+                <span class="w-2 h-2 rounded-full bg-secondary-500 animate-pulse"></span>
+                <span>Active Session Protected</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-primary-600 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Total Logins Recorded</span>
+                <span class="text-xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
+                    {{ total_records_count }}
+                </span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-secondary-600 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Current Remote IP</span>
+                <span class="text-sm font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
+                    {{ request.META.REMOTE_ADDR|default:"127.0.0.1" }}
+                </span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-slate-400 block">Logged In As</span>
+                <span class="text-sm font-bold text-slate-900 tracking-tight block truncate mt-0.5">
+                    {{ request.user.username }}
+                    <span class="text-xs font-normal text-slate-400">({{ request.user.get_role_display|default:request.user.role }})</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin_view %}
+    <!-- Admin Search & Filter Bar -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
+        <form method="get" class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search by username, company, IP address or device..."
+                       class="w-full pl-9 pr-4 py-2 rounded-xl text-xs border border-slate-200 focus:outline-none focus:border-primary-600 focus:ring-4 focus:ring-primary-100 bg-slate-50 focus:bg-white transition-all">
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <select name="role" class="px-3 py-2 rounded-xl text-xs border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary-600 font-medium text-slate-700">
+                    <option value="">All Roles</option>
+                    <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Clients (Users)</option>
+                    <option value="reseller" {% if selected_role == 'reseller' %}selected{% endif %}>Resellers</option>
+                    <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Administrators</option>
+                </select>
+
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs shrink-0 cursor-pointer">
+                    Filter
+                </button>
+
+                {% if search_query or selected_role %}
+                <a href="{% url 'accounts:login_history' %}" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors shrink-0">
+                    Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Login History Records Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 tracking-tight">Authentication Records</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Chronological record of successful login events.</p>
+            </div>
+            <span class="text-xs font-mono text-slate-400">Page {{ page_obj.number }} of {{ paginator.num_pages|default:1 }}</span>
+        </div>
+
+        {% if login_records %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        {% if is_admin_view %}
+                        <th class="py-3 px-5 font-medium">User / Account</th>
+                        {% endif %}
+                        <th class="py-3 px-5 font-medium">IP Address</th>
+                        <th class="py-3 px-5 font-medium">Device &amp; Browser</th>
+                        <th class="py-3 px-5 font-medium">Login Timestamp</th>
+                        <th class="py-3 px-5 font-medium text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for rec in login_records %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        {% if is_admin_view %}
+                        <td class="py-3.5 px-5">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-7 h-7 rounded-lg bg-primary-50 border border-primary-100 text-primary-700 font-bold flex items-center justify-center text-xs shrink-0">
+                                    {{ rec.user.username|slice:":1"|upper }}
+                                </span>
+                                <div>
+                                    <span class="font-bold text-slate-900 block">{{ rec.user.company_name|default:rec.user.username }}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono block">@{{ rec.user.username }} &bull; {{ rec.user.get_role_display|default:rec.user.role }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td class="py-3.5 px-5 font-mono text-slate-700 font-semibold">
+                            <span class="px-2 py-1 rounded-md bg-slate-100 border border-slate-200/80 text-[11px]">
+                                {{ rec.ip_address|default:"Unknown IP" }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-5 text-slate-700">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                <div>
+                                    <span class="font-semibold text-slate-800 block">{{ rec.device|default:"Standard Web Browser" }}</span>
+                                    <span class="text-[10px] text-slate-400 block truncate max-w-xs" title="{{ rec.user_agent }}">{{ rec.user_agent|truncatechars:45 }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-5 text-slate-600 font-mono text-[11px]">
+                            <span class="block font-medium text-slate-900">{{ rec.timestamp|date:"M d, Y" }}</span>
+                            <span class="text-slate-400">{{ rec.timestamp|date:"h:i:s A" }}</span>
+                        </td>
+                        <td class="py-3.5 px-5 text-right">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-secondary-700 border border-emerald-200">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span>Success</span>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-400">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} logins
+            </span>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                    &larr; Prev
+                </a>
+                {% endif %}
+
+                <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary-50 text-primary-700 border border-primary-200">
+                    {{ page_obj.number }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                    Next &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-12 px-4">
+            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-slate-800">No login records found</h4>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                {% if search_query or selected_role %}
+                    No authentication events match your filter criteria.
+                {% else %}
+                    New login events will appear here automatically on each session sign-in.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -77,7 +77,7 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
-from .models import WhiteLabel, WhitelistNumber, UserKYC
+from .models import WhiteLabel, WhitelistNumber, UserKYC, LoginHistory
 
 
 @admin.register(WhiteLabel)
@@ -99,5 +99,13 @@ class UserKYCAdmin(admin.ModelAdmin):
     list_display = ("user", "company_name", "person_name", "phone", "email", "pan_card", "status", "updated_at")
     list_filter = ("status", "created_at", "updated_at")
     search_fields = ("user__username", "company_name", "person_name", "email", "phone", "pan_card", "aadhar", "gst_number")
+
+
+@admin.register(LoginHistory)
+class LoginHistoryAdmin(admin.ModelAdmin):
+    list_display = ("user", "ip_address", "device", "timestamp")
+    list_filter = ("timestamp", "user__role")
+    search_fields = ("user__username", "user__email", "ip_address", "device", "user_agent")
+    readonly_fields = ("user", "ip_address", "user_agent", "device", "timestamp")
 
 

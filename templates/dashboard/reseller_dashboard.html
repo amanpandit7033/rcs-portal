@@ -6,82 +6,382 @@
 {% block content %}
 <div class="space-y-6">
 
-    <!-- Row 1: 3 KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+    <!-- Top Greeting & Action Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                Welcome, {{ request.user.company_name|default:request.user.first_name|default:request.user.username }}!
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Overview of your managed client enterprises, distribution volume, and wallet ledger.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'wallet:assign_credit' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-all shadow-2xs">
+                <svg class="w-4 h-4 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                <span>Assign Credit</span>
+            </a>
+            <a href="{% url 'accounts:client_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                <span>+ Add Client</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Row 1: 5 Core Metric KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <!-- 1. Managed Clients -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Managed Clients</span>
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Managed Clients</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">{{ clients_count }}</span>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono block">
+                    {{ clients_count|default:0 }}
+                </span>
+                <a href="{% url 'accounts:client_list' %}" class="text-[11px] font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1 mt-1">
+                    <span>Manage clients</span> &rarr;
+                </a>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <!-- 2. Reseller Wallet Balance -->
+        <div class="bg-gradient-to-br from-white to-slate-50/80 rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Reseller Wallet</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-secondary-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Reseller Wallet</span>
-                <span class="text-2xl font-bold text-emerald-600 tracking-tight font-mono block mt-0.5">{{ reseller_balance }}</span>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-secondary-600 tracking-tight font-mono block">
+                    {{ reseller_balance }}
+                </span>
+                <a href="{% url 'wallet:statement' %}" class="text-[11px] font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1 mt-1">
+                    <span>Ledger balance</span> &rarr;
+                </a>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100/80 text-purple-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        <!-- 3. Client Messages Dispatched -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Messages Sent</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-primary-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Client Messages Sent</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">{{ total_client_messages|default:0 }}</span>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono block">
+                    {{ total_client_messages|default:0 }}
+                </span>
+                <span class="text-[11px] text-slate-400 mt-1 block">Total client volume</span>
+            </div>
+        </div>
+
+        <!-- 4. Client Delivered Messages -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Delivered</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-secondary-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-extrabold text-secondary-600 tracking-tight font-mono">
+                        {{ client_delivered_messages|default:0 }}
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-secondary-700 border border-emerald-200/60">
+                        {{ delivery_rate }}
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-400 mt-1 block">Confirmed handset receipt</span>
+            </div>
+        </div>
+
+        <!-- 5. Client Failed / Errors -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Failed / Errors</span>
+                <div class="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-rose-600 tracking-tight font-mono block">
+                    {{ client_failed_messages|default:0 }}
+                </span>
+                <span class="text-[11px] text-slate-400 mt-1 block">Unreachable or expired</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 2: Client Traffic Performance Trend Chart (Full Width) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
+        <div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-primary-600"></span>
+                        <h2 class="text-base font-bold text-slate-900 tracking-tight">Client Messaging Volume &amp; Delivery Trend</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Aggregated daily traffic dispatched across all your registered enterprise clients.
+                    </p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-medium">
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-[#bdcaee]"></span> Sent
+                    </span>
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-secondary-500"></span> Delivered
+                    </span>
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-rose-500"></span> Failed
+                    </span>
+                </div>
+            </div>
+
+            <!-- Canvas Chart -->
+            <div class="relative h-72 sm:h-80 w-full mt-3">
+                <canvas id="resellerTrafficChart"></canvas>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Client Aggregate Delivery Rate: <strong class="text-secondary-600">{{ delivery_rate }}</strong></span>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'messaging:message_logs' %}" class="font-semibold text-primary-600 hover:text-primary-700">
+                    View Detailed Delivery Reports &rarr;
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Managed Clients List -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
-        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div>
-                <h3 class="text-base font-bold text-slate-900 tracking-tight">Your Registered Clients</h3>
-                <p class="text-xs text-slate-400 mt-0.5">Enterprises scoped to your reseller distributor account.</p>
+    <!-- Row 3: Registered Clients + Quick Utilities Split -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Registered Clients (2 Columns) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Your Registered Clients</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Enterprises scoped to your reseller distributor account.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'accounts:client_create' %}" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs">
+                        + Add Client
+                    </a>
+                    <a href="{% url 'accounts:client_list' %}" class="text-xs font-semibold text-primary-600 hover:text-primary-700 ml-2">
+                        View all ({{ clients_count }}) &rarr;
+                    </a>
+                </div>
             </div>
-            <a href="{% url 'accounts:client_create' %}" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-xs">
-                + Add Client
-            </a>
+
+            {% if recent_clients %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <th class="pb-3 font-medium">Client / Company</th>
+                            <th class="pb-3 font-medium">Username</th>
+                            <th class="pb-3 font-medium">Joined Date</th>
+                            <th class="pb-3 font-medium text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for client in recent_clients %}
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <td class="py-3.5 pr-3">
+                                <a href="{% url 'accounts:client_edit' client.id %}" class="font-bold text-slate-900 hover:text-primary-600 block truncate">
+                                    {{ client.company_name|default:client.username }}
+                                </a>
+                                <span class="text-[11px] text-slate-400 block mt-0.5">{{ client.email }}</span>
+                            </td>
+                            <td class="py-3.5 pr-3 font-mono text-slate-600 text-[11px]">
+                                @{{ client.username }}
+                            </td>
+                            <td class="py-3.5 pr-3 text-slate-500">
+                                {{ client.date_joined|date:"M d, Y" }}
+                            </td>
+                            <td class="py-3.5 text-right">
+                                {% if client.is_active %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-secondary-700 border border-emerald-200">Active</span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-10 px-4">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </div>
+                <h4 class="text-sm font-bold text-slate-800">No clients registered yet</h4>
+                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Create client enterprise accounts under your distributor profile and allocate messaging credits.</p>
+                <a href="{% url 'accounts:client_create' %}" class="inline-flex items-center gap-1.5 mt-4 px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs shadow-xs transition-colors">
+                    + Register First Client
+                </a>
+            </div>
+            {% endif %}
         </div>
 
-        {% if recent_clients %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                    <tr class="border-b border-slate-100 text-[11px] font-semibold text-slate-400">
-                        <th class="pb-3 font-medium">Client / Company</th>
-                        <th class="pb-3 font-medium">Email</th>
-                        <th class="pb-3 font-medium">Joined</th>
-                        <th class="pb-3 font-medium text-right">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50">
-                    {% for client in recent_clients %}
-                    <tr class="hover:bg-slate-50/60 transition-colors">
-                        <td class="py-3 font-semibold text-slate-900">{{ client.company_name|default:client.email }}</td>
-                        <td class="py-3 text-slate-500">{{ client.email }}</td>
-                        <td class="py-3 text-slate-500">{{ client.date_joined|date:"M d, Y" }}</td>
-                        <td class="py-3 text-right">
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Right: Reseller Utilities (1 Column) -->
+        <div class="space-y-4">
+
+            <!-- Credit Allocation Quick Card -->
+            <div class="bg-gradient-to-br from-primary-50 via-white to-secondary-50/30 rounded-2xl border border-primary-100/80 p-5 shadow-xs">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-primary-700 block">Credit Management</span>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-xl font-black text-slate-900 font-mono">{{ reseller_balance }}</span>
+                            <span class="text-xs font-semibold text-slate-500">Available</span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-white border border-primary-200/60 text-primary-600 flex items-center justify-center shadow-2xs shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2.5">
+                    Instantly assign pre-paid balance credits to any of your downstream managed client accounts.
+                </p>
+                <div class="mt-4 pt-3 border-t border-primary-100/60 flex items-center justify-between">
+                    <a href="{% url 'wallet:assign_credit' %}" class="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                        <span>Assign credit</span> &rarr;
+                    </a>
+                    <a href="{% url 'wallet:statement' %}" class="text-[11px] font-semibold text-secondary-600 hover:text-secondary-700">
+                        Wallet Ledger
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Navigation Tiles -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Reseller Shortcuts</h4>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <a href="{% url 'accounts:client_create' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-primary-50 hover:border-primary-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-primary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-primary-600 block">Add Client</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Register user</span>
+                    </a>
+
+                    <a href="{% url 'campaigns:campaign_create' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-secondary-50 hover:border-secondary-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-secondary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-secondary-600 block">Send RCS</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Launch campaign</span>
+                    </a>
+
+                    <a href="{% url 'messaging:message_logs' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-indigo-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 block">Reports</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Delivery audit</span>
+                    </a>
+
+                    <a href="{% url 'onboarding:client_list' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-secondary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-secondary-600 block">Bot Onboard</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">RCS agent status</span>
+                    </a>
+                </div>
+            </div>
+
         </div>
-        {% else %}
-        <div class="text-center py-8 text-slate-400 text-xs">
-            <p>No clients registered under your account yet.</p>
-        </div>
-        {% endif %}
+
     </div>
 
 </div>
+
+<!-- Interactive Chart Initialization -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("resellerTrafficChart");
+    if (!canvas) return;
+
+    const labels = {{ reseller_chart_labels|safe }};
+    const sentData = {{ reseller_chart_sent|safe }};
+    const deliveredData = {{ reseller_chart_delivered|safe }};
+    const failedData = {{ reseller_chart_failed|safe }};
+
+    new Chart(canvas, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Sent",
+                    data: sentData,
+                    backgroundColor: "#bdcaee",
+                    borderRadius: 6,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7,
+                },
+                {
+                    label: "Delivered",
+                    data: deliveredData,
+                    backgroundColor: "#39b54a",
+                    borderRadius: 6,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7,
+                },
+                {
+                    label: "Failed",
+                    data: failedData,
+                    backgroundColor: "#f43f5e",
+                    borderRadius: 6,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.7,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#ffffff',
+                    titleColor: '#0f172a',
+                    bodyColor: '#475569',
+                    borderColor: '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 12,
+                    boxPadding: 4,
+                    usePointStyle: true,
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: "#94a3b8", font: { size: 11, family: 'Figtree' } }
+                },
+                y: {
+                    beginAtZero: true,
+                    border: { dash: [4, 4] },
+                    grid: { color: "#f1f5f9" },
+                    ticks: { color: "#94a3b8", font: { size: 11, family: 'Figtree' } }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

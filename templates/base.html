@@ -300,6 +300,7 @@
                     <nav class="space-y-1" aria-label="Settings">
                         <a href="{% url 'accounts:user_profile' %}" title="My Profile" class="nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}"><svg class="ic"><use href="#i-user"/></svg><span class="nav-text">My Profile</span></a>
                         <a href="{% url 'accounts:kyc_details' %}" title="KYC Verification" class="nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}"><svg class="ic"><use href="#i-shield"/></svg><span class="nav-text">KYC Details</span></a>
+                        <a href="{% url 'accounts:login_history' %}" title="Login History" class="nl{% if request.resolver_match.url_name == 'login_history' %} on{% endif %}"><svg class="ic" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="nav-text">Login History</span></a>
                         {% if not request.user.is_admin %}
                         <a href="{% url 'onboarding:client_list' %}" title="Bot Onboarding" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg><span class="nav-text">Bot Onboarding</span></a>
                         {% endif %}
@@ -385,6 +386,7 @@
                                     <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">Not Added</span>
                                 {% endif %}
                             </a>
+                            <a href="{% url 'accounts:login_history' %}" class="dd flex items-center justify-between"><span>Login History</span><svg class="ic text-slate-400" style="width:.85rem;height:.85rem" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></a>
                             <a href="{% url 'wallet:statement' %}" class="dd flex items-center justify-between"><span>Wallet Balance</span><span class="font-bold font-mono text-emerald-600">{{ user_wallet_balance }}</span></a>
 
                             <a href="{% url 'api:settings' %}" class="dd">API &amp; Webhooks</a>

@@ -278,3 +278,25 @@ class UserKYC(models.Model):
         return f"KYC: {self.user.username} ({self.company_name}) - {self.get_status_display()}"
 
 
+class LoginHistory(models.Model):
+    """Logs user login activity across the portal."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="login_history",
+    )
+    ip_address = models.GenericIPAddressField("IP Address", null=True, blank=True)
+    user_agent = models.CharField("User Agent", max_length=512, blank=True)
+    device = models.CharField("Device / Browser", max_length=150, blank=True)
+    timestamp = models.DateTimeField("Login Time", auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Login History"
+        verbose_name_plural = "Login Histories"
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.user.username} @ {self.ip_address} ({self.timestamp:%Y-%m-%d %H:%M})"
+
+

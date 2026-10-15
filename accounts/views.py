@@ -8,10 +8,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import (
     LoginView,
     LogoutView,
-    PasswordResetView,
-    PasswordResetDoneView,
-    PasswordResetConfirmView,
-    PasswordResetCompleteView,
 )
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
@@ -24,9 +20,7 @@ from .forms import (
     ClientCreateForm,
     ClientEditForm,
     LoginForm,
-    PasswordResetForm,
     ProfileSettingsForm,
-    SetPasswordForm,
     UserCreateForm,
     UserEditForm,
     UserKYCForm,
@@ -34,7 +28,7 @@ from .forms import (
     WhiteLabelForm,
     WhitelistNumberForm,
 )
-from .models import WhiteLabel, WhitelistNumber, UserKYC
+from .models import WhiteLabel, WhitelistNumber, UserKYC, LoginHistory
 
 from .mixins import AdminRequiredMixin, ResellerRequiredMixin, UserRequiredMixin
 from wallet.models import Wallet
@@ -118,14 +112,19 @@ class AdminDashboardView(AdminRequiredMixin, TemplateView):
         context["total_messages_failed"] = msg_agg["total_failed"] or 0
         context["total_messages_read"] = msg_agg["total_read"] or 0
         context["today_messages_sent"] = msg_agg["today_sent"] or 0
+        total_sent_all = msg_agg["total_sent"] or 0
+        total_delivered_all = msg_agg["total_delivered"] or 0
+        context["platform_delivery_rate"] = f"{(total_delivered_all / total_sent_all * 100):.1f}%" if total_sent_all > 0 else "0.0%"
 
-        # Campaigns & Templates
+        # Campaigns, Templates, Onboardings & KYC
         context["total_campaigns"] = Campaign.objects.count()
         context["active_campaigns"] = Campaign.objects.filter(status__in=[Campaign.Status.RUNNING, Campaign.Status.QUEUED]).count()
         context["total_templates"] = Template.objects.count()
         context["approved_templates"] = Template.objects.filter(status="approved").count()
         context["total_onboardings"] = OnboardingApplication.objects.count()
         context["pending_onboardings"] = OnboardingApplication.objects.filter(status=OnboardingApplication.Status.SUBMITTED).count()
+        from accounts.models import UserKYC
+        context["pending_kyc_count"] = UserKYC.objects.filter(status="pending").count()
 
         # Traffic Chart: Last 7 days platform messages
         chart_since = now - timedelta(days=7)
@@ -187,28 +186,88 @@ class AdminDashboardView(AdminRequiredMixin, TemplateView):
 
 
 class ResellerDashboardView(ResellerRequiredMixin, TemplateView):
-    """Reseller overview dashboard showing managed counts and activity."""
+    """Reseller overview dashboard showing managed counts, client traffic, and activities."""
     template_name = "dashboard/reseller_dashboard.html"
 
     def get_context_data(self, **kwargs):
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.db.models import Count, Q
+        from django.db.models.functions import TruncDate
         from messaging.models import Message
-        from django.db.models import Q
+        from campaigns.models import Campaign
+
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Reseller Dashboard"
         reseller = self.request.user
         clients = User.objects.filter(parent_reseller=reseller)
         context["clients_count"] = clients.count()
-        context["recent_clients"] = clients[:5]
+        context["recent_clients"] = clients.order_by("-date_joined")[:5]
 
         # Reseller wallet balance
         reseller_wallet = getattr(reseller, "wallet", None)
         context["reseller_balance"] = format_inr(reseller_wallet.balance) if reseller_wallet else "₹ 0.00"
 
-        # Client messages count
-        client_ids = clients.values_list("id", flat=True)
+        # Client messages aggregates
+        client_ids = list(clients.values_list("id", flat=True))
         reseller_msgs = Message.objects.filter(user_id__in=client_ids)
-        reseller_sent = reseller_msgs.filter(~Q(status=Message.Status.QUEUED)).count()
-        context["total_client_messages"] = reseller_sent
+        msg_agg = reseller_msgs.aggregate(
+            sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
+            delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
+            read=Count("id", filter=Q(status=Message.Status.READ)),
+            failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+        )
+        total_sent = msg_agg["sent"] or 0
+        total_delivered = msg_agg["delivered"] or 0
+        total_read = msg_agg["read"] or 0
+        total_failed = msg_agg["failed"] or 0
+
+        context["total_client_messages"] = total_sent
+        context["client_delivered_messages"] = total_delivered
+        context["client_read_messages"] = total_read
+        context["client_failed_messages"] = total_failed
+        context["delivery_rate"] = f"{(total_delivered / total_sent * 100):.1f}%" if total_sent > 0 else "0.0%"
+        context["read_rate"] = f"{(total_read / total_sent * 100):.1f}%" if total_sent > 0 else "0.0%"
+
+        # 7-day trend chart
+        now = timezone.now()
+        today_date = timezone.localdate()
+        chart_since = now - timedelta(days=7)
+        daily_records = (
+            reseller_msgs.filter(created_at__gte=chart_since)
+            .annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(
+                sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
+                delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
+                failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            )
+            .order_by("day")
+        )
+        daily_map = {r["day"]: r for r in daily_records}
+        reseller_chart_labels = []
+        reseller_chart_sent = []
+        reseller_chart_delivered = []
+        reseller_chart_failed = []
+        for offset in range(6, -1, -1):
+            d = today_date - timedelta(days=offset)
+            rec = daily_map.get(d, {})
+            reseller_chart_labels.append(d.strftime("%a"))
+            reseller_chart_sent.append(rec.get("sent", 0))
+            reseller_chart_delivered.append(rec.get("delivered", 0))
+            reseller_chart_failed.append(rec.get("failed", 0))
+
+        context["reseller_chart_labels"] = reseller_chart_labels
+        context["reseller_chart_sent"] = reseller_chart_sent
+        context["reseller_chart_delivered"] = reseller_chart_delivered
+        context["reseller_chart_failed"] = reseller_chart_failed
+
+        # Recent client campaigns
+        context["recent_client_campaigns"] = (
+            Campaign.objects.filter(user_id__in=client_ids)
+            .select_related("user")
+            .order_by("-created_at")[:5]
+        )
 
         return context
 
@@ -808,33 +867,48 @@ class ComingSoonView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         feature_name = self.request.GET.get("feature", "Feature")
         context["feature_name"] = feature_name
-        context["page_title"] = f"{feature_name} - Coming Soon"
+# ---------------------------------------------------------------------------
+# Login History View
+# ---------------------------------------------------------------------------
+
+class LoginHistoryListView(LoginRequiredMixin, ListView):
+    """Displays user login history.
+    Admin users can see all system login history with search/filter.
+    Resellers and regular users see only their own login history.
+    """
+    model = LoginHistory
+    template_name = "accounts/login_history.html"
+    context_object_name = "login_records"
+    paginate_by = 25
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_admin:
+            qs = LoginHistory.objects.select_related("user").all()
+            q = self.request.GET.get("q", "").strip()
+            if q:
+                qs = qs.filter(
+                    Q(user__username__icontains=q)
+                    | Q(user__email__icontains=q)
+                    | Q(user__company_name__icontains=q)
+                    | Q(ip_address__icontains=q)
+                    | Q(device__icontains=q)
+                )
+            role_filter = self.request.GET.get("role", "").strip()
+            if role_filter:
+                qs = qs.filter(user__role=role_filter)
+            return qs.order_by("-timestamp")
+        else:
+            return LoginHistory.objects.filter(user=user).order_by("-timestamp")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Login History"
+        context["search_query"] = self.request.GET.get("q", "").strip()
+        context["selected_role"] = self.request.GET.get("role", "").strip()
+        context["is_admin_view"] = self.request.user.is_admin
+        context["total_records_count"] = self.get_queryset().count()
         return context
-
-
-# ---------------------------------------------------------------------------
-# Password Reset Views
-# ---------------------------------------------------------------------------
-
-class UserPasswordResetView(PasswordResetView):
-    template_name = "accounts/password_reset.html"
-    form_class = PasswordResetForm
-    email_template_name = "accounts/password_reset_email.html"
-    success_url = reverse_lazy("accounts:password_reset_done")
-
-
-class UserPasswordResetDoneView(PasswordResetDoneView):
-    template_name = "accounts/password_reset_done.html"
-
-
-class UserPasswordResetConfirmView(PasswordResetConfirmView):
-    template_name = "accounts/password_reset_confirm.html"
-    form_class = SetPasswordForm
-    success_url = reverse_lazy("accounts:password_reset_complete")
-
-
-class UserPasswordResetCompleteView(PasswordResetCompleteView):
-    template_name = "accounts/password_reset_complete.html"
 
 
 # ---------------------------------------------------------------------------
