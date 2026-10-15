@@ -1,191 +1,348 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}User Dashboard{% endblock %}
 {% block header_title %}User Dashboard{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-    <!-- Row 1: 4 Core Metric KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <!-- 1. Sent Messages -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                </svg>
+    <!-- Top Greeting & Action Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                Welcome, {{ request.user.company_name|default:request.user.first_name|default:request.user.username }}!
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Real-time RCS campaign delivery throughput, active metrics, and balance overview.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Period Filter Selector -->
+            <div class="inline-flex p-1 bg-white rounded-xl border border-slate-200/90 shadow-2xs text-xs font-semibold">
+                <a href="?period=today" class="px-3 py-1.5 rounded-lg transition-all {% if selected_period == 'today' %}bg-primary-600 text-white shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    Today
+                </a>
+                <a href="?period=7d" class="px-3 py-1.5 rounded-lg transition-all {% if selected_period == '7d' %}bg-primary-600 text-white shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    7 Days
+                </a>
+                <a href="?period=30d" class="px-3 py-1.5 rounded-lg transition-all {% if selected_period == '30d' %}bg-primary-600 text-white shadow-2xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                    30 Days
+                </a>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Sent Messages</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
+
+            <!-- New Campaign CTA -->
+            <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-all shadow-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Send RCS</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Row 1: 5 Core Metric KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 1. Sent Messages -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Sent Messages</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-primary-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono block">
                     {{ active_stats.sent|default:0 }}
                 </span>
+                <span class="text-[11px] text-slate-400 mt-1 block">Traffic in selected period</span>
             </div>
         </div>
 
         <!-- 2. Delivered -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7"/>
-                </svg>
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Delivered</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 text-secondary-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Delivered</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
-                    {{ active_stats.delivered|default:0 }}
-                </span>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-extrabold text-secondary-600 tracking-tight font-mono">
+                        {{ active_stats.delivered|default:0 }}
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-secondary-700 border border-emerald-200/60">
+                        {{ delivery_rate }}
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-400 mt-1 block">Successfully reached handset</span>
             </div>
         </div>
 
         <!-- 3. Read / Seen -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100/80 text-blue-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Read / Seen</span>
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Read / Seen</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
-                    {{ active_stats.read|default:0 }}
-                </span>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">
+                        {{ active_stats.read|default:0 }}
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                        {{ read_rate }}
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-400 mt-1 block">Recipient opened message</span>
             </div>
         </div>
 
-        <!-- 4. Failed / Rejected -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors">
-            <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100/80 text-rose-600 flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+        <!-- 4. Failed / Undelivered -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Failed / Errors</span>
+                <div class="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </div>
             </div>
-            <div>
-                <span class="text-xs font-medium text-slate-400 block">Failed / Errors</span>
-                <span class="text-2xl font-bold text-slate-900 tracking-tight font-mono block mt-0.5">
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-rose-600 tracking-tight font-mono block">
                     {{ active_stats.failed|default:0 }}
                 </span>
+                <span class="text-[11px] text-slate-400 mt-1 block">Unreachable or expired</span>
+            </div>
+        </div>
+
+        <!-- 5. Wallet Balance -->
+        <div class="bg-gradient-to-br from-white to-slate-50/80 rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">Wallet Balance</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-2xl font-extrabold text-slate-900 tracking-tight font-mono block">
+                    {{ client_balance }}
+                </span>
+                <a href="{% url 'wallet:statement' %}" class="text-[11px] font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1 mt-1">
+                    <span>View statement</span>
+                    <span>&rarr;</span>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Row 2: Middle Split (Delivery Performance Trend Chart + Timeframe Comparison) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Left: Delivery Performance Trend (2 Columns wide) -->
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
+    <!-- Row 2: Delivery Performance Trend Chart (Full Width) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
+        <div>
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div>
                     <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
+                        <span class="w-2.5 h-2.5 rounded-full bg-primary-600"></span>
                         <h2 class="text-base font-bold text-slate-900 tracking-tight">Delivery Performance Trend</h2>
                     </div>
-                    <div class="flex items-center gap-4 mt-1.5 text-xs">
-                        <span class="flex items-center gap-1.5 text-slate-500">
-                            <span class="w-2.5 h-2.5 rounded-full bg-[#bdcaee]"></span> Sent
-                        </span>
-                        <span class="flex items-center gap-1.5 text-slate-500">
-                            <span class="w-2.5 h-2.5 rounded-full bg-[#39b54a]"></span> Delivered
-                        </span>
-                        <span class="flex items-center gap-1.5 text-slate-500">
-                            <span class="w-2.5 h-2.5 rounded-full bg-[#f43f5e]"></span> Failed
-                        </span>
-                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Dispatched vs delivered handset receipt activity over selected interval.
+                    </p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-medium">
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-[#bdcaee]"></span> Sent
+                    </span>
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-secondary-500"></span> Delivered
+                    </span>
+                    <span class="flex items-center gap-1.5 text-slate-600">
+                        <span class="w-3 h-3 rounded bg-rose-500"></span> Failed
+                    </span>
                 </div>
             </div>
 
             <!-- Canvas Chart -->
-            <div class="relative h-72 w-full mt-2">
+            <div class="relative h-72 sm:h-80 w-full mt-3">
                 <canvas id="userTrendChart"></canvas>
             </div>
         </div>
 
-        <!-- Right: Timeframe Comparison Card (1 Column wide) -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs flex flex-col justify-between">
-            <div>
-                <h3 class="text-base font-bold text-slate-900 tracking-tight mb-1">Timeframe Comparison</h3>
-                <p class="text-xs text-slate-400 mb-4">Traffic summary across operational intervals.</p>
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Overall Delivery Health: <strong class="text-secondary-600">{{ delivery_rate }}</strong></span>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'reports:user_usage' %}" class="text-slate-500 hover:text-slate-800">
+                    Daily Analytics &rarr;
+                </a>
+                <a href="{% url 'messaging:message_logs' %}" class="font-semibold text-primary-600 hover:text-primary-700">
+                    Detailed Delivery Reports &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
 
-                <div class="space-y-3.5">
-                    <!-- Today -->
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-800 mb-2">
-                            <span>Today</span>
-                            <span class="text-slate-500 font-mono">{{ stats_today.sent|default:0 }} sent</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-emerald-600 font-bold uppercase block">Delivered</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_today.delivered|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-blue-600 font-bold uppercase block">Read</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_today.read|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-rose-600 font-bold uppercase block">Failed</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_today.failed|default:0 }}</span>
-                            </div>
+    <!-- Row 3: Recent Campaigns + Quick Resources Split -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Recent Campaigns (2 Columns) -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Recent RCS Campaigns</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Latest dispatches and their real-time contact processing.</p>
+                </div>
+                <a href="{% url 'campaigns:campaign_list' %}" class="text-xs font-semibold text-primary-600 hover:text-primary-700">
+                    View all &rarr;
+                </a>
+            </div>
+
+            {% if recent_campaigns %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <th class="pb-3 font-medium">Campaign</th>
+                            <th class="pb-3 font-medium">Type</th>
+                            <th class="pb-3 font-medium">Contacts</th>
+                            <th class="pb-3 font-medium">Delivery</th>
+                            <th class="pb-3 font-medium text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for c in recent_campaigns %}
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <td class="py-3.5 pr-3">
+                                <a href="{% url 'campaigns:campaign_detail' c.id %}" class="font-bold text-slate-900 hover:text-primary-600 block truncate max-w-[14rem]">
+                                    {{ c.name }}
+                                </a>
+                                <span class="text-[11px] text-slate-400 block mt-0.5">{{ c.created_at|date:"M d, Y · H:i" }}</span>
+                            </td>
+                            <td class="py-3.5 pr-3">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700">
+                                    {{ c.get_message_type_display|default:c.message_type }}
+                                </span>
+                            </td>
+                            <td class="py-3.5 pr-3 font-mono font-medium text-slate-700">
+                                {{ c.valid_count|default:c.total }}
+                            </td>
+                            <td class="py-3.5 pr-3 min-w-[120px]">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                        <div class="h-full bg-secondary-500 rounded-full" style="width: {{ c.progress_pct }}%"></div>
+                                    </div>
+                                    <span class="font-mono text-[10px] text-slate-500">{{ c.progress_pct }}%</span>
+                                </div>
+                                <span class="text-[10px] text-secondary-600 font-mono">{{ c.delivered_count }} dlvr</span>
+                            </td>
+                            <td class="py-3.5 text-right">
+                                {% if c.status == 'completed' %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-secondary-700 border border-emerald-200">Completed</span>
+                                {% elif c.status == 'running' %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-primary-700 border border-blue-200 animate-pulse">Running</span>
+                                {% elif c.status == 'scheduled' %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Scheduled</span>
+                                {% elif c.status == 'failed' %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Failed</span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">{{ c.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-10 px-4">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <h4 class="text-sm font-bold text-slate-800">No campaigns launched yet</h4>
+                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Upload your audience list, attach rich RCS cards, and launch in minutes.</p>
+                <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-1.5 mt-4 px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs shadow-xs transition-colors">
+                    + Launch First Campaign
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right: Quick Actions & Assets (1 Column) -->
+        <div class="space-y-4">
+
+            <!-- Approved Templates Card -->
+            <div class="bg-gradient-to-br from-primary-50 via-white to-secondary-50/30 rounded-2xl border border-primary-100/80 p-5 shadow-xs">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-primary-700 block">Rich Message Templates</span>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-2xl font-black text-slate-900 font-mono">{{ templates_count|default:0 }}</span>
+                            <span class="text-xs font-semibold text-slate-500">Approved &amp; Ready</span>
                         </div>
                     </div>
-
-                    <!-- 7 Days -->
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-800 mb-2">
-                            <span>Last 7 Days</span>
-                            <span class="text-slate-500 font-mono">{{ stats_7d.sent|default:0 }} sent</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-emerald-600 font-bold uppercase block">Delivered</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_7d.delivered|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-blue-600 font-bold uppercase block">Read</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_7d.read|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-rose-600 font-bold uppercase block">Failed</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_7d.failed|default:0 }}</span>
-                            </div>
-                        </div>
+                    <div class="w-10 h-10 rounded-xl bg-white border border-primary-200/60 text-primary-600 flex items-center justify-center shadow-2xs shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     </div>
-
-                    <!-- 30 Days -->
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-800 mb-2">
-                            <span>Last 30 Days</span>
-                            <span class="text-slate-500 font-mono">{{ stats_30d.sent|default:0 }} sent</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-emerald-600 font-bold uppercase block">Delivered</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_30d.delivered|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-blue-600 font-bold uppercase block">Read</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_30d.read|default:0 }}</span>
-                            </div>
-                            <div class="bg-white rounded p-1.5 border border-slate-100 shadow-2xs">
-                                <span class="text-[10px] text-rose-600 font-bold uppercase block">Failed</span>
-                                <span class="font-mono font-bold text-slate-800">{{ stats_30d.failed|default:0 }}</span>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2.5">
+                    Pre-verified rich cards, carousels, and quick action chips approved for carrier dispatch.
+                </p>
+                <div class="mt-4 pt-3 border-t border-primary-100/60 flex items-center justify-between">
+                    <a href="{% url 'templates_mgmt:template_list' %}" class="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                        <span>Browse templates</span> &rarr;
+                    </a>
+                    <a href="{% url 'templates_mgmt:template_create' %}" class="text-[11px] font-semibold text-secondary-600 hover:text-secondary-700">
+                        + New Template
+                    </a>
                 </div>
             </div>
 
-            <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <a href="{% url 'messaging:message_logs' %}" class="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
-                    Message Logs &rarr;
-                </a>
-                <a href="{% url 'reports:user_usage' %}" class="text-xs text-slate-500 hover:text-slate-800">
-                    Daily Analytics &rarr;
-                </a>
+            <!-- Quick Navigation Tiles -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Quick Utilities</h4>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <a href="{% url 'campaigns:campaign_create' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-primary-50 hover:border-primary-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-primary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-primary-600 block">Send RCS</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Bulk batch upload</span>
+                    </a>
+
+                    <a href="{% url 'messaging:message_logs' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-secondary-50 hover:border-secondary-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-secondary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-secondary-600 block">Reports</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Live status log</span>
+                    </a>
+
+                    <a href="{% url 'api:settings' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-indigo-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 block">API Docs</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">REST integration</span>
+                    </a>
+
+                    <a href="{% url 'accounts:kyc_details' %}" class="p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-200/80 transition-all text-left group">
+                        <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 group-hover:text-secondary-600 flex items-center justify-center shadow-2xs mb-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 group-hover:text-secondary-600 block">KYC Status</span>
+                        <span class="text-[10px] text-slate-400 block mt-0.5">Verification details</span>
+                    </a>
+                </div>
             </div>
+
         </div>
 
     </div>
@@ -214,6 +371,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     backgroundColor: "#bdcaee",
                     borderRadius: 6,
                     barPercentage: 0.6,
+                    categoryPercentage: 0.7,
                 },
                 {
                     label: "Delivered",
@@ -221,6 +379,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     backgroundColor: "#39b54a",
                     borderRadius: 6,
                     barPercentage: 0.6,
+                    categoryPercentage: 0.7,
                 },
                 {
                     label: "Failed",
@@ -228,6 +387,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     backgroundColor: "#f43f5e",
                     borderRadius: 6,
                     barPercentage: 0.6,
+                    categoryPercentage: 0.7,
                 }
             ]
         },
@@ -242,7 +402,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     bodyColor: '#475569',
                     borderColor: '#e2e8f0',
                     borderWidth: 1,
-                    padding: 10
+                    padding: 12,
+                    boxPadding: 4,
+                    usePointStyle: true,
                 }
             },
             scales: {

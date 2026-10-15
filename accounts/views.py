@@ -321,12 +321,21 @@ class UserDashboardView(UserRequiredMixin, TemplateView):
         context["chart_failed"] = chart_failed
         context["chart_read"] = chart_read
 
-        # Compute delivery rate for active period
+        # Compute delivery and read rate for active period
         total_for_rate = active_stats["sent"]
         if total_for_rate > 0:
             context["delivery_rate"] = f"{(active_stats['delivered'] / total_for_rate * 100):.1f}%"
+            context["read_rate"] = f"{(active_stats['read'] / total_for_rate * 100):.1f}%"
         else:
             context["delivery_rate"] = "0.0%"
+            context["read_rate"] = "0.0%"
+
+        from campaigns.models import Campaign
+        context["recent_campaigns"] = (
+            Campaign.objects.filter(user=user)
+            .select_related("template")
+            .order_by("-created_at")[:5]
+        )
 
         return context
 
