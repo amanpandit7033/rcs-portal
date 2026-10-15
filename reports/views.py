@@ -56,9 +56,12 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
         if date_str:
             qs = qs.filter(created_at__date=date_str)
 
-        header = [
-            "Message ID",
-            "OneXtel Carrier ID",
+        is_admin = getattr(request.user, "is_admin", False)
+
+        header = []
+        if is_admin:
+            header.extend(["Message ID", "OneXtel Carrier ID"])
+        header.extend([
             "Recipient",
             "Sender Profile",
             "Message Intent",
@@ -72,12 +75,13 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
             "Delivered At",
             "Read At",
             "User Email",
-        ]
+        ])
 
         def format_row(m):
-            return [
-                str(m.id),
-                m.onextel_message_id or "",
+            row = []
+            if is_admin:
+                row.extend([str(m.id), m.onextel_message_id or ""])
+            row.extend([
                 f"{m.prefix}{m.recipient}",
                 m.sender_profile.sender_profile_name if m.sender_profile else "",
                 m.message_type,
@@ -91,7 +95,8 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
                 m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m.delivered_at else "",
                 m.read_at.strftime("%Y-%m-%d %H:%M:%S") if m.read_at else "",
                 m.user.email if m.user else "",
-            ]
+            ])
+            return row
 
         filename = f"rcs_messages_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
         return stream_csv_response(
@@ -272,71 +277,6 @@ class ResellerMarginReportView(ResellerRequiredMixin, View):
             },
         )
 
-
-# ---------------------------------------------------------------------------
-# 4. Admin Overview (System-wide Traffic, DLR Success Rate & Failure Breakdown)
-# ---------------------------------------------------------------------------
-
-class AdminOverviewReportView(AdminRequiredMixin, View):
-    """Platform-wide operational telemetry, DLR delivery rate, and error analytics."""
-
-    template_name = "reports/admin_overview_report.html"
-
-    def get(self, request):
-        days = int(request.GET.get("days", 30))
-        since_date = timezone.now() - timedelta(days=days)
-        base_qs = Message.objects.filter(created_at__gte=since_date)
-
-        # Status counts
-        status_counts = base_qs.aggregate(
-            total=Count("id"),
-            queued=Count("id", filter=Q(status=Message.Status.QUEUED)),
-            submitted=Count("id", filter=Q(status=Message.Status.SUBMITTED)),
-            sent=Count("id", filter=Q(status=Message.Status.SENT)),
-            delivered=Count("id", filter=Q(status=Message.Status.DELIVERED)),
-            read=Count("id", filter=Q(status=Message.Status.READ)),
-            failed=Count("id", filter=Q(status=Message.Status.FAILED)),
-            total_revenue=Sum("cost"),
-        )
-
-        total_msgs = status_counts["total"] or 0
-        successful_dlr = (status_counts["delivered"] or 0) + (status_counts["read"] or 0)
-        success_rate = (successful_dlr / total_msgs * 100) if total_msgs > 0 else 0.0
-
-        # Daily revenue and volume
-        daily_traffic = (
-            base_qs.annotate(date=TruncDate("created_at"))
-            .values("date")
-            .annotate(
-                count=Count("id"),
-                revenue=Sum("cost"),
-                delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
-                failed=Count("id", filter=Q(status=Message.Status.FAILED)),
-            )
-            .order_by("-date")
-        )
-
-        # Failure reasons breakdown
-        failure_reasons = (
-            base_qs.filter(status=Message.Status.FAILED)
-            .exclude(failure_reason="")
-            .values("failure_reason")
-            .annotate(count=Count("id"))
-            .order_by("-count")[:10]
-        )
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "status_counts": status_counts,
-                "success_rate": round(success_rate, 2),
-                "daily_traffic": daily_traffic,
-                "failure_reasons": failure_reasons,
-                "selected_days": days,
-                "page_title": "Admin Platform Intelligence & DLR Telemetry",
-            },
-        )
 
 
 # ---------------------------------------------------------------------------

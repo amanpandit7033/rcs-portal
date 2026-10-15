@@ -207,7 +207,6 @@
                             <a href="{% url 'accounts:user_list' %}" title="User Management" class="nl{% if request.resolver_match.view_name == 'accounts:user_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">User Management</span></a>
                             <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
                             <a href="{% url 'wallet:statement' %}" title="Wallet" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg><span class="nav-text">Wallet</span></a>
-                            <a href="{% url 'reports:admin_overview' %}" title="Reports" class="nl{% if request.resolver_match.view_name == 'reports:admin_overview' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg><span class="nav-text">Reports</span></a>
 
                         {% elif request.user.is_reseller %}
                             <a href="{% url 'accounts:reseller_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
@@ -216,7 +215,7 @@
                             <a href="{% url 'accounts:client_list' %}" title="Clients" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Clients</span></a>
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
                             <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Message Logs</span></a>
-                            <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'transfer' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
+                            <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
                             <a href="{% url 'wallet:statement' %}" title="Wallet Ledger" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg><span class="nav-text">Wallet Ledger</span></a>
 
                         {% else %}
@@ -225,7 +224,6 @@
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
                             <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Campaigns</span></a>
                             <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Message Logs</span></a>
-                            <a href="{% url 'reports:user_usage' %}" title="Reports" class="nl{% if request.resolver_match.view_name == 'reports:user_usage' %} on{% endif %}"><svg class="ic"><use href="#i-chart"/></svg><span class="nav-text">Reports</span></a>
                         {% endif %}
                     </nav>
                 </div>

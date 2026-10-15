@@ -49,7 +49,7 @@ class AssignCreditForm(forms.Form):
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Enter amount in ₹ (e.g. 500.00)", "step": "0.01"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Enter amount in ₹ (e.g. 500.00)", "step": "any"}),
         label="Amount (₹)",
     )
     remarks = forms.CharField(
@@ -85,65 +85,6 @@ class AssignCreditForm(forms.Form):
             )
 
 
-class WalletAdjustmentForm(forms.Form):
-    """Admin form to credit or deduct wallet funds with mandatory remarks."""
-
-    ACTION_CHOICES = (
-        ("credit", "Add Credit (+)"),
-        ("debit", "Deduct Funds (-)"),
-    )
-
-    action = forms.ChoiceField(
-        choices=ACTION_CHOICES,
-        widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
-        label="Action",
-    )
-    amount = forms.DecimalField(
-        max_digits=14,
-        decimal_places=4,
-        min_value=Decimal("0.0001"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.00", "step": "0.01"}),
-        label="Amount (INR)",
-    )
-    remarks = forms.CharField(
-        required=True,
-        widget=forms.Textarea(
-            attrs={"class": TAILWIND_TEXTAREA, "placeholder": "Reason for adjustment (mandatory audit trail)..."}
-        ),
-        label="Mandatory Remark",
-    )
-
-
-class TransferCreditForm(forms.Form):
-    """Reseller form to transfer balance directly to an onboarded client."""
-
-    client = forms.ModelChoiceField(
-        queryset=User.objects.none(),
-        widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
-        label="Target Client",
-    )
-    amount = forms.DecimalField(
-        max_digits=14,
-        decimal_places=4,
-        min_value=Decimal("0.0001"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.00", "step": "0.01"}),
-        label="Transfer Amount (INR)",
-    )
-    remarks = forms.CharField(
-        required=False,
-        widget=forms.Textarea(
-            attrs={"class": TAILWIND_TEXTAREA, "placeholder": "Optional transfer notes..."}
-        ),
-        label="Transfer Remarks",
-    )
-
-    def __init__(self, *args, reseller=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if reseller:
-            self.fields["client"].queryset = User.objects.filter(parent_reseller=reseller, is_active=True)
-            self.fields["client"].label_from_instance = lambda obj: f"{obj.company_name or obj.get_full_name()} ({obj.email})"
-
-
 class RatePlansForm(forms.Form):
     """Configure Promotional, Transactional, and OTP rates for a user."""
 
@@ -152,7 +93,7 @@ class RatePlansForm(forms.Form):
         max_digits=14,
         decimal_places=4,
         min_value=Decimal("0.0001"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2500", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2500", "step": "any"}),
         label="Promotional Rate (INR)",
     )
     promotional_cost_rate = forms.DecimalField(
@@ -160,7 +101,7 @@ class RatePlansForm(forms.Form):
         decimal_places=4,
         min_value=Decimal("0.0000"),
         required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1800", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1800", "step": "any"}),
         label="Promotional Cost Rate (INR)",
     )
 
@@ -169,7 +110,7 @@ class RatePlansForm(forms.Form):
         max_digits=14,
         decimal_places=4,
         min_value=Decimal("0.0001"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2000", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2000", "step": "any"}),
         label="Transactional Rate (INR)",
     )
     transactional_cost_rate = forms.DecimalField(
@@ -177,7 +118,7 @@ class RatePlansForm(forms.Form):
         decimal_places=4,
         min_value=Decimal("0.0000"),
         required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "any"}),
         label="Transactional Cost Rate (INR)",
     )
 
@@ -186,7 +127,7 @@ class RatePlansForm(forms.Form):
         max_digits=14,
         decimal_places=4,
         min_value=Decimal("0.0001"),
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "any"}),
         label="OTP Rate (INR)",
     )
     otp_cost_rate = forms.DecimalField(
@@ -194,7 +135,7 @@ class RatePlansForm(forms.Form):
         decimal_places=4,
         min_value=Decimal("0.0000"),
         required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1000", "step": "0.0001"}),
+        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1000", "step": "any"}),
         label="OTP Cost Rate (INR)",
     )
 

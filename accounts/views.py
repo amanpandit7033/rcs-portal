@@ -468,7 +468,7 @@ class ToggleUserActiveView(AdminRequiredMixin, View):
 # ---------------------------------------------------------------------------
 
 class ClientListView(ResellerRequiredMixin, ListView):
-    """Reseller view listing only their own onboarded clients."""
+    """Reseller view listing only their own onboarded clients with modal creation, editing, and rates."""
     model = User
     template_name = "accounts/client_list.html"
     context_object_name = "clients_list"
@@ -476,7 +476,7 @@ class ClientListView(ResellerRequiredMixin, ListView):
 
     def get_queryset(self):
         reseller = self.request.user
-        qs = User.objects.filter(parent_reseller=reseller).select_related("wallet").order_by("-date_joined")
+        qs = User.objects.filter(parent_reseller=reseller).select_related("wallet").prefetch_related("rate_plans").order_by("-date_joined")
         search = self.request.GET.get("q")
         if search:
             qs = qs.filter(
@@ -490,54 +490,81 @@ class ClientListView(ResellerRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["search_query"] = self.request.GET.get("q", "")
         context["page_title"] = "Client Management"
+        if "form" not in context:
+            context["form"] = ClientCreateForm(reseller=self.request.user)
+        context["open_create"] = bool(self.request.GET.get("open_create"))
+        context["open_edit_id"] = self.request.GET.get("open_edit", "")
+        context["open_rates_id"] = self.request.GET.get("open_rates", "")
+        context["reseller_rates"] = self.request.user.get_rates_dict()
+
+        import json
+        clients_json = {}
+        for c in context["clients_list"]:
+            clients_json[str(c.id)] = {
+                "id": c.id,
+                "username": c.username,
+                "email": c.email or "",
+                "company_name": c.company_name or "",
+                "first_name": c.first_name or "",
+                "last_name": c.last_name or "",
+                "phone": c.phone or "",
+                "state": c.state or "",
+                "GSTIN": c.GSTIN or "",
+                "role": c.role,
+                "is_active": c.is_active,
+                "rates": c.get_rates_dict(),
+            }
+        context["clients_json"] = json.dumps(clients_json)
         return context
 
+    def post(self, request, *args, **kwargs):
+        form = ClientCreateForm(request.POST, reseller=request.user)
+        if form.is_valid():
+            client = form.save()
+            messages.success(request, f"Client {client.email or client.username} onboarded successfully.")
+            return redirect("accounts:client_list")
 
-class ClientCreateView(ResellerRequiredMixin, CreateView):
-    """Reseller view to register a new direct client."""
-    model = User
-    form_class = ClientCreateForm
-    template_name = "accounts/client_form.html"
-    success_url = reverse_lazy("accounts:client_list")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["reseller"] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f"Client {self.object.email} onboarded successfully.")
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["form_title"] = "Onboard New Client"
-        context["submit_label"] = "Register Client"
-        return context
+        self.object_list = self.get_queryset()
+        context = self.get_context_data(form=form)
+        context["open_create"] = True
+        return self.render_to_response(context)
 
 
-class ClientEditView(ResellerRequiredMixin, UpdateView):
-    """Reseller view to edit an existing client."""
-    model = User
-    form_class = ClientEditForm
-    template_name = "accounts/client_form.html"
-    success_url = reverse_lazy("accounts:client_list")
+class ClientCreateView(ResellerRequiredMixin, View):
+    """Reseller view redirecting to modal creation on ClientListView or handling POST."""
 
-    def get_queryset(self):
-        # Strict scoping: reseller can ONLY edit their own clients
-        return User.objects.filter(parent_reseller=self.request.user)
+    def get(self, request, *args, **kwargs):
+        return redirect(f"{reverse('accounts:client_list')}?open_create=1")
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f"Client {self.object.email} updated successfully.")
-        return response
+    def post(self, request, *args, **kwargs):
+        form = ClientCreateForm(request.POST, reseller=request.user)
+        if form.is_valid():
+            client = form.save()
+            messages.success(request, f"Client {client.email or client.username} onboarded successfully.")
+            return redirect("accounts:client_list")
+        for field, errors in form.errors.items():
+            for err in errors:
+                messages.error(request, f"{field.title()}: {err}")
+        return redirect(f"{reverse('accounts:client_list')}?open_create=1")
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["form_title"] = f"Edit Client: {self.object.email}"
-        context["submit_label"] = "Update Client"
-        return context
+
+class ClientEditView(ResellerRequiredMixin, View):
+    """Reseller view redirecting to modal edit on ClientListView or handling POST."""
+
+    def get(self, request, pk, *args, **kwargs):
+        return redirect(f"{reverse('accounts:client_list')}?open_edit={pk}")
+
+    def post(self, request, pk, *args, **kwargs):
+        client = get_object_or_404(User, pk=pk, parent_reseller=request.user)
+        form = ClientEditForm(request.POST, instance=client)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Client {client.email or client.username} updated successfully.")
+            return redirect("accounts:client_list")
+        for field, errors in form.errors.items():
+            for err in errors:
+                messages.error(request, f"{field.title()}: {err}")
+        return redirect(f"{reverse('accounts:client_list')}?open_edit={pk}")
 
 
 class ToggleClientActiveView(ResellerRequiredMixin, View):

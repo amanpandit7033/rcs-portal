@@ -16,8 +16,6 @@ from .forms import (
     AssignCreditForm,
     RatePlansForm,
     SenderProfileForm,
-    TransferCreditForm,
-    WalletAdjustmentForm,
     WalletStatementFilterForm,
 )
 from .models import RatePlan, SenderProfile, Wallet, WalletTransaction
@@ -230,100 +228,6 @@ class AssignCreditView(RoleRequiredMixin, FormView):
             return self.form_invalid(form)
 
 
-class ResellerCreditTransferView(ResellerRequiredMixin, FormView):
-    """Reseller view to allocate prepaid credits to a direct client."""
-
-    template_name = "wallet/transfer.html"
-    form_class = TransferCreditForm
-    success_url = reverse_lazy("wallet:statement")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["reseller"] = self.request.user
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        client_id = self.request.GET.get("client_id")
-        if client_id:
-            initial["client"] = client_id
-        return initial
-
-    def form_valid(self, form):
-        client = form.cleaned_data["client"]
-        amount = form.cleaned_data["amount"]
-        remarks = form.cleaned_data.get("remarks", "")
-
-        try:
-            transfer(
-                from_user=self.request.user,
-                to_user=client,
-                amount=amount,
-                remarks=remarks,
-                created_by=self.request.user,
-            )
-            messages.success(
-                self.request,
-                f"Successfully transferred {amount} INR to {client.company_name or client.email}."
-            )
-            return redirect("accounts:client_list")
-        except InsufficientBalanceError as e:
-            messages.error(self.request, f"Transfer failed: {e}")
-            return self.form_invalid(form)
-        except Exception as e:
-            messages.error(self.request, f"Transfer error: {e}")
-            return self.form_invalid(form)
-
-
-class AdminAdjustWalletView(AdminRequiredMixin, FormView):
-    """Admin view to credit or deduct wallet funds with mandatory remarks."""
-
-    template_name = "wallet/adjust_wallet.html"
-    form_class = WalletAdjustmentForm
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.target_user = get_object_or_404(User, id=kwargs["user_id"])
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["target_user"] = self.target_user
-        context["target_wallet"] = getattr(self.target_user, "wallet", None)
-        return context
-
-    def form_valid(self, form):
-        action = form.cleaned_data["action"]
-        amount = form.cleaned_data["amount"]
-        remarks = form.cleaned_data["remarks"]
-
-        try:
-            if action == "credit":
-                credit(
-                    user=self.target_user,
-                    amount=amount,
-                    remarks=remarks,
-                    created_by=self.request.user,
-                    reference_type="admin_adjustment",
-                )
-                messages.success(self.request, f"Successfully credited {amount} INR to {self.target_user.email}.")
-            else:
-                debit(
-                    user=self.target_user,
-                    amount=amount,
-                    remarks=remarks,
-                    created_by=self.request.user,
-                    reference_type="admin_adjustment",
-                )
-                messages.success(self.request, f"Successfully deducted {amount} INR from {self.target_user.email}.")
-            return redirect("accounts:user_list")
-        except InsufficientBalanceError as e:
-            messages.error(self.request, f"Adjustment failed: {e}")
-            return self.form_invalid(form)
-        except Exception as e:
-            messages.error(self.request, f"An unexpected error occurred: {e}")
-            return self.form_invalid(form)
-
-
 class ManageRatePlansView(RoleRequiredMixin, View):
     """View to set and view Rate Plans (Promotional, Transactional, OTP).
 
@@ -332,7 +236,6 @@ class ManageRatePlansView(RoleRequiredMixin, View):
     """
 
     allowed_roles = ["admin", "reseller"]
-    template_name = "wallet/manage_rates.html"
 
     def get_target_user(self, request, user_id):
         target = get_object_or_404(User, id=user_id)
@@ -345,34 +248,9 @@ class ManageRatePlansView(RoleRequiredMixin, View):
     def get(self, request, user_id):
         if request.user.is_admin:
             return redirect(f"{reverse('accounts:user_list')}?open_rates={user_id}")
-        target_user = self.get_target_user(request, user_id)
-        rates = {rp.message_type: rp for rp in target_user.rate_plans.all()}
-
-        # If reseller is viewing, fetch reseller's own baseline rates for comparison
-        reseller_rates = {}
-        if target_user.parent_reseller:
-            reseller_rates = {rp.message_type: rp for rp in target_user.parent_reseller.rate_plans.all()}
-
-        initial = {
-            "promotional_rate": rates.get("PROMOTIONAL").rate if rates.get("PROMOTIONAL") else Decimal("0.2500"),
-            "promotional_cost_rate": rates.get("PROMOTIONAL").cost_rate if rates.get("PROMOTIONAL") else Decimal("0.1800"),
-            "transactional_rate": rates.get("TRANSACTIONAL").rate if rates.get("TRANSACTIONAL") else Decimal("0.2000"),
-            "transactional_cost_rate": rates.get("TRANSACTIONAL").cost_rate if rates.get("TRANSACTIONAL") else Decimal("0.1500"),
-            "otp_rate": rates.get("OTP").rate if rates.get("OTP") else Decimal("0.1500"),
-            "otp_cost_rate": rates.get("OTP").cost_rate if rates.get("OTP") else Decimal("0.1000"),
-        }
-        form = RatePlansForm(initial=initial)
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "target_user": target_user,
-                "form": form,
-                "reseller_rates": reseller_rates,
-                "is_admin": request.user.is_admin,
-            },
-        )
+        if request.user.is_reseller:
+            return redirect(f"{reverse('accounts:client_list')}?open_rates={user_id}")
+        return redirect("accounts:user_dashboard")
 
     def post(self, request, user_id):
         target_user = self.get_target_user(request, user_id)
@@ -413,16 +291,14 @@ class ManageRatePlansView(RoleRequiredMixin, View):
                 messages.error(request, str(e))
             except Exception as e:
                 messages.error(request, f"Error saving rate plan: {e}")
+        else:
+            for field, errors in form.errors.items():
+                for err in errors:
+                    messages.error(request, f"{field.title()}: {err}")
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "target_user": target_user,
-                "form": form,
-                "is_admin": request.user.is_admin,
-            },
-        )
+        if request.user.is_reseller:
+            return redirect(f"{reverse('accounts:client_list')}?open_rates={user_id}")
+        return redirect(f"{reverse('accounts:user_list')}?open_rates={user_id}")
 
 
 class ManageSenderProfilesView(AdminRequiredMixin, View):
