@@ -244,3 +244,7 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+# Session Security & Expiration (2 hours)
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=7200)  # 2 hours (7200 seconds)
+SESSION_SAVE_EVERY_REQUEST = True  # Extends expiration on each active request
+
