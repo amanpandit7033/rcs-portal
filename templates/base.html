@@ -126,6 +126,7 @@
         <symbol id="i-out" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></symbol>
         <symbol id="i-chev" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></symbol>
         <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h6m-6 4h4"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></symbol>
     </svg>
 
     {% if request.user.is_authenticated %}
@@ -207,6 +208,7 @@
                             <a href="{% url 'accounts:user_list' %}" title="User Management" class="nl{% if request.resolver_match.view_name == 'accounts:user_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">User Management</span></a>
                             <a href="{% url 'wallet:assign_credit' %}" title="Assign Credit" class="nl{% if request.resolver_match.url_name == 'assign_credit' %} on{% endif %}"><svg class="ic"><use href="#i-plus"/></svg><span class="nav-text">Assign Credit</span></a>
                             <a href="{% url 'wallet:statement' %}" title="Wallet" class="nl{% if request.resolver_match.url_name == 'statement' %} on{% endif %}"><svg class="ic"><use href="#i-coin"/></svg><span class="nav-text">Wallet</span></a>
+                            <a href="{% url 'accounts:whitelist_list' %}" title="Priority Whitelist" class="nl{% if request.resolver_match.url_name == 'whitelist_list' %} on{% endif %}"><svg class="ic"><use href="#i-shield"/></svg><span class="nav-text">Whitelist</span></a>
 
                         {% elif request.user.is_reseller %}
                             <a href="{% url 'accounts:reseller_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>

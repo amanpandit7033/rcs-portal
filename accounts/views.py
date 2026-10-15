@@ -31,8 +31,9 @@ from .forms import (
     UserEditForm,
     UserPasswordChangeForm,
     WhiteLabelForm,
+    WhitelistNumberForm,
 )
-from .models import WhiteLabel
+from .models import WhiteLabel, WhitelistNumber
 from .mixins import AdminRequiredMixin, ResellerRequiredMixin, UserRequiredMixin
 from wallet.models import Wallet
 from wallet.utils import format_inr
@@ -382,6 +383,10 @@ class UserListView(AdminRequiredMixin, ListView):
                 "GSTIN": u.GSTIN or "",
                 "role": u.role,
                 "is_active": u.is_active,
+                "can_use_low_price": u.can_use_low_price,
+                "is_low_price_applied": u.is_low_price_applied,
+                "low_price_start_from": u.low_price_start_from,
+                "low_price_percentage": str(u.low_price_percentage),
                 "rates": u.get_rates_dict(),
                 "senders": u.get_sender_profiles_list(),
             }
@@ -437,7 +442,9 @@ class UserEditView(AdminRequiredMixin, UpdateView):
         return response
 
     def form_invalid(self, form):
-        messages.error(self.request, "Failed to update account. Please check the fields.")
+        for field, errors in form.errors.items():
+            for err in errors:
+                messages.error(self.request, f"{field.title()}: {err}")
         return redirect(f"{reverse('accounts:user_list')}?open_edit={self.get_object().id}")
 
     def get_context_data(self, **kwargs):
@@ -512,6 +519,10 @@ class ClientListView(ResellerRequiredMixin, ListView):
                 "GSTIN": c.GSTIN or "",
                 "role": c.role,
                 "is_active": c.is_active,
+                "can_use_low_price": c.can_use_low_price,
+                "is_low_price_applied": c.is_low_price_applied,
+                "low_price_start_from": c.low_price_start_from,
+                "low_price_percentage": str(c.low_price_percentage),
                 "rates": c.get_rates_dict(),
             }
         context["clients_json"] = json.dumps(clients_json)
@@ -878,4 +889,95 @@ class WhiteLabelDeleteView(AdminRequiredMixin, DeleteView):
         res = super().delete(request, *args, **kwargs)
         messages.success(request, f"White-label configuration for '{name}' was deleted.")
         return res
+
+
+# ---------------------------------------------------------------------------
+# Priority Whitelist Management (Admin Only)
+# ---------------------------------------------------------------------------
+
+class WhitelistListView(AdminRequiredMixin, ListView):
+    """Admin-only view to manage user-wise priority whitelisted phone numbers that never get cut."""
+    model = WhitelistNumber
+    template_name = "accounts/whitelist_list.html"
+    context_object_name = "numbers_list"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = WhitelistNumber.objects.select_related("user", "created_by").order_by("-created_at")
+        search = self.request.GET.get("q")
+        if search:
+            qs = qs.filter(
+                Q(phone_number__icontains=search)
+                | Q(description__icontains=search)
+                | Q(user__username__icontains=search)
+                | Q(user__company_name__icontains=search)
+            )
+        user_id = self.request.GET.get("user_id")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_query"] = self.request.GET.get("q", "")
+        context["selected_user_id"] = self.request.GET.get("user_id", "")
+        context["page_title"] = "Priority Whitelist"
+        if "form" not in context:
+            context["form"] = WhitelistNumberForm()
+        context["total_whitelisted"] = WhitelistNumber.objects.count()
+        context["users_list"] = User.objects.all().order_by("username")
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = WhitelistNumberForm(request.POST)
+        if form.is_valid():
+            target_user = form.cleaned_data["user"]
+            raw_text = form.cleaned_data["numbers"]
+            description = form.cleaned_data.get("description", "").strip()
+
+            import re
+            tokens = re.split(r"[\r\n,;]+", raw_text)
+            added_count = 0
+            for token in tokens:
+                digits = "".join(filter(str.isdigit, token.strip()))
+                if digits:
+                    if len(digits) == 10:
+                        norm = "+91" + digits
+                    elif len(digits) == 12 and digits.startswith("91"):
+                        norm = "+" + digits
+                    else:
+                        norm = "+" + digits if not token.strip().startswith("+") else token.strip()
+                    _, created = WhitelistNumber.objects.get_or_create(
+                        user=target_user,
+                        phone_number=norm,
+                        defaults={"description": description, "created_by": request.user},
+                    )
+                    if created:
+                        added_count += 1
+
+            if added_count > 0:
+                messages.success(request, f"Successfully added {added_count} number(s) to whitelist for {target_user.username}.")
+            else:
+                messages.info(request, f"No new numbers were added (numbers may already exist on {target_user.username}'s whitelist).")
+            return redirect("accounts:whitelist_list")
+
+        self.object_list = self.get_queryset()
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+
+class WhitelistDeleteView(AdminRequiredMixin, DeleteView):
+    """Admin-only deletion of a whitelisted phone number."""
+    model = WhitelistNumber
+    success_url = reverse_lazy("accounts:whitelist_list")
+
+    def post(self, request, *args, **kwargs):
+        obj = self.get_object()
+        num = obj.phone_number
+        uname = obj.user.username if obj.user else "Account"
+        res = super().delete(request, *args, **kwargs)
+        messages.success(request, f"Number '{num}' removed from {uname}'s whitelist.")
+        return res
+
+
 

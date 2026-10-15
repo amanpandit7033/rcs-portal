@@ -1,4 +1,5 @@
 """Accounts models."""
+from decimal import Decimal
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -47,6 +48,37 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField("Phone Number", max_length=20, blank=True)
     GSTIN = models.CharField("GSTIN", max_length=15, blank=True)
     state = models.CharField("State", max_length=100, blank=True)
+
+    # Low Price / Cutting Configuration
+    can_use_low_price = models.BooleanField(
+        "Allow Low Price Feature",
+        default=False,
+        help_text="Permit this reseller to configure low price cutting for their clients",
+    )
+    is_low_price_applied = models.BooleanField(
+        "Apply Low Price",
+        default=False,
+        help_text="Enable cutting / skimming on campaigns exceeding the threshold",
+    )
+    low_price_start_from = models.PositiveIntegerField(
+        "Low Price Start From",
+        default=0,
+        help_text="Minimum campaign recipient count to trigger low price cutting",
+    )
+    low_price_percentage = models.DecimalField(
+        "Low Price Percentage (%)",
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Percentage of contacts to skip/cut",
+    )
+    low_price_credit_rate = models.DecimalField(
+        "Low Price Credit Amount (₹)",
+        max_digits=8,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        help_text="Amount credited to parent reseller per skipped message",
+    )
 
     is_active = models.BooleanField("Active", default=True)
     is_staff = models.BooleanField("Staff status", default=False)
@@ -173,3 +205,33 @@ class WhiteLabel(models.Model):
 
     def __str__(self):
         return f"{self.company_name} ({self.pointed_subdomain})"
+
+
+class WhitelistNumber(models.Model):
+    """Priority whitelisted phone numbers that are never cut/skipped during campaign dispatch for a specific account."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="whitelisted_numbers",
+        help_text="Account this whitelist belongs to",
+    )
+    phone_number = models.CharField("Phone Number", max_length=20, db_index=True)
+    description = models.CharField("Remarks / Owner", max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_whitelists",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Whitelisted Number"
+        verbose_name_plural = "Whitelisted Numbers"
+        ordering = ["-created_at"]
+        unique_together = ("user", "phone_number")
+
+    def __str__(self):
+        return f"{self.user.username}: {self.phone_number} ({self.description})" if self.description else f"{self.user.username}: {self.phone_number}"
+

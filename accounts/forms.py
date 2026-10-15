@@ -167,6 +167,10 @@ class UserEditForm(forms.ModelForm):
             "role",
             "parent_reseller",
             "is_active",
+            "can_use_low_price",
+            "is_low_price_applied",
+            "low_price_start_from",
+            "low_price_percentage",
         ]
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
@@ -180,6 +184,10 @@ class UserEditForm(forms.ModelForm):
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "can_use_low_price": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "is_low_price_applied": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "low_price_start_from": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 1000", "min": "0"}),
+            "low_price_percentage": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 10.00", "step": "0.01", "min": "0", "max": "100"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -289,6 +297,10 @@ class ClientEditForm(forms.ModelForm):
             "GSTIN",
             "state",
             "is_active",
+            "can_use_low_price",
+            "is_low_price_applied",
+            "low_price_start_from",
+            "low_price_percentage",
         ]
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
@@ -301,6 +313,10 @@ class ClientEditForm(forms.ModelForm):
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "can_use_low_price": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "is_low_price_applied": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "low_price_start_from": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 1000", "min": "0"}),
+            "low_price_percentage": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 10.00", "step": "0.01", "min": "0", "max": "100"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -319,6 +335,41 @@ class ClientEditForm(forms.ModelForm):
         if commit:
             client.save()
         return client
+
+
+class WhitelistNumberForm(forms.Form):
+    """Admin form to add whitelisted phone numbers for an account (single or bulk)."""
+    user = forms.ModelChoiceField(
+        queryset=None,
+        label="Account / User",
+        widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
+        empty_label="Select Account",
+    )
+    numbers = forms.CharField(
+        label="Phone Numbers",
+        widget=forms.Textarea(
+            attrs={
+                "class": TAILWIND_INPUT,
+                "rows": 4,
+                "placeholder": "Enter phone numbers separated by comma or new line\ne.g. 9876543210, 919876543211",
+            }
+        ),
+        help_text="Enter priority numbers for this account. They will never be cut/skipped in this account's campaigns.",
+    )
+    description = forms.CharField(
+        label="Remarks / Owner",
+        required=False,
+        widget=forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. Director VIP, Test number"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import User
+        self.fields["user"].queryset = User.objects.all().order_by("username")
+        self.fields["user"].label_from_instance = lambda obj: (
+            f"{obj.username} ({obj.company_name})" if obj.company_name else f"{obj.username} [{obj.role.title()}]"
+        )
+
 
 
 class ProfileSettingsForm(forms.ModelForm):

@@ -178,7 +178,7 @@ def run_campaign_task(self, campaign_id: str):
     Converts wallet reservation to per-message debits and releases unused reserve on completion.
     """
     try:
-        campaign = Campaign.objects.select_related("user", "sender_profile", "template").get(id=campaign_id)
+        campaign = Campaign.objects.select_related("user", "user__parent_reseller", "sender_profile", "template").get(id=campaign_id)
     except Campaign.DoesNotExist:
         logger.error("run_campaign_task: Campaign %s not found.", campaign_id)
         return
@@ -192,6 +192,67 @@ def run_campaign_task(self, campaign_id: str):
     if not campaign.started_at:
         campaign.started_at = timezone.now()
     campaign.save(update_fields=["status", "started_at", "updated_at"])
+
+    # Low Price / Skimming Setup
+    user = campaign.user
+    total_valid_contacts = CampaignContact.objects.filter(
+        campaign=campaign,
+        status=CampaignContact.Status.PENDING,
+    ).count()
+
+    skipped_contact_ids = set()
+
+    # Low Price rules:
+    # 1. Enabled on user (is_low_price_applied = True)
+    # 2. Campaigns with 20 or fewer numbers are automatically whitelisted (0 skipped)
+    # 3. Campaign total >= low_price_start_from and percentage > 0
+    if (
+        user.is_low_price_applied
+        and total_valid_contacts > 20
+        and total_valid_contacts >= user.low_price_start_from
+        and user.low_price_percentage > Decimal("0.00")
+    ):
+        from accounts.models import WhitelistNumber
+        import random
+
+        # 1. Fetch whitelisted priority numbers for this campaign's user (never cut)
+        whitelisted_raw = list(
+            WhitelistNumber.objects.filter(user=campaign.user).values_list("phone_number", flat=True)
+        )
+        whitelisted_set = set()
+        for num in whitelisted_raw:
+            cleaned = "".join(filter(str.isdigit, str(num)))
+            if cleaned:
+                whitelisted_set.add(cleaned)
+                if len(cleaned) == 10:
+                    whitelisted_set.add("91" + cleaned)
+                elif cleaned.startswith("91") and len(cleaned) == 12:
+                    whitelisted_set.add(cleaned[2:])
+
+        # 2. Collect eligible contacts that are NOT whitelisted
+        all_pending = list(
+            CampaignContact.objects.filter(
+                campaign=campaign,
+                status=CampaignContact.Status.PENDING,
+            ).values_list("id", "number")
+        )
+
+        eligible_ids = []
+        for cid, num in all_pending:
+            cleaned_num = "".join(filter(str.isdigit, str(num)))
+            if cleaned_num not in whitelisted_set:
+                eligible_ids.append(cid)
+
+        # 3. Calculate target skip count = round(total_contacts * percentage / 100)
+        target_skip_count = int(round(float(total_valid_contacts) * float(user.low_price_percentage) / 100.0))
+        target_skip_count = min(target_skip_count, len(eligible_ids))
+
+        if target_skip_count > 0:
+            skipped_contact_ids = set(random.sample(eligible_ids, target_skip_count))
+            logger.info(
+                "Low Price cutting applied for campaign %s (user %s): skipping %s out of %s contacts (eligible: %s)",
+                campaign.id, user.username, len(skipped_contact_ids), total_valid_contacts, len(eligible_ids)
+            )
 
     BATCH_CHUNK = 200
 
@@ -216,6 +277,8 @@ def run_campaign_task(self, campaign_id: str):
         for contact in pending_contacts:
             throttle_rate_limit()
 
+            is_skipped = contact.id in skipped_contact_ids
+
             # Create individual Message
             message = Message.objects.create(
                 campaign=campaign,
@@ -229,7 +292,8 @@ def run_campaign_task(self, campaign_id: str):
                 custom_params=contact.params,
                 rate_applied=campaign.rate_applied,
                 cost=campaign.rate_applied,
-                status=Message.Status.QUEUED,
+                status=Message.Status.DELIVERED if is_skipped else Message.Status.QUEUED,
+                delivered_at=timezone.now() if is_skipped else None,
             )
 
             # Convert reservation portion into real Message DEBIT ledger row
@@ -251,12 +315,41 @@ def run_campaign_task(self, campaign_id: str):
             # Deduct from reserved balance tracker
             campaign.reserved_amount = max(Decimal("0.0000"), campaign.reserved_amount - message.cost)
 
-            contact.status = CampaignContact.Status.DISPATCHED
+            contact.status = CampaignContact.Status.DELIVERED if is_skipped else CampaignContact.Status.DISPATCHED
             contact.message = message
             contact.save(update_fields=["status", "message"])
 
-            # Queue on the 'bulk' queue to prevent starving priority transactional messages
-            send_message_task.apply_async(args=[str(message.id)], queue="bulk")
+            if is_skipped:
+                # Credit rebate to parent reseller based on their configured rate plan
+                parent_reseller = getattr(campaign.user, "parent_reseller", None)
+                if parent_reseller:
+                    from wallet.models import RatePlan
+                    from wallet.services import credit
+
+                    reseller_plan = RatePlan.objects.filter(
+                        user=parent_reseller,
+                        message_type=campaign.message_type,
+                    ).first()
+
+                    rebate_amount = Decimal("0.0000")
+                    if reseller_plan:
+                        rebate_amount = reseller_plan.cost_rate if reseller_plan.cost_rate > Decimal("0.0000") else reseller_plan.rate
+                    if rebate_amount <= Decimal("0.0000"):
+                        rebate_amount = message.cost
+
+                    try:
+                        credit(
+                            user=parent_reseller,
+                            amount=rebate_amount,
+                            remarks=f"Low Price Rebate: Campaign '{campaign.name}' ({contact.number})",
+                            reference_type="LOW_PRICE_REBATE",
+                            reference_id=str(message.id),
+                        )
+                    except Exception as e:
+                        logger.error("Failed to credit low price rebate to reseller %s: %s", parent_reseller.username, e)
+            else:
+                # Queue on the 'bulk' queue to prevent starving priority transactional messages
+                send_message_task.apply_async(args=[str(message.id)], queue="bulk")
 
         # Update processed counter for live progress bar
         campaign.processed_count = CampaignContact.objects.filter(

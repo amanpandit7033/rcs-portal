@@ -28,6 +28,8 @@ from .views import (
     WhiteLabelDeleteView,
     WhiteLabelListView,
     WhiteLabelUpdateView,
+    WhitelistDeleteView,
+    WhitelistListView,
 )
 
 app_name = "accounts"
@@ -51,6 +53,10 @@ urlpatterns = [
     path("users/create/", UserCreateView.as_view(), name="user_create"),
     path("users/<int:pk>/edit/", UserEditView.as_view(), name="user_edit"),
     path("users/<int:user_id>/toggle-status/", ToggleUserActiveView.as_view(), name="toggle_user_status"),
+
+    # Admin: Priority Whitelist Management
+    path("whitelist/", WhitelistListView.as_view(), name="whitelist_list"),
+    path("whitelist/<int:pk>/delete/", WhitelistDeleteView.as_view(), name="whitelist_delete"),
 
     # Admin: White Label Management
     path("whitelabel/", WhiteLabelListView.as_view(), name="whitelabel_list"),

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Priority Whitelist Directory - RCS Portal{% endblock %}
+{% block header_title %}Priority Whitelist{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ showAddModal: false }">
+
+    <!-- Top Header & Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Priority Whitelist</h1>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    {{ total_whitelisted }} Protected Number{{ total_whitelisted|pluralize }}
+                </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Account-wise whitelisted phone numbers are strictly protected and will never be skipped or cut during campaign dispatch.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="button"
+                    @click="showAddModal = true"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                <span>Add Numbers</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+        <form method="get" class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text"
+                       name="q"
+                       value="{{ search_query }}"
+                       placeholder="Search by phone number, account, or remarks..."
+                       class="w-full pl-9 pr-4 py-2 rounded-xl text-xs border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all">
+            </div>
+
+            <!-- Filter by Account -->
+            <div class="w-full sm:w-60">
+                <select name="user_id"
+                        onchange="this.form.submit()"
+                        class="w-full px-3 py-2 rounded-xl text-xs border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all text-slate-700">
+                    <option value="">All Accounts</option>
+                    {% for u in users_list %}
+                    <option value="{{ u.id }}" {% if selected_user_id == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.username }}{% if u.company_name %} ({{ u.company_name }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer">
+                    Filter
+                </button>
+                {% if search_query or selected_user_id %}
+                <a href="{% url 'accounts:whitelist_list' %}" class="w-full sm:w-auto px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors text-center">
+                    Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Whitelisted Numbers Table -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                        <th class="py-3.5 px-4 sm:px-6">Phone Number</th>
+                        <th class="py-3.5 px-4">Account / User</th>
+                        <th class="py-3.5 px-4">Remarks / Owner</th>
+                        <th class="py-3.5 px-4">Added By</th>
+                        <th class="py-3.5 px-4">Date Added</th>
+                        <th class="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for item in numbers_list %}
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="py-3.5 px-4 sm:px-6 font-mono font-bold text-slate-900">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span>{{ item.phone_number }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-800 font-medium">
+                            <div class="flex flex-col">
+                                <span class="font-semibold text-slate-900">{{ item.user.username }}</span>
+                                {% if item.user.company_name %}
+                                <span class="text-[11px] text-slate-400">{{ item.user.company_name }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 font-medium">
+                            {{ item.description|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 text-[11px]">
+                            {{ item.created_by.username|default:"System Admin" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
+                            {{ item.created_at|date:"d M Y, h:i A" }}
+                        </td>
+                        <td class="py-3.5 px-4 sm:px-6 text-right">
+                            <form method="post" action="{% url 'accounts:whitelist_delete' item.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                        onclick="return confirm('Remove {{ item.phone_number }} from {{ item.user.username }}\'s priority whitelist?')"
+                                        title="Remove number">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 px-4 text-center">
+                            <div class="max-w-sm mx-auto text-center space-y-3">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-800">No whitelisted numbers found</h3>
+                                <p class="text-xs text-slate-500">
+                                    Add priority test or client numbers here to ensure they are always dispatched directly to the operator.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+            <div class="flex items-center gap-1">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Add Numbers Modal Dialog -->
+    <div x-show="showAddModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         @keydown.escape.window="showAddModal = false">
+        <div x-show="showAddModal"
+             x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+             @click="showAddModal = false"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div x-show="showAddModal"
+                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-lg border border-slate-100 flex flex-col"
+                 @click.stop>
+                <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 tracking-tight">Add Whitelist Numbers</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Enter one or multiple numbers to strictly protect from cutting.</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="showAddModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form method="post" action="{% url 'accounts:whitelist_list' %}" class="p-6 space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Account / User <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.user }}
+                        <p class="text-[11px] text-slate-400 mt-1">Select the account this whitelist belongs to.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Phone Numbers <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.numbers }}
+                        <p class="text-[11px] text-slate-400 mt-1">Separate multiple numbers with commas or new lines. Formats like 9876543210 or +919876543210 are accepted.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Remarks / Owner (Optional)
+                        </label>
+                        {{ form.description }}
+                        <p class="text-[11px] text-slate-400 mt-1">e.g. CEO Phone, QA Testing Sim, Director VIP</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button type="button" @click="showAddModal = false" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-all focus:ring-4 focus:ring-blue-100 cursor-pointer">
+                            <span>Add to Whitelist</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
