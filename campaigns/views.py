@@ -123,6 +123,15 @@ class CampaignCreateView(RoleRequiredMixin, View):
         user_wallet = getattr(request.user, "wallet", None)
         current_balance = user_wallet.balance if user_wallet else Decimal("0.0000")
 
+        from django.db.models import Count
+        from .models import ContactGroup
+
+        contact_groups = (
+            ContactGroup.objects.for_user(request.user)
+            .annotate(contacts_count=Count("contacts"))
+            .order_by("-created_at")
+        )
+
         return render(
             request,
             self.template_name,
@@ -131,6 +140,7 @@ class CampaignCreateView(RoleRequiredMixin, View):
                 "templates": templates,
                 "templates_json": json.dumps(templates_data),
                 "current_balance": current_balance,
+                "contact_groups": contact_groups,
                 "page_title": "Create & Send Campaign",
             },
         )
@@ -189,12 +199,15 @@ class CampaignCreateView(RoleRequiredMixin, View):
                 id=template_id,
             )
 
+        # Auto-detect message_type from approved template or default to PROMOTIONAL
+        final_message_type = (template.message_type if template and template.message_type else message_type) or "PROMOTIONAL"
+
         # Create campaign record
         campaign = Campaign.objects.create(
             user=request.user,
             name=name,
             sender_profile=sender_profile,
-            message_type=message_type,
+            message_type=final_message_type,
             template=template,
             file=campaign_file,
             status=Campaign.Status.PARSING,
@@ -333,7 +346,7 @@ class CampaignExportCSVView(RoleRequiredMixin, View):
             "Recipient Number",
             "Contact Status",
             "Message ID",
-            "OneXtel Carrier ID",
+            "Carrier Message ID",
             "Message Status",
             "Dispatched At",
             "Delivered At",
@@ -361,4 +374,369 @@ class CampaignExportCSVView(RoleRequiredMixin, View):
             header=header,
             queryset_iterator=qs.iterator(chunk_size=1000),
             row_formatter=format_row,
+        )
+
+
+# =====================================================================
+# Contact Groups Management Views
+# =====================================================================
+
+def parse_group_contacts(raw_text: str = "", file_obj=None) -> list:
+    """
+    Parses contacts from raw text (comma/newline separated) or uploaded file (CSV, Excel, TXT).
+    Returns a list of unique tuples: (cleaned_mobile_number, contact_name).
+    """
+    import re
+    import csv
+    from messaging.services import normalize_and_validate_indian_phone
+    from django.core.exceptions import ValidationError
+
+    contacts_map = {}
+
+    def add_number(raw_num: str, raw_name: str = ""):
+        if not raw_num:
+            return
+        try:
+            clean_num = normalize_and_validate_indian_phone(raw_num)
+        except ValidationError:
+            clean_digits = re.sub(r"[^\d]", "", str(raw_num).strip())
+            if len(clean_digits) == 12 and clean_digits.startswith("91"):
+                clean_digits = clean_digits[2:]
+            elif len(clean_digits) == 11 and clean_digits.startswith("0"):
+                clean_digits = clean_digits[1:]
+            if 10 <= len(clean_digits) <= 15:
+                clean_num = clean_digits
+            else:
+                return
+
+        if clean_num not in contacts_map:
+            contacts_map[clean_num] = raw_name.strip()[:100]
+
+    if raw_text:
+        lines = re.split(r"[\r\n]+", raw_text)
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            parts = re.split(r"[,;\t]+", line)
+            if len(parts) >= 2:
+                p0, p1 = parts[0].strip(), parts[1].strip()
+                p0_digits = re.sub(r"[^\d]", "", p0)
+                p1_digits = re.sub(r"[^\d]", "", p1)
+                if len(p0_digits) >= 10:
+                    add_number(p0, p1)
+                elif len(p1_digits) >= 10:
+                    add_number(p1, p0)
+                else:
+                    add_number(p0)
+            elif len(parts) == 1:
+                add_number(parts[0])
+
+    if file_obj:
+        ext = file_obj.name.lower().split(".")[-1]
+        if ext in ["xlsx", "xls"]:
+            import openpyxl
+            try:
+                wb = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+                sheet = wb.active
+                for row in sheet.iter_rows(values_only=True):
+                    if not row:
+                        continue
+                    c0 = str(row[0] or "").strip()
+                    c1 = str(row[1] or "").strip() if len(row) > 1 else ""
+                    c0_digits = re.sub(r"[^\d]", "", c0)
+                    c1_digits = re.sub(r"[^\d]", "", c1)
+                    if len(c0_digits) >= 10:
+                        add_number(c0, c1)
+                    elif len(c1_digits) >= 10:
+                        add_number(c1, c0)
+            except Exception as e:
+                logger.error("Error reading excel file in parse_group_contacts: %s", e)
+        else:
+            try:
+                content = file_obj.read().decode("utf-8", errors="ignore")
+                csv_reader = csv.reader(content.splitlines())
+                for row in csv_reader:
+                    if not row:
+                        continue
+                    c0 = str(row[0] or "").strip()
+                    c1 = str(row[1] or "").strip() if len(row) > 1 else ""
+                    c0_digits = re.sub(r"[^\d]", "", c0)
+                    c1_digits = re.sub(r"[^\d]", "", c1)
+                    if len(c0_digits) >= 10:
+                        add_number(c0, c1)
+                    elif len(c1_digits) >= 10:
+                        add_number(c1, c0)
+            except Exception as e:
+                logger.error("Error reading csv/txt file in parse_group_contacts: %s", e)
+
+    return [(num, name) for num, name in contacts_map.items()]
+
+
+class ContactGroupListView(RoleRequiredMixin, View):
+    """List contact groups for current user with contact count and search."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+    template_name = "campaigns/group_list.html"
+
+    def get(self, request):
+        from django.db.models import Count
+        from .models import ContactGroup
+
+        q = request.GET.get("q", "").strip()
+        qs = (
+            ContactGroup.objects.for_user(request.user)
+            .annotate(contacts_count=Count("contacts"))
+            .order_by("-created_at")
+        )
+        if q:
+            qs = qs.filter(name__icontains=q)
+
+        total_groups = qs.count()
+        total_contacts_sum = sum(g.contacts_count for g in qs)
+
+        paginator = Paginator(qs, 15)
+        page_obj = paginator.get_page(request.GET.get("page", 1))
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "groups": page_obj,
+                "search_query": q,
+                "total_groups": total_groups,
+                "total_contacts_sum": total_contacts_sum,
+                "page_title": "Manage Contact Groups",
+            },
+        )
+
+
+class ContactGroupCreateView(RoleRequiredMixin, View):
+    """Create a new contact group and populate initial contacts."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+    template_name = "campaigns/group_form.html"
+
+    def get(self, request):
+        return render(
+            request,
+            self.template_name,
+            {
+                "page_title": "Create Contact Group",
+                "is_create": True,
+            },
+        )
+
+    def post(self, request):
+        from .models import ContactGroup, GroupContact
+
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        raw_numbers = request.POST.get("numbers", "").strip()
+        file_obj = request.FILES.get("file")
+
+        if not name:
+            messages.error(request, "Please provide a valid Group Name.")
+            return redirect("campaigns:group_create")
+
+        group = ContactGroup.objects.create(
+            user=request.user,
+            name=name,
+            description=description,
+        )
+
+        parsed_contacts = parse_group_contacts(raw_numbers, file_obj)
+        batch = [
+            GroupContact(group=group, mobile_number=num, name=contact_name)
+            for num, contact_name in parsed_contacts
+        ]
+        if batch:
+            GroupContact.objects.bulk_create(batch, ignore_conflicts=True)
+
+        count = group.contacts.count()
+        messages.success(request, f"Group '{name}' created successfully with {count} contacts.")
+        return redirect("campaigns:group_detail", pk=group.pk)
+
+
+class ContactGroupDetailView(RoleRequiredMixin, View):
+    """View contacts in a group, search, and add more numbers."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+    template_name = "campaigns/group_detail.html"
+
+    def get(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        q = request.GET.get("q", "").strip()
+
+        contacts_qs = group.contacts.all().order_by("-id")
+        if q:
+            contacts_qs = contacts_qs.filter(
+                Q(mobile_number__icontains=q) | Q(name__icontains=q)
+            )
+
+        paginator = Paginator(contacts_qs, 50)
+        page_obj = paginator.get_page(request.GET.get("page", 1))
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "group": group,
+                "contacts": page_obj,
+                "search_query": q,
+                "total_contacts": group.contacts.count(),
+                "page_title": f"Group: {group.name}",
+            },
+        )
+
+    def post(self, request, pk):
+        """Append more contacts to this group."""
+        from .models import ContactGroup, GroupContact
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        raw_numbers = request.POST.get("numbers", "").strip()
+        file_obj = request.FILES.get("file")
+
+        parsed_contacts = parse_group_contacts(raw_numbers, file_obj)
+        if not parsed_contacts:
+            messages.error(request, "No valid mobile numbers found to add.")
+            return redirect("campaigns:group_detail", pk=group.pk)
+
+        initial_count = group.contacts.count()
+        batch = [
+            GroupContact(group=group, mobile_number=num, name=contact_name)
+            for num, contact_name in parsed_contacts
+        ]
+        GroupContact.objects.bulk_create(batch, ignore_conflicts=True)
+        new_count = group.contacts.count() - initial_count
+
+        messages.success(
+            request,
+            f"Successfully added {new_count} new contacts to '{group.name}' "
+            f"({len(parsed_contacts) - new_count} duplicates skipped).",
+        )
+        return redirect("campaigns:group_detail", pk=group.pk)
+
+
+class ContactGroupUpdateView(RoleRequiredMixin, View):
+    """Edit group name and description."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+    template_name = "campaigns/group_edit.html"
+
+    def get(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        return render(
+            request,
+            self.template_name,
+            {
+                "group": group,
+                "page_title": f"Edit Group: {group.name}",
+            },
+        )
+
+    def post(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+
+        if not name:
+            messages.error(request, "Group Name cannot be empty.")
+            return redirect("campaigns:group_edit", pk=group.pk)
+
+        group.name = name
+        group.description = description
+        group.save(update_fields=["name", "description", "updated_at"])
+
+        messages.success(request, f"Group '{name}' updated successfully.")
+        return redirect("campaigns:group_detail", pk=group.pk)
+
+
+class ContactGroupDeleteView(RoleRequiredMixin, View):
+    """Delete a contact group and all its members."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def post(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        name = group.name
+        group.delete()
+        messages.success(request, f"Group '{name}' was deleted.")
+        return redirect("campaigns:group_list")
+
+
+class ContactGroupDeleteContactView(RoleRequiredMixin, View):
+    """Delete single contact from a group."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def post(self, request, pk, contact_id):
+        from .models import ContactGroup, GroupContact
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        contact = get_object_or_404(GroupContact, id=contact_id, group=group)
+        contact.delete()
+        messages.success(request, f"Contact {contact.mobile_number} removed.")
+        return redirect("campaigns:group_detail", pk=group.pk)
+
+
+class ContactGroupExportView(RoleRequiredMixin, View):
+    """Export all contact numbers in a group as CSV."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def get(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        qs = group.contacts.all().order_by("id")
+
+        header = ["Mobile Number", "Contact Name", "Added At"]
+
+        def format_row(c):
+            return [
+                c.mobile_number,
+                c.name,
+                c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else "",
+            ]
+
+        safe_name = group.name.lower().replace(" ", "_")
+        filename = f"group_{safe_name}_contacts.csv"
+
+        return stream_csv_response(
+            filename=filename,
+            header=header,
+            queryset_iterator=qs.iterator(chunk_size=1000),
+            row_formatter=format_row,
+        )
+
+
+class ContactGroupNumbersAjaxView(RoleRequiredMixin, View):
+    """API endpoint to fetch all numbers of a group formatted for Campaign textarea insertion."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def get(self, request, pk):
+        from .models import ContactGroup
+
+        group = get_object_or_404(ContactGroup.objects.for_user(request.user), pk=pk)
+        numbers = list(group.contacts.values_list("mobile_number", flat=True))
+
+        return JsonResponse(
+            {
+                "success": True,
+                "group_id": group.id,
+                "group_name": group.name,
+                "count": len(numbers),
+                "numbers": numbers,
+                "numbers_text": "\n".join(numbers),
+            }
         )

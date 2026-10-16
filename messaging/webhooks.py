@@ -75,4 +75,4 @@ class OneXtelDLRWebhookView(View):
 
     def get(self, request):
         """Some vendors send GET verification or health checks."""
-        return JsonResponse({"status": "active", "service": "OneXtel RCS DLR Receiver"})
+        return JsonResponse({"status": "active", "service": "RCS DLR Receiver"})

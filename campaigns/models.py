@@ -190,3 +190,64 @@ class CampaignContact(models.Model):
 
     def __str__(self):
         return f"{self.number} ({self.get_status_display()})"
+
+
+class ContactGroupQuerySet(RoleScopedQuerySetMixin, models.QuerySet):
+    user_field = "user"
+
+
+class ContactGroupManager(models.Manager.from_queryset(ContactGroupQuerySet)):
+    def for_user(self, user):
+        return self.get_queryset().for_user(user)
+
+
+class ContactGroup(models.Model):
+    """Client contact group for saving and reusing recipient lists in campaigns."""
+
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="contact_groups",
+    )
+    name = models.CharField("Group Name", max_length=150)
+    description = models.TextField("Description", blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ContactGroupManager()
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Contact Group"
+        verbose_name_plural = "Contact Groups"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def total_contacts(self):
+        return self.contacts.count()
+
+
+class GroupContact(models.Model):
+    """Individual recipient contact in a ContactGroup."""
+
+    id = models.BigAutoField(primary_key=True)
+    group = models.ForeignKey(
+        ContactGroup,
+        on_delete=models.CASCADE,
+        related_name="contacts",
+    )
+    mobile_number = models.CharField("Mobile Number", max_length=20, db_index=True)
+    name = models.CharField("Contact Name", max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["group", "mobile_number"], name="unique_group_mobile")
+        ]
+
+    def __str__(self):
+        return f"{self.mobile_number} ({self.group.name})"

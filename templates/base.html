@@ -268,7 +268,8 @@
                             <a href="{% url 'accounts:admin_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'admin_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
                             <a href="{% url 'onboarding:admin_list' %}" title="Onboarding Requests" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}"><svg class="ic"><use href="#i-clipboard"/></svg><span class="nav-text">Onboarding Requests</span></a>
                             <a href="{% url 'accounts:admin_kyc_list' %}" title="KYC Requests" class="nl{% if request.resolver_match.url_name == 'admin_kyc_list' %} on{% endif %}"><svg class="ic"><use href="#i-shield"/></svg><span class="nav-text">KYC Requests</span></a>
-                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' and 'group' not in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Manage Groups</span></a>
 
                             <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Delivery Reports</span></a>
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Manage Templates</span></a>
@@ -279,7 +280,8 @@
 
                         {% elif request.user.is_reseller %}
                             <a href="{% url 'accounts:reseller_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
-                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' and 'group' not in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Manage Groups</span></a>
                             <a href="{% url 'accounts:client_list' %}" title="Clients" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Clients</span></a>
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
                             <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Delivery Reports</span></a>
@@ -288,7 +290,8 @@
 
                         {% else %}
                             <a href="{% url 'accounts:user_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'user_dashboard' %} on{% endif %}"><svg class="ic"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
-                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:campaign_list' %}" title="Campaigns" class="nl{% if request.resolver_match.namespace == 'campaigns' and 'group' not in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-camp"/></svg><span class="nav-text">Send RCS</span></a>
+                            <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}"><svg class="ic"><use href="#i-users"/></svg><span class="nav-text">Manage Groups</span></a>
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Templates" class="nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"><svg class="ic"><use href="#i-box"/></svg><span class="nav-text">Templates</span></a>
                             <a href="{% url 'messaging:message_logs' %}" title="Message Logs" class="nl{% if request.resolver_match.view_name == 'messaging:message_logs' %} on{% endif %}"><svg class="ic"><use href="#i-logs"/></svg><span class="nav-text">Delivery Reports</span></a>
                         {% endif %}
@@ -422,21 +425,61 @@
 
             <!-- Page body -->
             <main class="flex-1 p-5 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-                {% if messages %}
-                <div class="space-y-3">
-                    {% for message in messages %}
-                    <div x-data="{ show: true }" x-show="show" role="alert" class="p-4 rounded-2xl border flex items-start justify-between gap-3 text-sm font-medium {% if message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-800{% elif message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
-                        <span>{{ message }}</span>
-                        <button type="button" @click="show = false" class="opacity-60 hover:opacity-100 shrink-0" aria-label="Dismiss"><svg class="ic" style="width:1rem;height:1rem"><use href="#i-x"/></svg></button>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
                 {% block content %}{% endblock %}
             </main>
         </div>
     </div>
+
+    <!-- Floating Toast Notifications (Auto-dismisses after 3s) -->
+    {% if messages %}
+    <div class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0">
+        {% for message in messages %}
+        <div x-data="{ show: true }"
+             x-init="setTimeout(() => show = false, 3000)"
+             x-show="show"
+             x-transition:enter="transform ease-out duration-300 transition"
+             x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-4"
+             x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             role="alert"
+             class="pointer-events-auto w-full p-3.5 px-4 rounded-2xl border shadow-lg shadow-slate-900/10 flex items-center justify-between gap-3 text-xs font-semibold backdrop-blur-md transition-all
+             {% if message.tags == 'error' %}
+                 bg-rose-50/95 border-rose-200 text-rose-900
+             {% elif message.tags == 'success' %}
+                 bg-emerald-50/95 border-emerald-200 text-emerald-900
+             {% elif message.tags == 'warning' %}
+                 bg-amber-50/95 border-amber-200 text-amber-900
+             {% else %}
+                 bg-blue-50/95 border-blue-200 text-blue-900
+             {% endif %}">
+            <div class="flex items-center gap-2.5 min-w-0">
+                {% if message.tags == 'error' %}
+                <span class="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </span>
+                {% elif message.tags == 'success' %}
+                <span class="w-6 h-6 rounded-lg bg-emerald-100 text-[#39b54a] flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </span>
+                {% else %}
+                <span class="w-6 h-6 rounded-lg bg-blue-100 text-[#283891] flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                {% endif %}
+                <span class="truncate leading-snug">{{ message }}</span>
+            </div>
+            <button type="button"
+                    @click="show = false"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 shrink-0 transition-colors"
+                    aria-label="Dismiss">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% else %}
     {% block unauthenticated_layout %}
     <!-- Public / non-authenticated layout (default for password reset, lockout) -->

@@ -277,10 +277,9 @@ class UserDashboardView(UserRequiredMixin, TemplateView):
     template_name = "dashboard/user_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        from datetime import timedelta
         from django.utils import timezone
         from django.db.models import Count, Q
-        from django.db.models.functions import TruncDate
+        from django.db.models.functions import TruncHour
         from messaging.models import Message
         from templates_mgmt.models import Template
 
@@ -290,97 +289,74 @@ class UserDashboardView(UserRequiredMixin, TemplateView):
         user_wallet = getattr(user, "wallet", None)
         context["client_balance"] = format_inr(user_wallet.balance) if user_wallet else "₹ 0.00"
 
-        now = timezone.now()
+        # Bounded strictly to today using timezone-aware start of day (hits index on user + created_at)
         today_date = timezone.localdate()
+        tz = timezone.get_current_timezone()
+        today_start = timezone.datetime.combine(today_date, timezone.datetime.min.time(), tzinfo=tz)
 
-        def get_stats_for_qs(qs):
-            agg = qs.aggregate(
-                total=Count("id"),
-                sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
-                delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
-                failed=Count("id", filter=Q(status=Message.Status.FAILED)),
-                read=Count("id", filter=Q(status=Message.Status.READ)),
-            )
-            return {
-                "total": agg["total"] or 0,
-                "sent": agg["sent"] or 0,
-                "delivered": agg["delivered"] or 0,
-                "failed": agg["failed"] or 0,
-                "read": agg["read"] or 0,
-            }
+        today_msgs = Message.objects.filter(user=user, created_at__gte=today_start)
 
-        user_msgs = Message.objects.filter(user=user)
-        stats_today = get_stats_for_qs(user_msgs.filter(created_at__date=today_date))
-        stats_7d = get_stats_for_qs(user_msgs.filter(created_at__gte=now - timedelta(days=7)))
-        stats_30d = get_stats_for_qs(user_msgs.filter(created_at__gte=now - timedelta(days=30)))
+        agg = today_msgs.aggregate(
+            total=Count("id"),
+            sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
+            delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
+            failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            read=Count("id", filter=Q(status=Message.Status.READ)),
+        )
+        active_stats = {
+            "total": agg["total"] or 0,
+            "sent": agg["sent"] or 0,
+            "delivered": agg["delivered"] or 0,
+            "failed": agg["failed"] or 0,
+            "read": agg["read"] or 0,
+        }
 
-        period = self.request.GET.get("period", "7d")
-        if period == "today":
-            active_stats = stats_today
-            days_count = 1
-        elif period == "30d":
-            active_stats = stats_30d
-            days_count = 30
-        else:
-            period = "7d"
-            active_stats = stats_7d
-            days_count = 7
-
-        # Daily chart data for selected period
-        chart_since = now - timedelta(days=days_count)
-        daily_records = (
-            user_msgs.filter(created_at__gte=chart_since)
-            .annotate(day=TruncDate("created_at"))
-            .values("day")
+        # Hourly breakdown for today (fast, index-bounded)
+        hourly_records = (
+            today_msgs
+            .annotate(hour=TruncHour("created_at"))
+            .values("hour")
             .annotate(
                 sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
                 delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
                 failed=Count("id", filter=Q(status=Message.Status.FAILED)),
                 read=Count("id", filter=Q(status=Message.Status.READ)),
             )
-            .order_by("day")
+            .order_by("hour")
         )
 
-        # Generate complete date range so every day shows real counts (even 0)
-        daily_map = {r["day"]: r for r in daily_records}
+        hourly_map = {}
+        for r in hourly_records:
+            h_dt = r.get("hour")
+            if h_dt:
+                loc_h = timezone.localtime(h_dt).hour
+                hourly_map[loc_h] = r
+
         chart_labels = []
         chart_sent = []
         chart_delivered = []
         chart_failed = []
         chart_read = []
 
-        if period == "today":
-            d = today_date
-            rec = daily_map.get(d, {})
-            chart_labels = [d.strftime("%b %d")]
-            chart_sent = [rec.get("sent", 0)]
-            chart_delivered = [rec.get("delivered", 0)]
-            chart_failed = [rec.get("failed", 0)]
-            chart_read = [rec.get("read", 0)]
-        else:
-            for offset in range(days_count - 1, -1, -1):
-                d = today_date - timedelta(days=offset)
-                rec = daily_map.get(d, {})
-                chart_labels.append(d.strftime("%a") if days_count == 7 else d.strftime("%b %d"))
-                chart_sent.append(rec.get("sent", 0))
-                chart_delivered.append(rec.get("delivered", 0))
-                chart_failed.append(rec.get("failed", 0))
-                chart_read.append(rec.get("read", 0))
+        for h in range(24):
+            chart_labels.append(f"{h:02d}:00")
+            rec = hourly_map.get(h, {})
+            chart_sent.append(rec.get("sent", 0))
+            chart_delivered.append(rec.get("delivered", 0))
+            chart_failed.append(rec.get("failed", 0))
+            chart_read.append(rec.get("read", 0))
 
         # Total templates approved
         context["templates_count"] = Template.objects.filter(owner=user, status="approved").count()
-        context["stats_today"] = stats_today
-        context["stats_7d"] = stats_7d
-        context["stats_30d"] = stats_30d
+        context["stats_today"] = active_stats
         context["active_stats"] = active_stats
-        context["selected_period"] = period
         context["chart_labels"] = chart_labels
         context["chart_sent"] = chart_sent
         context["chart_delivered"] = chart_delivered
         context["chart_failed"] = chart_failed
         context["chart_read"] = chart_read
 
-        # Compute delivery and read rate for active period
+        # Compute delivery and read rate for today
         total_for_rate = active_stats["sent"]
         if total_for_rate > 0:
             context["delivery_rate"] = f"{(active_stats['delivered'] / total_for_rate * 100):.1f}%"
@@ -841,7 +817,7 @@ class SystemSettingsView(AdminRequiredMixin, View):
                 "max_tps": gateway_tps,
                 "default_ttl": "86,400s (24 Hours)",
                 "low_balance_threshold": "₹500.00",
-                "vendor": "OneXtel RCS Carrier Network",
+                "vendor": "Tier-1 RCS Carrier Network",
             },
             "security_info": {
                 "axes_limit": axes_limit,

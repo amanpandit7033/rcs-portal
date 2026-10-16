@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Group: {{ group.name }} - RCS Portal{% endblock %}
+{% block header_title %}Group Details{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6" x-data="{ showAddForm: false }">
+
+    
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">{{ group.name }}</h1>
+            {% if group.description %}
+            <p class="text-xs text-slate-500 mt-1">{{ group.description }}</p>
+            {% endif %}
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <button type="button"
+                    @click="showAddForm = !showAddForm"
+                    class="px-3.5 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2b70] text-white text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Add Numbers</span>
+            </button>
+
+            <a href="{% url 'campaigns:group_export' group.id %}" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Export CSV</span>
+            </a>
+
+            <!-- Back to Groups Button -->
+            <div>
+                <a href="{% url 'campaigns:group_list' %}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-600 hover:text-slate-900 shadow-2xs transition-all">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    <span>Back to Groups</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Pill Card -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </span>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Total Contacts</span>
+                <span class="text-lg font-bold text-slate-900 font-mono">{{ total_contacts }}</span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Created At</span>
+                <span class="text-xs font-bold text-slate-800 font-mono">{{ group.created_at|date:"M d, Y" }}</span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl bg-emerald-50 text-[#39b54a] flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </span>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Campaign Ready</span>
+                <span class="text-xs font-semibold text-emerald-600">Available in Campaign Form</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible Add More Contacts Form -->
+    <div x-show="showAddForm" x-cloak style="display: none;" class="bg-white rounded-2xl border-2 border-blue-100 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <svg class="w-4 h-4 text-[#283891]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Add More Contacts to "{{ group.name }}"</span>
+            </h2>
+            <button type="button" @click="showAddForm = false" class="text-xs text-slate-400 hover:text-slate-600">&times; Close</button>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Paste Numbers (one per line or comma-separated)</label>
+                <textarea
+                    name="numbers"
+                    rows="4"
+                    placeholder="e.g.&#10;9876543210&#10;9876543211, Ramesh Patel"
+                    class="w-full p-3 text-xs font-mono rounded-xl border border-slate-200 focus:outline-none focus:border-[#283891] text-slate-900 placeholder-slate-400"
+                ></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Or Upload CSV / Excel</label>
+                    <input type="file" name="file" accept=".csv, .xlsx, .xls, .txt" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+                </div>
+
+                <button type="submit" class="px-5 py-2 rounded-xl bg-[#283891] hover:bg-[#1f2b70] text-white text-xs font-bold transition-all shadow-sm">
+                    Add Numbers
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Contact List & Search Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Contacts List ({{ total_contacts }})
+            </h2>
+
+            <form method="get" class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="relative w-full sm:w-64">
+                    <input type="text"
+                           name="q"
+                           value="{{ search_query }}"
+                           placeholder="Search phone or name..."
+                           class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-[#283891] text-slate-800 placeholder-slate-400">
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <button type="submit" class="px-3 py-1.5 rounded-xl bg-secondary-600 hover:bg-secondary-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+                    Search
+                </button>
+                {% if search_query %}
+                <a href="{% url 'campaigns:group_detail' group.id %}" class="px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">
+                    Reset
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">Mobile Number</th>
+                        <th class="py-3 px-4">Contact Name</th>
+                        <th class="py-3 px-4">Added Date</th>
+                        <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for c in contacts %}
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">
+                            {{ forloop.counter }}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80">
+                                {{ c.mobile_number }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600">
+                            {{ c.name|default:"—" }}
+                        </td>
+                        <td class="py-3 px-4 font-mono text-slate-500 text-[11px]">
+                            {{ c.created_at|date:"M d, Y h:i A" }}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <form method="post" action="{% url 'campaigns:group_delete_contact' group.id c.id %}" class="inline" onsubmit="return confirm('Remove {{ c.mobile_number }} from this group?');">
+                                {% csrf_token %}
+                                <button type="submit" title="Delete Number" class="p-1 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-10 text-center text-slate-400">
+                            <p class="text-xs font-semibold text-slate-700">No contacts in this group yet</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Click "Add Numbers" above to paste or upload contacts.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if contacts.has_other_pages %}
+        <div class="px-4 py-3 border-t border-slate-200/80 bg-slate-50 flex items-center justify-between text-xs">
+            <span class="text-slate-500">
+                Page {{ contacts.number }} of {{ contacts.paginator.num_pages }}
+            </span>
+            <div class="flex items-center gap-1.5">
+                {% if contacts.has_previous %}
+                <a href="?page={{ contacts.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">
+                    &larr; Previous
+                </a>
+                {% endif %}
+                {% if contacts.has_next %}
+                <a href="?page={{ contacts.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">
+                    Next &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

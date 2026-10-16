@@ -955,7 +955,7 @@ function rcsBuilder() {
             });
         },
 
-        // Helper to format suggestion payload according to OneXtel schema
+        // Helper to format suggestion payload according to carrier schema
         formatSuggestion(s) {
             const postbackVal = (s.postback && s.postback.trim()) ? s.postback.trim() : (s.displayText || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
             const obj = {
@@ -983,7 +983,7 @@ function rcsBuilder() {
             return obj;
         },
 
-        // Assemble clean JSON payload conforming strictly to OneXtel API
+        // Assemble clean JSON payload conforming strictly to carrier API
         buildPayload() {
             const validSuggestions = this.suggestions
                 .filter(s => s.displayText && s.displayText.trim())

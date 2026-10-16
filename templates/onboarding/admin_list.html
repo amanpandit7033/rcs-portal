@@ -44,7 +44,7 @@
         <form method="get" class="flex items-center gap-2 w-full max-w-md">
             {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
             <input type="text" name="q" value="{{ search_query }}" placeholder="Search by brand, bot name, username, or reseller..." class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 shadow-2xs">
-            <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition-colors">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-secondary-600 hover:bg-secondary-700 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer">
                 Search
             </button>
         </form>

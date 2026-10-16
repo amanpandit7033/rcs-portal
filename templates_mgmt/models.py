@@ -103,7 +103,7 @@ class Template(models.Model):
     payload = models.JSONField(
         "Template Payload",
         default=dict,
-        help_text="Structured JSON conforming to OneXtel specification.",
+        help_text="Structured JSON conforming to carrier specification.",
     )
     status = models.CharField(
         "Approval Status",
@@ -113,7 +113,7 @@ class Template(models.Model):
         db_index=True,
     )
     onextel_status_raw = models.CharField(
-        "OneXtel Raw Status",
+        "Carrier Raw Status",
         max_length=100,
         blank=True,
     )

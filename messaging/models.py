@@ -122,7 +122,7 @@ class Message(models.Model):
         db_index=True,
     )
     onextel_message_id = models.CharField(
-        "OneXtel Message ID",
+        "Carrier Message ID",
         max_length=100,
         null=True,
         blank=True,
@@ -165,7 +165,7 @@ class DLRLog(models.Model):
     id = models.BigAutoField(primary_key=True)
     payload = models.JSONField("Raw Webhook Payload", default=dict)
     onextel_message_id = models.CharField(
-        "OneXtel Message ID",
+        "Carrier Message ID",
         max_length=100,
         blank=True,
         db_index=True,

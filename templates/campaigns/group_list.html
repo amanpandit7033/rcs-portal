@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Contact Groups - RCS Portal{% endblock %}
+{% block header_title %}Manage Groups{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manage Contact Groups</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Organize your customer contact lists into groups and quickly insert them into campaigns with one click.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{% url 'campaigns:group_create' %}" class="px-4 py-2.5 rounded-xl bg-[#283891] hover:bg-[#1f2b70] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Create Group</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-[#283891] flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Total Contact Groups</span>
+                <span class="text-xl font-bold text-slate-900 font-mono">{{ total_groups }}</span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#39b54a] flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            </div>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Total Saved Numbers</span>
+                <span class="text-xl font-bold text-slate-900 font-mono">{{ total_contacts_sum }}</span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+                <span class="block text-xs font-medium text-slate-500">Campaign Integration</span>
+                <span class="text-xs font-semibold text-slate-700">Auto-Fill in Campaign</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div class="relative w-full sm:max-w-md">
+                <input type="text"
+                       name="q"
+                       value="{{ search_query }}"
+                       placeholder="Search group by name..."
+                       class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-[#283891] text-slate-800 placeholder-slate-400">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button type="submit" class="px-4 py-2 rounded-xl bg-secondary-600 hover:bg-secondary-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+                    Filter
+                </button>
+                {% if search_query %}
+                <a href="{% url 'campaigns:group_list' %}" class="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors">
+                    Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Groups Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                        <th class="py-3.5 px-4">Group Name</th>
+                        <th class="py-3.5 px-4">Description</th>
+                        <th class="py-3.5 px-4 text-center">Total Contacts</th>
+                        <th class="py-3.5 px-4">Created Date</th>
+                        <th class="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for g in groups %}
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-blue-50 text-[#283891] flex items-center justify-center font-bold text-xs shrink-0">
+                                    {{ g.name|slice:":1"|upper }}
+                                </span>
+                                <div>
+                                    <a href="{% url 'campaigns:group_detail' g.id %}" class="font-bold text-slate-900 hover:text-[#283891] transition-colors">
+                                        {{ g.name }}
+                                    </a>
+                                    {% if request.user.is_admin and g.user != request.user %}
+                                    <span class="block text-[10px] text-slate-400 font-mono">Owner: {{ g.user.username }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 max-w-xs truncate">
+                            {{ g.description|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#283891] font-mono border border-blue-100">
+                                {{ g.contacts_count|default:g.total_contacts }} numbers
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                            {{ g.created_at|date:"M d, Y h:i A" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex items-center gap-1.5">
+                                <a href="{% url 'campaigns:group_detail' g.id %}"
+                                   title="View &amp; Manage Contacts"
+                                   class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </a>
+
+                                <a href="{% url 'campaigns:group_export' g.id %}"
+                                   title="Export CSV"
+                                   class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                </a>
+
+                                <a href="{% url 'campaigns:group_edit' g.id %}"
+                                   title="Edit Group Info"
+                                   class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </a>
+
+                                <form method="post" action="{% url 'campaigns:group_delete' g.id %}" class="inline" onsubmit="return confirm('Are you sure you want to delete group \'{{ g.name|escapejs }}\'? All contacts inside will be removed.');">
+                                    {% csrf_token %}
+                                    <button type="submit" title="Delete Group" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-slate-400">
+                            <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <p class="font-semibold text-slate-700 text-sm">No contact groups found</p>
+                            <p class="text-xs text-slate-400 mt-1">Create your first contact group to save and reuse recipient numbers easily.</p>
+                            <div class="mt-4">
+                                <a href="{% url 'campaigns:group_create' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#283891] text-white text-xs font-semibold hover:bg-[#1f2b70] transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    <span>Create Contact Group</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if groups.has_other_pages %}
+        <div class="px-4 py-3 border-t border-slate-200/80 bg-slate-50 flex items-center justify-between text-xs">
+            <span class="text-slate-500">
+                Page {{ groups.number }} of {{ groups.paginator.num_pages }}
+            </span>
+            <div class="flex items-center gap-1.5">
+                {% if groups.has_previous %}
+                <a href="?page={{ groups.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">
+                    &larr; Previous
+                </a>
+                {% endif %}
+                {% if groups.has_next %}
+                <a href="?page={{ groups.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">
+                    Next &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -169,7 +169,7 @@ class TemplateCreateView(RoleRequiredMixin, View):
             )
             raw_status = resp.get("status", "Pending")
         except OneXtelClientError as e:
-            error_msg = f"OneXtel API Error: {e}"
+            error_msg = f"Carrier Gateway Error: {e}"
             if request.content_type == "application/json":
                 return JsonResponse({"error": error_msg}, status=502)
             messages.error(request, error_msg)

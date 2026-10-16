@@ -60,7 +60,7 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
 
         header = []
         if is_admin:
-            header.extend(["Message ID", "OneXtel Carrier ID"])
+            header.extend(["Message ID", "Carrier Message ID"])
         header.extend([
             "Recipient",
             "Sender Profile",
@@ -313,7 +313,7 @@ class AdminDLRLogListView(AdminRequiredMixin, View):
             self.template_name,
             {
                 "dlr_logs": page_obj,
-                "page_title": "OneXtel DLR Webhook Logs",
+                "page_title": "Carrier DLR Webhook Logs",
             },
         )
 
