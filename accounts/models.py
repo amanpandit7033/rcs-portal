@@ -192,7 +192,7 @@ class WhiteLabel(models.Model):
         upload_to="whitelabel/logos/",
         blank=True,
         null=True,
-        help_text="Square 1:1 ratio logo / app icon (PNG, JPG, SVG, WebP) shown when sidebar menu is toggled/collapsed",
+        help_text="Square 1:1 ratio logo / app icon (PNG, JPG, SVG, WebP) shown on browser tab favicon & when sidebar menu is toggled/collapsed",
     )
     is_active = models.BooleanField("Active", default=True)
     created_at = models.DateTimeField(auto_now_add=True)

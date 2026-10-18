@@ -1,9 +1,22 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Developer API Documentation (v1) | RCS Portal</title>
+<title>Developer API Documentation (v1) | {{ whitelabel.company_name|default:"RCS Portal" }}</title>
+{% if whitelabel.square_logo %}
+<link rel="icon" href="{{ whitelabel.square_logo.url }}">
+<link rel="shortcut icon" href="{{ whitelabel.square_logo.url }}">
+<link rel="apple-touch-icon" href="{{ whitelabel.square_logo.url }}">
+{% elif whitelabel.logo %}
+<link rel="icon" href="{{ whitelabel.logo.url }}">
+<link rel="shortcut icon" href="{{ whitelabel.logo.url }}">
+<link rel="apple-touch-icon" href="{{ whitelabel.logo.url }}">
+{% else %}
+<link rel="icon" type="image/svg+xml" href="{% static 'images/rcs_logo.svg' %}">
+<link rel="shortcut icon" type="image/svg+xml" href="{% static 'images/rcs_logo.svg' %}">
+{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -537,7 +550,7 @@ function verifyWebhookSignature(rawBodyBuffer, incomingSignature, secret) {
 
   <div class="cta">
     <div><h3>Ready to integrate?</h3><p>Import the official Postman collection to try every endpoint with ready-made request bodies and bearer tokens.</p></div>
-    <a href="{% url 'api:v1_postman_export' %}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Postman collection</a>
+    <a href="{% url 'api:v1_postman_export' %}" download="rcs_postman_collection.json"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Postman collection</a>
   </div>
 </section>
 </main>

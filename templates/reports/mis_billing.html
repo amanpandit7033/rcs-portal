@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}MIS Billing - RCS Portal{% endblock %}
+{% block header_title %}MIS Billing{% endblock %}
+
+{% block content %}
+<div class="w-full space-y-6">
+
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold mb-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                <span>Financial &amp; Volume Ledger</span>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">MIS Billing</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Per-user daily consolidated message dispatch metrics, delivery acknowledgments, and financial accounting.
+            </p>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <a href="?{% if username_query %}username={{ username_query }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if user_belonging %}user_belonging=1&{% endif %}export=csv"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Export CSV</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <!-- 1. Total Sent -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Sent</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-slate-900">{{ summary.total_sent|default:"0" }}</span>
+                <span class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-semibold">100%</span>
+            </div>
+        </div>
+
+        <!-- 2. Delivered -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Delivered</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-emerald-600">{{ summary.total_delivered|default:"0" }}</span>
+                <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold">{{ summary.delivery_rate|floatformat:1 }}%</span>
+            </div>
+        </div>
+
+        <!-- 3. Read -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Read</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-indigo-600">{{ summary.total_read|default:"0" }}</span>
+                <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-semibold">Seen</span>
+            </div>
+        </div>
+
+        <!-- 4. Failed -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Failed</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-rose-600">{{ summary.total_failed|default:"0" }}</span>
+                <span class="text-[10px] text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded font-semibold">Dropped</span>
+            </div>
+        </div>
+
+        <!-- 5. Delivery Rate -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Delivery Ratio</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-cyan-600">{{ summary.delivery_rate|floatformat:1 }}%</span>
+                <span class="text-[10px] text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded font-semibold">DLR</span>
+            </div>
+        </div>
+
+        <!-- 6. Total Billed Cost -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Billed</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-lg sm:text-xl font-bold font-mono text-amber-600">₹{{ summary.total_cost|floatformat:4 }}</span>
+                <span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-semibold">INR</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar Card -->
+    <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+        <form method="get" class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <!-- Username Filter -->
+                <div class="relative min-w-[220px] flex-1 sm:flex-initial">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Username / Client</label>
+                    <div class="relative">
+                        <input list="user-candidates-list"
+                               type="text"
+                               name="username"
+                               value="{{ username_query }}"
+                               placeholder="Search username or company..."
+                               class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                        <datalist id="user-candidates-list">
+                            {% for cand in candidate_users %}
+                            <option value="{{ cand.username }}">{{ cand.company_name|default:cand.username }} ({{ cand.role|title }})</option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                </div>
+
+                <!-- From Date -->
+                <div class="min-w-[150px] flex-1 sm:flex-initial">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">From Date</label>
+                    <input type="date"
+                           name="from_date"
+                           value="{{ from_date }}"
+                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                </div>
+
+                <!-- To Date -->
+                <div class="min-w-[150px] flex-1 sm:flex-initial">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">To Date</label>
+                    <input type="date"
+                           name="to_date"
+                           value="{{ to_date }}"
+                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                </div>
+
+                <!-- Checkbox: User Belonging -->
+                {% if not request.user.role == 'user' %}
+                <div class="flex items-center pt-5 sm:pt-4">
+                    <label class="inline-flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 transition-colors cursor-pointer select-none text-xs font-semibold text-slate-700 shadow-2xs"
+                           title="Check this to skip the reseller's own MIS count and show daily counts for users & clients belonging to that reseller.">
+                        <input type="checkbox"
+                               name="user_belonging"
+                               value="1"
+                               {% if user_belonging %}checked{% endif %}
+                               class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500/20 border-slate-300 transition-colors cursor-pointer">
+                        <span>User belonging</span>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 pt-2 lg:pt-4 self-end lg:self-auto">
+                <button type="submit"
+                        class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    <span>Filter</span>
+                </button>
+                {% if username_query or from_date or to_date or user_belonging %}
+                <a href="{% url 'reports:mis_billing' %}"
+                   class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+    <!-- MIS Billing Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="text-[11px] font-semibold uppercase bg-slate-50/80 text-slate-400 border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-3.5 font-medium">Date</th>
+                        <th class="px-5 py-3.5 font-medium">Username / Company</th>
+                        <th class="px-5 py-3.5 font-medium">Role</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Sent</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Delivered</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Read</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Failed</th>
+                        <th class="px-5 py-3.5 font-medium text-right">Total Cost (₹)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for row in page_obj %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <!-- Date -->
+                        <td class="px-5 py-3.5 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                            {{ row.date|date:"d M Y" }}
+                            <span class="text-[10px] text-slate-400 block font-sans">{{ row.date|date:"l" }}</span>
+                        </td>
+
+                        <!-- Username / Company -->
+                        <td class="px-5 py-3.5 whitespace-nowrap">
+                            <span class="font-bold text-slate-900 block">{{ row.user.username }}</span>
+                            <span class="text-[11px] text-slate-500 block truncate max-w-xs">{{ row.user.company_name|default:"Enterprise Account" }}</span>
+                        </td>
+
+                        <!-- Role -->
+                        <td class="px-5 py-3.5 whitespace-nowrap">
+                            {% if row.user.role == 'superadmin' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Admin</span>
+                            {% elif row.user.role == 'reseller' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Reseller</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">User</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Sent -->
+                        <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                            {{ row.sent_count }}
+                        </td>
+
+                        <!-- Delivered -->
+                        <td class="px-5 py-3.5 text-right font-mono font-semibold text-emerald-600 whitespace-nowrap">
+                            {{ row.delivered_count }}
+                        </td>
+
+                        <!-- Read -->
+                        <td class="px-5 py-3.5 text-right font-mono font-semibold text-indigo-600 whitespace-nowrap">
+                            {{ row.read_count }}
+                        </td>
+
+                        <!-- Failed -->
+                        <td class="px-5 py-3.5 text-right font-mono font-semibold text-rose-600 whitespace-nowrap">
+                            {{ row.failed_count }}
+                        </td>
+
+                        <!-- Total Cost -->
+                        <td class="px-5 py-3.5 text-right font-mono font-extrabold text-slate-900 whitespace-nowrap">
+                            ₹ {{ row.total_cost|floatformat:4 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-5 py-12 text-center text-slate-400">
+                            <div class="max-w-xs mx-auto space-y-2">
+                                <svg class="w-8 h-8 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <p class="text-xs font-semibold text-slate-600">No MIS billing records found</p>
+                                <p class="text-[11px] text-slate-400">Try adjusting your username or date range filters.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- Summary Table Footer -->
+                {% if page_obj %}
+                <tfoot class="bg-slate-50/90 font-bold border-t border-slate-200/80 text-slate-800">
+                    <tr>
+                        <td colspan="3" class="px-5 py-3 uppercase tracking-wider text-[11px]">Filtered Totals</td>
+                        <td class="px-5 py-3 text-right font-mono text-slate-900">{{ summary.total_sent }}</td>
+                        <td class="px-5 py-3 text-right font-mono text-emerald-600">{{ summary.total_delivered }}</td>
+                        <td class="px-5 py-3 text-right font-mono text-indigo-600">{{ summary.total_read }}</td>
+                        <td class="px-5 py-3 text-right font-mono text-rose-600">{{ summary.total_failed }}</td>
+                        <td class="px-5 py-3 text-right font-mono text-amber-700">₹ {{ summary.total_cost|floatformat:4 }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between gap-4">
+            <span class="text-xs text-slate-500 font-medium">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} total days)
+            </span>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?{% if username_query %}username={{ username_query }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if user_belonging %}user_belonging=1&{% endif %}page={{ page_obj.previous_page_number }}"
+                   class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    &larr; Prev
+                </a>
+                {% endif %}
+
+                {% if page_obj.has_next %}
+                <a href="?{% if username_query %}username={{ username_query }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if user_belonging %}user_belonging=1&{% endif %}page={{ page_obj.next_page_number }}"
+                   class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    Next &rarr;
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

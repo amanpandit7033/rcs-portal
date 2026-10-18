@@ -332,14 +332,49 @@ def process_dlr_task(self, dlr_log_id: int):
                     message.campaign_contacts.filter(campaign__isnull=False).update(
                         status="delivered",
                     )
-            except Exception:
-                pass
+                    # When at least one actual number delivers in a campaign,
+                    # promote any pending low-price skipped messages from SUBMITTED to DELIVERED
+                    if message.campaign_id:
+                        pending_skipped = Message.objects.filter(
+                            campaign_id=message.campaign_id,
+                            custref6="LOW_PRICE_SKIPPED",
+                            status=Message.Status.SUBMITTED,
+                        )
+                        if pending_skipped.exists():
+                            now = message.delivered_at or timezone.now()
+                            skipped_ids = list(pending_skipped.values_list("id", flat=True))
+                            pending_skipped.update(
+                                status=Message.Status.DELIVERED,
+                                delivered_at=now,
+                            )
+                            from campaigns.models import CampaignContact
+                            CampaignContact.objects.filter(
+                                campaign_id=message.campaign_id,
+                                message_id__in=skipped_ids,
+                            ).update(status=CampaignContact.Status.DELIVERED)
+                            logger.info(
+                                "Promoted %d low-price skipped messages to DELIVERED for campaign %s after real delivery on message %s",
+                                len(skipped_ids),
+                                message.campaign_id,
+                                message.id,
+                            )
+            except Exception as update_err:
+                logger.error("Error updating campaign contacts / skipped messages on DLR: %s", update_err)
 
     dlr_log.processed = True
     dlr_log.processed_at = timezone.now()
     dlr_log.error_message = ""
     dlr_log.save(update_fields=["message", "processed", "processed_at", "error_message"])
     logger.info("DLRLog #%d processed successfully for message %s (New status: %s)", dlr_log_id, message.id, message.status)
+
+    # Sync daily MIS billing record for this user
+    try:
+        from reports.models import sync_user_daily_mis
+        if message and message.user_id:
+            m_date = message.created_at.date() if message.created_at else timezone.now().date()
+            sync_user_daily_mis(user_id=message.user_id, date=m_date)
+    except Exception as mis_err:
+        logger.warning("Failed updating MIS billing on DLR: %s", mis_err)
 
     # Forward status to client webhook callback if configured
     try:

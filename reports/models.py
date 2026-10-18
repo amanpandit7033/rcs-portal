@@ -1,0 +1,122 @@
+"""Reports models for daily MIS billing and analytics."""
+from decimal import Decimal
+from django.conf import settings
+from django.db import models
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
+from accounts.managers import RoleScopedQuerySetMixin
+
+
+class MISBillingQuerySet(RoleScopedQuerySetMixin, models.QuerySet):
+    user_field = "user"
+
+
+class MISBillingManager(models.Manager.from_queryset(MISBillingQuerySet)):
+    def for_user(self, user):
+        return self.get_queryset().for_user(user)
+
+
+class MISBilling(models.Model):
+    """Daily aggregated MIS billing record per user tracking message throughput and costs."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mis_billing_records",
+        help_text="User/account associated with these counts",
+    )
+    date = models.DateField(
+        "Billing Date",
+        db_index=True,
+        help_text="Date of message activity",
+    )
+    sent_count = models.PositiveIntegerField(
+        "Total Sent",
+        default=0,
+        help_text="Total messages dispatched/sent on this date",
+    )
+    delivered_count = models.PositiveIntegerField(
+        "Delivered",
+        default=0,
+        help_text="Messages delivered or read on this date",
+    )
+    read_count = models.PositiveIntegerField(
+        "Read",
+        default=0,
+        help_text="Messages confirmed read on this date",
+    )
+    failed_count = models.PositiveIntegerField(
+        "Failed",
+        default=0,
+        help_text="Messages permanently failed on this date",
+    )
+    total_cost = models.DecimalField(
+        "Total Cost (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        help_text="Total billable cost debited for messages dispatched on this date",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = MISBillingManager()
+
+    class Meta:
+        verbose_name = "MIS Billing Record"
+        verbose_name_plural = "MIS Billing Records"
+        unique_together = ("user", "date")
+        ordering = ["-date", "-total_cost"]
+        indexes = [
+            models.Index(fields=["date", "user"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date} (Sent: {self.sent_count}, Cost: ₹{self.total_cost})"
+
+
+def sync_user_daily_mis(user_id=None, date=None):
+    """
+    Synchronizes MISBilling records from the Message table into the dedicated MISBilling table.
+    Can be scoped to a single user and date, or run globally to sync all message history.
+    """
+    from messaging.models import Message
+
+    qs = Message.objects.all()
+    if user_id:
+        qs = qs.filter(user_id=user_id)
+    if date:
+        qs = qs.filter(created_at__date=date)
+
+    aggregates = (
+        qs.annotate(activity_date=TruncDate("created_at"))
+        .values("user_id", "activity_date")
+        .annotate(
+            sent_count=Count("id"),
+            delivered_count=Count(
+                "id",
+                filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ]),
+            ),
+            read_count=Count("id", filter=Q(status=Message.Status.READ)),
+            failed_count=Count("id", filter=Q(status=Message.Status.FAILED)),
+            total_cost=Sum("cost"),
+        )
+    )
+
+    for item in aggregates:
+        u_id = item["user_id"]
+        act_date = item["activity_date"]
+        if not u_id or not act_date:
+            continue
+        MISBilling.objects.update_or_create(
+            user_id=u_id,
+            date=act_date,
+            defaults={
+                "sent_count": item["sent_count"] or 0,
+                "delivered_count": item["delivered_count"] or 0,
+                "read_count": item["read_count"] or 0,
+                "failed_count": item["failed_count"] or 0,
+                "total_cost": item["total_cost"] or Decimal("0.0000"),
+            },
+        )

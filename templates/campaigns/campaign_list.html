@@ -1,23 +1,99 @@
 {% extends "base.html" %}
 
-{% block title %}Bulk Campaigns{% endblock %}
-{% block header_title %}Bulk Campaigns{% endblock %}
+{% block title %}Campaign Reports{% endblock %}
+{% block header_title %}Campaign Reports{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{
+    chartModalOpen: false,
+    chartCampaign: { name: '', total: 0, delivered: 0, failed: 0, other: 0 },
+    chartInstance: null,
+    openChart(c) {
+        const total = Number(c.total) || 0;
+        const delivered = Number(c.delivered) || 0;
+        const failed = Number(c.failed) || 0;
+        const other = Math.max(0, total - delivered - failed);
+        this.chartCampaign = {
+            name: c.name || '',
+            total: total,
+            delivered: delivered,
+            failed: failed,
+            other: other
+        };
+        this.chartModalOpen = true;
+        this.$nextTick(() => {
+            this.renderPieChart();
+        });
+    },
+    renderPieChart() {
+        const ctx = document.getElementById('userCampaignPieChart');
+        if (!ctx) return;
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+            this.chartInstance = null;
+        }
+        const delivered = this.chartCampaign.delivered;
+        const failed = this.chartCampaign.failed;
+        const other = this.chartCampaign.other;
+        const hasData = (delivered + failed + other) > 0;
+        const dataValues = hasData ? [delivered, failed, other] : [1];
+        const dataColors = hasData ? ['#10b981', '#ef4444', '#3b82f6'] : ['#e2e8f0'];
+        const dataLabels = hasData ? ['Delivered / Read', 'Failed', 'Pending / In-Transit'] : ['No dispatches'];
+
+        this.chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: dataLabels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: dataColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 14,
+                            font: { size: 11, weight: '600' }
+                        }
+                    },
+                    tooltip: {
+                        enabled: hasData,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const tot = delivered + failed + other;
+                                const pct = tot > 0 ? ((val / tot) * 100).toFixed(1) : 0;
+                                return ` ${context.label}: ${val.toLocaleString()} (${pct}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '62%'
+            }
+        });
+    }
+}">
     <!-- Action Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold mb-1">
-                Batch Dispatch Engine
+                Analytics & Reports
             </div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Bulk RCS Campaigns</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Upload CSV or Excel recipient lists, map variables, reserve funds, and track real-time delivery.</p>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Campaign Reports</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Track real-time delivery metrics, recipient analytics, and status for all your dispatched campaigns.</p>
         </div>
         <div>
             <a href="{% url 'campaigns:campaign_create' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                <span>Launch New Campaign</span>
+                <span>Send RCS</span>
             </a>
         </div>
     </div>
@@ -61,7 +137,7 @@
                         <th class="px-5 py-3.5 font-medium">Campaign Name</th>
                         <th class="px-5 py-3.5 font-medium">Sender / Type</th>
                         <th class="px-5 py-3.5 font-medium">Status</th>
-                        <th class="px-5 py-3.5 font-medium">Progress / Valid</th>
+                        <th class="px-5 py-3.5 font-medium">Count</th>
                         <th class="px-5 py-3.5 font-medium">Est. Cost</th>
                         <th class="px-5 py-3.5 font-medium">Created</th>
                         <th class="px-5 py-3.5 font-medium text-right">Actions</th>
@@ -74,7 +150,6 @@
                             <a href="{% url 'campaigns:campaign_detail' c.id %}" class="font-semibold text-slate-900 hover:text-blue-600 transition-colors block">
                                 {{ c.name }}
                             </a>
-                            <span class="text-[11px] text-slate-400 font-mono mt-0.5 block">ID: {{ c.id|stringformat:".8s" }}...</span>
                         </td>
                         <td class="px-5 py-4">
                             <div class="font-medium text-slate-900">{{ c.sender_profile.sender_profile_name }}</div>
@@ -116,13 +191,21 @@
                             {% endif %}
                         </td>
                         <td class="px-5 py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                    <div class="bg-blue-600 h-1.5 rounded-full" style="width: {{ c.progress_pct }}%"></div>
-                                </div>
-                                <span class="text-[11px] font-mono text-slate-700 font-medium">{{ c.processed_count }}/{{ c.valid_count }}</span>
-                            </div>
-                            <span class="text-[10px] text-slate-400 mt-0.5 block">Total Rows: {{ c.total }}</span>
+                            <button type="button"
+                                    @click="openChart({
+                                        name: '{{ c.name|escapejs }}',
+                                        total: {{ c.total|default:c.valid_count|default:0 }},
+                                        delivered: {{ c.delivered_count|default:0 }},
+                                        failed: {{ c.failed_count|default:0 }}
+                                    })"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold font-mono transition-all cursor-pointer shadow-2xs hover:shadow-xs group"
+                                    title="Click to view delivery distribution pie chart">
+                                <svg class="w-3.5 h-3.5 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                                </svg>
+                                <span>{{ c.total|default:c.valid_count }}</span>
+                            </button>
                         </td>
                         <td class="px-5 py-4 font-mono font-bold text-slate-900">
                             ₹ {{ c.estimated_cost }}
@@ -132,8 +215,9 @@
                         </td>
                         <td class="px-5 py-4 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <a href="{% url 'campaigns:campaign_detail' c.id %}" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors shadow-2xs">
-                                    Details &rarr;
+                                <a href="{% url 'campaigns:campaign_detail' c.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 text-xs font-semibold transition-colors shadow-2xs">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    <span>View</span>
                                 </a>
                             </div>
                         </td>
@@ -147,6 +231,97 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Pie Chart Analytics Modal Dialog -->
+    <div x-show="chartModalOpen"
+         x-cloak
+         style="display: none;"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         aria-labelledby="chart-modal-title" role="dialog" aria-modal="true"
+         @keydown.escape.window="chartModalOpen = false">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Backdrop -->
+            <div x-show="chartModalOpen"
+                 x-transition:enter="ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="chartModalOpen = false"
+                 class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal Panel -->
+            <div x-show="chartModalOpen"
+                 x-transition:enter="ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-200 p-6 space-y-5">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-base font-bold text-slate-900 truncate" id="chart-modal-title">Campaign Delivery Breakdown</h3>
+                            <p class="text-xs text-slate-500 truncate" x-text="chartCampaign.name"></p>
+                        </div>
+                    </div>
+                    <button type="button" @click="chartModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Pie Chart Container -->
+                <div class="h-64 relative flex items-center justify-center">
+                    <canvas id="userCampaignPieChart"></canvas>
+                </div>
+
+                <!-- Detailed Stat Pills -->
+                <div class="grid grid-cols-3 gap-2.5 text-center">
+                    <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/70">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Delivered</span>
+                        <span class="text-base font-bold font-mono text-emerald-800" x-text="chartCampaign.delivered.toLocaleString()"></span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200/70">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">Failed</span>
+                        <span class="text-base font-bold font-mono text-rose-800" x-text="chartCampaign.failed.toLocaleString()"></span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200/70">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">Pending</span>
+                        <span class="text-base font-bold font-mono text-blue-800" x-text="chartCampaign.other.toLocaleString()"></span>
+                    </div>
+                </div>
+
+                <!-- Total & Success Rate Bar -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 font-medium">Total Volume:</span>
+                        <span class="font-bold font-mono text-slate-800" x-text="chartCampaign.total.toLocaleString()"></span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 font-medium">Success Rate:</span>
+                        <span class="font-bold font-mono text-emerald-600"
+                              x-text="(chartCampaign.total > 0 ? ((chartCampaign.delivered / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="pt-2 flex justify-end">
+                    <button type="button" @click="chartModalOpen = false" class="w-full sm:w-auto px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

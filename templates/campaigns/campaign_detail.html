@@ -7,9 +7,15 @@
 <div class="space-y-6">
     <!-- Back to List -->
     <div>
-        <a href="{% url 'campaigns:campaign_list' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
-            &larr; Back to Campaigns
+        {% if request.user.is_admin %}
+        <a href="{% url 'reports:admin_campaign_reports' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+            &larr; Back to Campaign Reports
         </a>
+        {% else %}
+        <a href="{% url 'campaigns:campaign_list' %}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+            &larr; Back to Campaign Reports
+        </a>
+        {% endif %}
     </div>
 
     <!-- Live Dynamic Progress Card (Managed via HTMX) -->

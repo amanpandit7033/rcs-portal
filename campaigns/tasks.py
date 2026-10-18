@@ -292,8 +292,10 @@ def run_campaign_task(self, campaign_id: str):
                 custom_params=contact.params,
                 rate_applied=campaign.rate_applied,
                 cost=campaign.rate_applied,
-                status=Message.Status.DELIVERED if is_skipped else Message.Status.QUEUED,
-                delivered_at=timezone.now() if is_skipped else None,
+                status=Message.Status.SUBMITTED if is_skipped else Message.Status.QUEUED,
+                submitted_at=timezone.now() if is_skipped else None,
+                delivered_at=None,
+                custref6="LOW_PRICE_SKIPPED" if is_skipped else "",
             )
 
             # Convert reservation portion into real Message DEBIT ledger row
@@ -315,7 +317,7 @@ def run_campaign_task(self, campaign_id: str):
             # Deduct from reserved balance tracker
             campaign.reserved_amount = max(Decimal("0.0000"), campaign.reserved_amount - message.cost)
 
-            contact.status = CampaignContact.Status.DELIVERED if is_skipped else CampaignContact.Status.DISPATCHED
+            contact.status = CampaignContact.Status.DISPATCHED
             contact.message = message
             contact.save(update_fields=["status", "message"])
 
@@ -385,6 +387,15 @@ def run_campaign_task(self, campaign_id: str):
     campaign.reserved_amount = Decimal("0.0000")
     campaign.save(update_fields=["status", "completed_at", "reserved_amount", "updated_at"])
     logger.info("Campaign %s completed successfully.", campaign.id)
+
+    # Sync daily MIS billing for this campaign's user
+    try:
+        from reports.models import sync_user_daily_mis
+        if campaign.user_id:
+            c_date = campaign.created_at.date() if campaign.created_at else timezone.now().date()
+            sync_user_daily_mis(user_id=campaign.user_id, date=c_date)
+    except Exception as e:
+        logger.warning("Failed syncing MIS billing on campaign completion: %s", e)
 
 
 @shared_task

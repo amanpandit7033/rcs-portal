@@ -4,7 +4,7 @@
 {% block header_title %}Assign Credit{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6"
+<div class="w-full space-y-6"
      x-data="{
          showModal: {% if form.errors or request.GET.user_id or request.GET.client_id %}true{% else %}false{% endif %},
          quickAmount(val) {

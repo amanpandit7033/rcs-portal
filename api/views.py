@@ -403,9 +403,17 @@ class PostmanCollectionExportView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        import json
+        from django.http import HttpResponse
         from .postman import get_postman_collection
+
         collection_data = get_postman_collection(request)
-        return Response(collection_data, status=status.HTTP_200_OK, content_type="application/json")
+        response = HttpResponse(
+            json.dumps(collection_data, indent=2),
+            content_type="application/json; charset=utf-8",
+        )
+        response["Content-Disposition"] = 'attachment; filename="rcs_postman_collection.json"'
+        return response
 
 
 class APIDocumentationView(View):
