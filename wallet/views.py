@@ -144,7 +144,11 @@ class AssignCreditView(RoleRequiredMixin, FormView):
         initial = super().get_initial()
         target_id = self.request.GET.get("user_id") or self.request.GET.get("client_id")
         if target_id:
-            initial["target_user"] = target_id
+            try:
+                target = User.objects.get(id=target_id)
+                initial["target_user"] = target.username
+            except (User.DoesNotExist, ValueError):
+                initial["target_user"] = target_id
         return initial
 
     def get_context_data(self, **kwargs):
@@ -152,6 +156,14 @@ class AssignCreditView(RoleRequiredMixin, FormView):
         user = self.request.user
         context["page_title"] = "Assign Wallet Credit"
         context["is_superadmin"] = user.is_admin
+
+        # Candidates for autocomplete: Admin searches everyone, Reseller searches their users/resellers
+        if user.is_admin:
+            context["target_users_list"] = User.objects.filter(is_active=True).select_related("wallet").order_by("username")
+        elif user.is_reseller:
+            context["target_users_list"] = User.objects.filter(parent_reseller=user, is_active=True).select_related("wallet").order_by("username")
+        else:
+            context["target_users_list"] = User.objects.none()
 
         # Fetch recent transactions initiated by or involving this user
         if user.is_admin:

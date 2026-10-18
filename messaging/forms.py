@@ -10,7 +10,7 @@ class MessageFilterForm(forms.Form):
     q = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            "placeholder": "Search recipient, msg ID, or carrier ID...",
+            "placeholder": "Search by username...",
             "class": "w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs",
         }),
     )

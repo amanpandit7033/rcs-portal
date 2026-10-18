@@ -33,11 +33,17 @@ class AssignCreditForm(forms.Form):
         ("debit", "Deduct Credit (-)"),
     )
 
-    target_user = forms.ModelChoiceField(
-        queryset=User.objects.none(),
-        widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
-        label="Target Account (User or Reseller)",
-        empty_label="-- Select User or Reseller --",
+    target_user = forms.CharField(
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": TAILWIND_INPUT,
+                "placeholder": "Search by username...",
+                "list": "target-user-candidates",
+                "autocomplete": "off",
+            }
+        ),
+        label="Target Username",
     )
     action = forms.ChoiceField(
         choices=ACTION_CHOICES,
@@ -63,26 +69,43 @@ class AssignCreditForm(forms.Form):
     def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.actor = actor
+        if actor and actor.is_reseller:
+            self.fields["action"].choices = (("credit", "Add Credit (+)"),)
+
+    def clean_target_user(self):
+        val = str(self.cleaned_data.get("target_user", "")).strip()
+        if not val:
+            raise forms.ValidationError("Please enter or select a target username.")
+
+        if val.startswith("@"):
+            val = val[1:].strip()
+
+        target = None
+        if val.isdigit():
+            target = User.objects.filter(id=val).select_related("wallet").first()
+        if not target:
+            target = User.objects.filter(username__iexact=val).select_related("wallet").first()
+
+        if not target:
+            raise forms.ValidationError(f"User '{val}' not found.")
+
+        actor = getattr(self, "actor", None)
         if actor:
             if actor.is_admin:
-                # Superadmin can add amounts to any active user (including admin)
-                self.fields["target_user"].queryset = User.objects.filter(
-                    is_active=True,
-                ).select_related("wallet").order_by("role", "company_name", "username")
+                if not target.is_active:
+                    raise forms.ValidationError(f"User '@{target.username}' is not active.")
             elif actor.is_reseller:
-                # Reseller can add amounts to their own direct clients/sub-resellers
-                self.fields["target_user"].queryset = User.objects.filter(
+                # Reseller can assign only to direct clients or sub-resellers under them
+                allowed = User.objects.filter(
                     parent_reseller=actor,
                     is_active=True,
-                ).select_related("wallet").order_by("role", "company_name", "username")
-                self.fields["action"].choices = (("credit", "Add Credit (+)"),)
+                ).values_list("id", flat=True)
+                if target.id not in allowed:
+                    raise forms.ValidationError(f"User '@{target.username}' is not under your management.")
             else:
-                self.fields["target_user"].queryset = User.objects.none()
+                raise forms.ValidationError("You do not have permission to assign credit.")
 
-            self.fields["target_user"].label_from_instance = lambda obj: (
-                f"{obj.company_name or obj.get_full_name() or obj.username} "
-                f"(@{obj.username} | {obj.get_role_display()} | Current: ₹{obj.wallet.balance if hasattr(obj, 'wallet') and obj.wallet else '0.00'})"
-            )
+        return target
 
 
 class RatePlansForm(forms.Form):

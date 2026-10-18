@@ -395,15 +395,14 @@ class UserListView(AdminRequiredMixin, ListView):
         if role:
             qs = qs.filter(role=role)
         if search:
-            qs = qs.filter(
-                Q(email__icontains=search)
-                | Q(company_name__icontains=search)
-                | Q(phone__icontains=search)
-            )
+            qs = qs.filter(username__icontains=search)
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["candidate_usernames"] = list(
+            User.objects.values_list("username", flat=True).order_by("username")
+        )
         context["current_role"] = self.request.GET.get("role", "")
         context["search_query"] = self.request.GET.get("q", "")
         context["page_title"] = "Users & Resellers Management"
@@ -532,15 +531,16 @@ class ClientListView(ResellerRequiredMixin, ListView):
         qs = User.objects.filter(parent_reseller=reseller).select_related("wallet").prefetch_related("rate_plans").order_by("-date_joined")
         search = self.request.GET.get("q")
         if search:
-            qs = qs.filter(
-                Q(email__icontains=search)
-                | Q(company_name__icontains=search)
-                | Q(phone__icontains=search)
-            )
+            qs = qs.filter(username__icontains=search)
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["candidate_usernames"] = list(
+            User.objects.filter(parent_reseller=self.request.user)
+            .values_list("username", flat=True)
+            .order_by("username")
+        )
         context["search_query"] = self.request.GET.get("q", "")
         context["page_title"] = "Client Management"
         if "form" not in context:
@@ -1063,16 +1063,10 @@ class UserKYCView(LoginRequiredMixin, View):
             }
             form = UserKYCForm(initial=initial_data)
 
-        all_kycs = None
-        if request.user.is_admin:
-            all_kycs = UserKYC.objects.select_related("user").order_by("-updated_at")
-
         context = {
             "page_title": "KYC Verification",
             "form": form,
             "kyc": kyc,
-            "all_kycs": all_kycs,
-            "active_tab": request.GET.get("tab", "my_kyc"),
         }
         return render(request, self.template_name, context)
 

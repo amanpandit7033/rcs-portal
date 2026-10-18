@@ -36,11 +36,7 @@ class MessageLogView(RoleRequiredMixin, ListView):
             date = self.filter_form.cleaned_data.get("date")
 
             if q:
-                qs = qs.filter(
-                    models.Q(recipient__icontains=q)
-                    | models.Q(id__icontains=q)
-                    | models.Q(onextel_message_id__icontains=q)
-                )
+                qs = qs.filter(user__username__icontains=q)
             if status:
                 qs = qs.filter(status=status)
             if message_type:
@@ -52,6 +48,21 @@ class MessageLogView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = self.request.user
+        if getattr(user, "is_admin", False):
+            candidate_usernames = list(User.objects.values_list("username", flat=True).order_by("username"))
+        elif getattr(user, "is_reseller", False):
+            candidate_usernames = list(
+                User.objects.filter(models.Q(id=user.id) | models.Q(parent_reseller=user))
+                .values_list("username", flat=True)
+                .order_by("username")
+            )
+        else:
+            candidate_usernames = [user.username]
+
+        context["candidate_usernames"] = candidate_usernames
         context["filter_form"] = getattr(self, "filter_form", MessageFilterForm(self.request.GET))
         context["page_title"] = "RCS Message Logs"
         return context

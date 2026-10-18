@@ -45,11 +45,7 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
         date_str = request.GET.get("date")
 
         if q:
-            qs = qs.filter(
-                models.Q(recipient__icontains=q)
-                | models.Q(id__icontains=q)
-                | models.Q(onextel_message_id__icontains=q)
-            )
+            qs = qs.filter(user__username__icontains=q)
         if status:
             qs = qs.filter(status=status)
         if message_type:
@@ -375,20 +371,20 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
         q = request.GET.get("q", "").strip()
         status = request.GET.get("status", "").strip()
         user_id = request.GET.get("user_id", "").strip()
+        from_date = request.GET.get("from_date", "").strip()
+        to_date = request.GET.get("to_date", "").strip()
         date_str = request.GET.get("date", "").strip()
 
         if q:
-            qs = qs.filter(
-                Q(name__icontains=q)
-                | Q(id__icontains=q)
-                | Q(user__username__icontains=q)
-                | Q(user__email__icontains=q)
-                | Q(sender_profile__sender_profile_name__icontains=q)
-            )
+            qs = qs.filter(user__username__icontains=q)
         if status:
             qs = qs.filter(status=status)
         if user_id:
             qs = qs.filter(user_id=user_id)
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
         if date_str:
             qs = qs.filter(created_at__date=date_str)
 
@@ -401,8 +397,9 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
         paginator = Paginator(qs, 20)
         page_obj = paginator.get_page(request.GET.get("page", 1))
 
-        # Users list for filter dropdown
+        # Users list for filter dropdown and autocomplete
         users = User.objects.filter(role__in=["user", "reseller"]).order_by("username")
+        candidate_usernames = list(users.values_list("username", flat=True))
 
         return render(
             request,
@@ -410,8 +407,11 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
             {
                 "campaigns": page_obj,
                 "users": users,
+                "candidate_usernames": candidate_usernames,
                 "selected_status": status,
                 "selected_user": user_id,
+                "from_date": from_date,
+                "to_date": to_date,
                 "selected_date": date_str,
                 "search_query": q,
                 "total_campaigns": total_campaigns,
@@ -636,9 +636,7 @@ class MISBillingView(RoleRequiredMixin, View):
                     # Search by parent reseller username
                     qs = qs.filter(user__parent_reseller__username__iexact=username)
             else:
-                qs = qs.filter(
-                    Q(user__username__icontains=username) | Q(user__company_name__icontains=username)
-                )
+                qs = qs.filter(user__username__icontains=username)
         elif user_belonging:
             # Checkbox selected with no username entered
             if getattr(user, "is_reseller", False):

@@ -41,22 +41,44 @@ class CampaignListView(RoleRequiredMixin, View):
 
         status = request.GET.get("status")
         q = request.GET.get("q")
+        from_date = request.GET.get("from_date", "").strip()
+        to_date = request.GET.get("to_date", "").strip()
 
         if status:
             qs = qs.filter(status=status)
         if q:
-            qs = qs.filter(name__icontains=q)
+            qs = qs.filter(user__username__icontains=q)
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
 
         paginator = Paginator(qs, 15)
         page_obj = paginator.get_page(request.GET.get("page", 1))
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if getattr(request.user, "is_admin", False):
+            candidate_usernames = list(User.objects.values_list("username", flat=True).order_by("username"))
+        elif getattr(request.user, "is_reseller", False):
+            candidate_usernames = list(
+                User.objects.filter(Q(id=request.user.id) | Q(parent_reseller=request.user))
+                .values_list("username", flat=True)
+                .order_by("username")
+            )
+        else:
+            candidate_usernames = [request.user.username]
 
         return render(
             request,
             self.template_name,
             {
                 "campaigns": page_obj,
+                "candidate_usernames": candidate_usernames,
                 "selected_status": status or "",
                 "search_query": q or "",
+                "from_date": from_date,
+                "to_date": to_date,
                 "page_title": "Bulk RCS Campaigns",
             },
         )
