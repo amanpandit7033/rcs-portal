@@ -35,8 +35,13 @@ class CampaignListView(RoleRequiredMixin, View):
     template_name = "campaigns/campaign_list.html"
 
     def get(self, request):
+        from django.db.models import Count, Q
         qs = Campaign.objects.for_user(request.user).select_related(
             "user", "sender_profile", "template"
+        ).annotate(
+            annotated_read=Count("messages", filter=Q(messages__status="read"), distinct=True),
+            annotated_delivered=Count("messages", filter=Q(messages__status="delivered"), distinct=True),
+            annotated_failed=Count("messages", filter=Q(messages__status="failed"), distinct=True),
         ).order_by("-created_at")
 
         status = request.GET.get("status")

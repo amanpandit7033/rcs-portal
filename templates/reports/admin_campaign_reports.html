@@ -22,16 +22,18 @@
         this.updateModalOpen = true;
     },
     chartModalOpen: false,
-    chartCampaign: { name: '', total: 0, delivered: 0, failed: 0, other: 0 },
+    chartCampaign: { name: '', total: 0, read: 0, delivered: 0, failed: 0, other: 0 },
     chartInstance: null,
     openChart(c) {
         const total = Number(c.total) || 0;
+        const read = Number(c.read) || 0;
         const delivered = Number(c.delivered) || 0;
         const failed = Number(c.failed) || 0;
-        const other = Math.max(0, total - delivered - failed);
+        const other = Math.max(0, total - read - delivered - failed);
         this.chartCampaign = {
             name: c.name || '',
             total: total,
+            read: read,
             delivered: delivered,
             failed: failed,
             other: other
@@ -48,13 +50,14 @@
             this.chartInstance.destroy();
             this.chartInstance = null;
         }
+        const read = this.chartCampaign.read;
         const delivered = this.chartCampaign.delivered;
         const failed = this.chartCampaign.failed;
         const other = this.chartCampaign.other;
-        const hasData = (delivered + failed + other) > 0;
-        const dataValues = hasData ? [delivered, failed, other] : [1];
-        const dataColors = hasData ? ['#10b981', '#ef4444', '#3b82f6'] : ['#e2e8f0'];
-        const dataLabels = hasData ? ['Delivered / Read', 'Failed', 'Pending / In-Transit'] : ['No dispatches'];
+        const hasData = (read + delivered + failed + other) > 0;
+        const dataValues = hasData ? [read, delivered, failed, other] : [1];
+        const dataColors = hasData ? ['#8b5cf6', '#10b981', '#ef4444', '#3b82f6'] : ['#e2e8f0'];
+        const dataLabels = hasData ? ['Read', 'Delivered (Unread)', 'Failed', 'Pending / In-Transit'] : ['No dispatches'];
 
         this.chartInstance = new Chart(ctx, {
             type: 'doughnut',
@@ -320,8 +323,9 @@
                                     @click="openChart({
                                         name: '{{ c.name|escapejs }}',
                                         total: {{ c.total|default:c.valid_count|default:0 }},
-                                        delivered: {{ c.delivered_count|default:0 }},
-                                        failed: {{ c.failed_count|default:0 }}
+                                        read: {{ c.annotated_read|default:0 }},
+                                        delivered: {{ c.annotated_delivered|default:c.delivered_count|default:0 }},
+                                        failed: {{ c.annotated_failed|default:c.failed_count|default:0 }}
                                     })"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold font-mono transition-all cursor-pointer shadow-2xs hover:shadow-xs group"
                                     title="Click to view delivery distribution pie chart">
@@ -605,7 +609,11 @@
                 </div>
 
                 <!-- Detailed Stat Pills -->
-                <div class="grid grid-cols-3 gap-2.5 text-center">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div class="p-2.5 rounded-xl bg-purple-50 border border-purple-200/70">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Read</span>
+                        <span class="text-base font-bold font-mono text-purple-800" x-text="chartCampaign.read.toLocaleString()"></span>
+                    </div>
                     <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/70">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Delivered</span>
                         <span class="text-base font-bold font-mono text-emerald-800" x-text="chartCampaign.delivered.toLocaleString()"></span>
@@ -620,16 +628,23 @@
                     </div>
                 </div>
 
-                <!-- Total & Success Rate Bar -->
+                <!-- Total & Delivery Rates Bar -->
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 font-medium">Total Volume:</span>
+                        <span class="text-slate-500 font-medium">Total:</span>
                         <span class="font-bold font-mono text-slate-800" x-text="chartCampaign.total.toLocaleString()"></span>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 font-medium">Success Rate:</span>
-                        <span class="font-bold font-mono text-emerald-600"
-                              x-text="(chartCampaign.total > 0 ? ((chartCampaign.delivered / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-500 font-medium">Delivered:</span>
+                            <span class="font-bold font-mono text-emerald-600"
+                                  x-text="(chartCampaign.total > 0 ? (((chartCampaign.delivered + chartCampaign.read) / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-500 font-medium">Read Rate:</span>
+                            <span class="font-bold font-mono text-purple-600"
+                                  x-text="(chartCampaign.total > 0 ? ((chartCampaign.read / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
+                        </div>
                     </div>
                 </div>
 

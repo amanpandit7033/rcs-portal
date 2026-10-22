@@ -151,6 +151,7 @@ class CampaignContact(models.Model):
         PROCESSING = "processing", "Processing"
         DISPATCHED = "dispatched", "Dispatched"
         DELIVERED = "delivered", "Delivered"
+        READ = "read", "Read"
         FAILED = "failed", "Failed"
         INVALID = "invalid", "Invalid"
         DUPLICATE = "duplicate", "Duplicate"

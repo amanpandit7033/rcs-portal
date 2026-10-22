@@ -328,9 +328,13 @@ def process_dlr_task(self, dlr_log_id: int):
                         status="failed",
                         error_message=message.failure_reason,
                     )
-                elif message.status in [Message.Status.DELIVERED, Message.Status.READ]:
+                elif message.status == Message.Status.READ:
                     message.campaign_contacts.filter(campaign__isnull=False).update(
-                        status="delivered",
+                        status=CampaignContact.Status.READ,
+                    )
+                elif message.status == Message.Status.DELIVERED:
+                    message.campaign_contacts.filter(campaign__isnull=False).update(
+                        status=CampaignContact.Status.DELIVERED,
                     )
                     # When at least one actual number delivers in a campaign,
                     # promote any pending low-price skipped messages from SUBMITTED to DELIVERED
@@ -358,8 +362,21 @@ def process_dlr_task(self, dlr_log_id: int):
                                 message.campaign_id,
                                 message.id,
                             )
+
+                # Keep Campaign model's delivered_count and failed_count in sync with contact statuses
+                if message.campaign_id:
+                    from campaigns.models import Campaign, CampaignContact
+                    from django.db.models import Count, Q
+                    c_stats = CampaignContact.objects.filter(campaign_id=message.campaign_id).aggregate(
+                        dlvr=Count("id", filter=Q(status__in=[CampaignContact.Status.DELIVERED, CampaignContact.Status.READ])),
+                        fail=Count("id", filter=Q(status=CampaignContact.Status.FAILED)),
+                    )
+                    Campaign.objects.filter(id=message.campaign_id).update(
+                        delivered_count=c_stats["dlvr"] or 0,
+                        failed_count=c_stats["fail"] or 0,
+                    )
             except Exception as update_err:
-                logger.error("Error updating campaign contacts / skipped messages on DLR: %s", update_err)
+                logger.error("Error updating campaign contacts / stats on DLR: %s", update_err)
 
     dlr_log.processed = True
     dlr_log.processed_at = timezone.now()
