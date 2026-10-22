@@ -25,6 +25,8 @@ def validate_suggestion(suggestion: Dict[str, Any], index: int = 0) -> None:
 
     if not display_text:
         raise ValidationError(f"Suggestion #{index + 1}: 'displayText' is required.")
+    if len(display_text) > 25:
+        raise ValidationError(f"Suggestion #{index + 1}: 'displayText' cannot exceed 25 characters (got {len(display_text)}).")
     if not postback:
         raise ValidationError(f"Suggestion #{index + 1}: 'postback' is required.")
     if s_type not in VALID_SUGGESTION_TYPES:
@@ -75,10 +77,12 @@ def validate_suggestion(suggestion: Dict[str, Any], index: int = 0) -> None:
                 raise ValidationError(f"Suggestion #{index + 1} ('calendar_event') requires '{field}'.")
 
 
-def validate_suggestions_list(suggestions: List[Dict[str, Any]]) -> None:
+def validate_suggestions_list(suggestions: List[Dict[str, Any]], max_suggestions: int = 4) -> None:
     """Validate a list of suggestions."""
     if not isinstance(suggestions, list):
         raise ValidationError("'suggestions' must be a list.")
+    if len(suggestions) > max_suggestions:
+        raise ValidationError(f"A maximum of {max_suggestions} suggestion buttons are allowed (found {len(suggestions)}).")
     for idx, s in enumerate(suggestions):
         validate_suggestion(s, index=idx)
 
@@ -131,6 +135,10 @@ def validate_template_payload(template_type: str, payload: Dict[str, Any]) -> No
         desc = str(standalone.get("cardDescription", "")).strip()
         if not title and not desc:
             raise ValidationError("rich_card 'standAlone' requires at least a 'cardTitle' or 'cardDescription'.")
+        if len(title) > 200:
+            raise ValidationError(f"rich_card 'cardTitle' cannot exceed 200 characters (got {len(title)}).")
+        if len(desc) > 2000:
+            raise ValidationError(f"rich_card 'cardDescription' cannot exceed 2000 characters (got {len(desc)}).")
 
         if "suggestions" in standalone and standalone["suggestions"]:
             validate_suggestions_list(standalone["suggestions"])
@@ -165,6 +173,10 @@ def validate_template_payload(template_type: str, payload: Dict[str, Any]) -> No
             desc = str(card.get("cardDescription", "")).strip()
             if not title and not desc:
                 raise ValidationError(f"Carousel card #{idx + 1} requires at least a cardTitle or cardDescription.")
+            if len(title) > 200:
+                raise ValidationError(f"Carousel card #{idx + 1} 'cardTitle' cannot exceed 200 characters (got {len(title)}).")
+            if len(desc) > 2000:
+                raise ValidationError(f"Carousel card #{idx + 1} 'cardDescription' cannot exceed 2000 characters (got {len(desc)}).")
             if "suggestions" in card and card["suggestions"]:
                 validate_suggestions_list(card["suggestions"])
 
