@@ -98,33 +98,29 @@
                     <label class="block text-xs font-semibold text-slate-700 mb-2">
                         Template Layout Architecture <span class="text-rose-500">*</span>
                     </label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <button type="button" @click="template_type = 'text_message'"
                                 :class="template_type === 'text_message' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
-                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                                class="p-3.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
-                            <span class="text-xs">Text Message</span>
-                        </button>
-
-                        <button type="button" @click="template_type = 'text_message_with_media'"
-                                :class="template_type === 'text_message_with_media' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
-                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
-                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <span class="text-xs">Text + Media</span>
+                            <span class="text-xs font-semibold">Text Message</span>
+                            <span class="text-[10px] text-slate-400">Plain text + quick action buttons</span>
                         </button>
 
                         <button type="button" @click="template_type = 'rich_card'"
                                 :class="template_type === 'rich_card' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
-                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                                class="p-3.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
                             <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
-                            <span class="text-xs">Rich Card</span>
+                            <span class="text-xs font-semibold">Rich Card (Image + Text)</span>
+                            <span class="text-[10px] text-slate-400">Media, headline, copy & buttons</span>
                         </button>
 
                         <button type="button" @click="template_type = 'carousel'"
                                 :class="template_type === 'carousel' ? 'border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-2xs' : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'"
-                                class="p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
+                                class="p-3.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5">
                             <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                            <span class="text-xs">Carousel</span>
+                            <span class="text-xs font-semibold">Carousel</span>
+                            <span class="text-[10px] text-slate-400">2-10 horizontal swipeable cards</span>
                         </button>
                     </div>
                 </div>
@@ -149,47 +145,7 @@
                 </div>
             </div>
 
-            <!-- TYPE 2: TEXT MESSAGE WITH MEDIA -->
-            <div x-show="template_type === 'text_message_with_media'" x-cloak style="display: none;" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
-                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
-                    Media & Text Layout
-                </h3>
-
-                <!-- Message Order -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Content Layout Order</label>
-                        <select x-model="media_order" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                            <option value="media_at_top">Media at Top (Default)</option>
-                            <option value="text_message_at_top">Text Message at Top</option>
-                        </select>
-                    </div>
-
-                    <!-- Media Upload Helper -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Media Asset File</label>
-                        <input type="file" accept="image/*,video/*,application/pdf" @change="handleImageInput($event, 'documentUrl')"
-                               class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-                    </div>
-                </div>
-
-                <!-- Document / Media URL -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Public Document / Media URL <span class="text-rose-500">*</span></label>
-                    <input type="url" x-model="documentUrl" placeholder="https://example.com/banner.jpg"
-                           class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                </div>
-
-                <!-- Text Content -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Message Text <span class="text-rose-500">*</span></label>
-                    <textarea x-model="text_message_content" rows="3" placeholder="Special promotion for [customer_name]!"
-                              class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"></textarea>
-                </div>
-            </div>
-
-            <!-- TYPE 3: RICH CARD STANDALONE -->
+            <!-- TYPE 2: RICH CARD STANDALONE -->
             <div x-show="template_type === 'rich_card'" x-cloak style="display: none;" class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-5">
                 <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                     <span class="w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-xs flex items-center justify-center font-bold">2</span>
@@ -671,54 +627,7 @@
                                 </div>
                             </div>
 
-                            <!-- 2. Text Message with Media Preview -->
-                            <div x-show="template_type === 'text_message_with_media'" x-cloak style="display: none;" class="space-y-2">
-                                <div class="max-w-[88%] rounded-2xl rounded-tl-xs bg-white text-slate-900 shadow-xs border border-slate-200/80 overflow-hidden text-xs">
-                                    <!-- Order: Media at Top -->
-                                    <template x-if="media_order === 'media_at_top'">
-                                        <div>
-                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
-                                                <template x-if="documentUrl">
-                                                    <img :src="documentUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
-                                                </template>
-                                                <template x-if="!documentUrl">
-                                                    <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
-                                                </template>
-                                            </div>
-                                            <div class="p-3 whitespace-pre-wrap leading-relaxed">
-                                                <span x-text="text_message_content || 'Message text goes here...'"></span>
-                                                <div class="text-[9px] text-slate-400 text-right mt-1">9:41 AM &bull; RCS</div>
-                                            </div>
-                                        </div>
-                                    </template>
-                                    <!-- Order: Text at Top -->
-                                    <template x-if="media_order === 'text_message_at_top'">
-                                        <div>
-                                            <div class="p-3 whitespace-pre-wrap leading-relaxed">
-                                                <span x-text="text_message_content || 'Message text goes here...'"></span>
-                                            </div>
-                                            <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
-                                                <template x-if="documentUrl">
-                                                    <img :src="documentUrl" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x300/e2e8f0/64748b?text=Media+Preview';">
-                                                </template>
-                                                <template x-if="!documentUrl">
-                                                    <span class="text-slate-400 text-xs font-medium">Media placeholder</span>
-                                                </template>
-                                            </div>
-                                            <div class="px-3 py-1.5 text-[9px] text-slate-400 text-right">9:41 AM &bull; RCS</div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <!-- Suggestion Buttons -->
-                                <div class="space-y-1.5 pt-1">
-                                    <template x-for="(btn, i) in suggestions" :key="i">
-                                        <div class="px-3 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate transition-colors"
-                                             x-text="btn.displayText || ('Button ' + (i+1))"></div>
-                                    </template>
-                                </div>
-                            </div>
-
-                            <!-- 3. Rich Card Preview -->
+                            <!-- 2. Rich Card Preview -->
                             <div x-show="template_type === 'rich_card'" x-cloak style="display: none;" class="space-y-2">
                                 <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs"
                                      :class="card_orientation === 'HORIZONTAL' ? 'flex flex-row items-stretch' : 'flex flex-col'">
@@ -918,10 +827,8 @@ function rcsBuilder() {
         submitting: false,
         clientError: '',
 
-        // Type 1 & 2 content
+        // Type 1 content (Text Message)
         text_message_content: '',
-        documentUrl: '',
-        media_order: 'media_at_top',
 
         // Type 3 content (Rich Card Standalone)
         card_orientation: 'VERTICAL',
@@ -997,7 +904,7 @@ function rcsBuilder() {
 
         get detectedPlaceholders() {
             let combinedText = '';
-            if (this.template_type === 'text_message' || this.template_type === 'text_message_with_media') {
+            if (this.template_type === 'text_message') {
                 combinedText += this.text_message_content;
             } else if (this.template_type === 'rich_card') {
                 combinedText += ' ' + (this.standalone.cardTitle || '') + ' ' + (this.standalone.cardDescription || '');
@@ -1430,15 +1337,6 @@ function rcsBuilder() {
                 };
             }
 
-            if (this.template_type === 'text_message_with_media') {
-                return {
-                    templateType: 'text_message_with_media',
-                    documentUrl: this.documentUrl,
-                    messageOrder: this.media_order,
-                    textMessageContent: this.text_message_content,
-                    suggestions: validSuggestions,
-                };
-            }
 
             if (this.template_type === 'rich_card') {
                 return {
@@ -1495,15 +1393,6 @@ function rcsBuilder() {
             if (this.template_type === 'text_message') {
                 if (!this.text_message_content.trim()) {
                     this.clientError = 'Please enter the message body content.';
-                    return;
-                }
-            } else if (this.template_type === 'text_message_with_media') {
-                if (!this.documentUrl.trim()) {
-                    this.clientError = 'Please enter or upload a valid Media URL.';
-                    return;
-                }
-                if (!this.text_message_content.trim()) {
-                    this.clientError = 'Please enter the message text.';
                     return;
                 }
             } else if (this.template_type === 'rich_card') {
