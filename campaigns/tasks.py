@@ -388,14 +388,15 @@ def run_campaign_task(self, campaign_id: str):
     campaign.save(update_fields=["status", "completed_at", "reserved_amount", "updated_at"])
     logger.info("Campaign %s completed successfully.", campaign.id)
 
-    # Sync daily MIS billing for this campaign's user
+    # Sync daily MIS billing and Live Status for this campaign's user
     try:
-        from reports.models import sync_user_daily_mis
+        from reports.models import sync_user_daily_mis, sync_live_status
         if campaign.user_id:
             c_date = campaign.created_at.date() if campaign.created_at else timezone.now().date()
             sync_user_daily_mis(user_id=campaign.user_id, date=c_date)
+            sync_live_status(user_id=campaign.user_id, date=c_date)
     except Exception as e:
-        logger.warning("Failed syncing MIS billing on campaign completion: %s", e)
+        logger.warning("Failed syncing MIS billing / Live Status on campaign completion: %s", e)
 
 
 @shared_task

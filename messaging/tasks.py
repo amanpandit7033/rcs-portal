@@ -384,14 +384,15 @@ def process_dlr_task(self, dlr_log_id: int):
     dlr_log.save(update_fields=["message", "processed", "processed_at", "error_message"])
     logger.info("DLRLog #%d processed successfully for message %s (New status: %s)", dlr_log_id, message.id, message.status)
 
-    # Sync daily MIS billing record for this user
+    # Sync daily MIS billing and Live Status record for this user
     try:
-        from reports.models import sync_user_daily_mis
+        from reports.models import sync_user_daily_mis, sync_live_status
         if message and message.user_id:
             m_date = message.created_at.date() if message.created_at else timezone.now().date()
             sync_user_daily_mis(user_id=message.user_id, date=m_date)
+            sync_live_status(user_id=message.user_id, date=m_date)
     except Exception as mis_err:
-        logger.warning("Failed updating MIS billing on DLR: %s", mis_err)
+        logger.warning("Failed updating MIS / Live Status on DLR: %s", mis_err)
 
     # Forward status to client webhook callback if configured
     try:

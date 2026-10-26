@@ -120,3 +120,128 @@ def sync_user_daily_mis(user_id=None, date=None):
                 "total_cost": item["total_cost"] or Decimal("0.0000"),
             },
         )
+
+
+class LiveStatusQuerySet(RoleScopedQuerySetMixin, models.QuerySet):
+    user_field = "user"
+
+
+class LiveStatusManager(models.Manager.from_queryset(LiveStatusQuerySet)):
+    def for_user(self, user):
+        return self.get_queryset().for_user(user)
+
+
+class LiveStatus(models.Model):
+    """Daily per-user live tracking table for submissions, delivery acknowledgments, reads, failures, and cost."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="live_status_records",
+        help_text="User/account associated with these counts",
+    )
+    date = models.DateField(
+        "Status Date",
+        db_index=True,
+        help_text="Date of activity",
+    )
+    total_submission = models.PositiveIntegerField(
+        "Total Submission",
+        default=0,
+        help_text="Total messages dispatched/submitted on this date",
+    )
+    total_delivered = models.PositiveIntegerField(
+        "Total Delivered",
+        default=0,
+        help_text="Messages delivered or read on this date",
+    )
+    total_read = models.PositiveIntegerField(
+        "Total Read",
+        default=0,
+        help_text="Messages confirmed read on this date",
+    )
+    total_failed = models.PositiveIntegerField(
+        "Total Failed",
+        default=0,
+        help_text="Messages permanently failed on this date",
+    )
+    total_cost = models.DecimalField(
+        "Total Cost (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        help_text="Total billable cost debited for messages on this date",
+    )
+    last_sent_at = models.DateTimeField(
+        "Last Activity At",
+        null=True,
+        blank=True,
+        help_text="Timestamp of the most recent message dispatched on this date",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = LiveStatusManager()
+
+    class Meta:
+        verbose_name = "Live Status Record"
+        verbose_name_plural = "Live Status Records"
+        unique_together = ("user", "date")
+        ordering = ["-date", "-total_submission"]
+        indexes = [
+            models.Index(fields=["date", "user"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date} (Submissions: {self.total_submission}, Cost: ₹{self.total_cost})"
+
+
+def sync_live_status(user_id=None, date=None):
+    """
+    Synchronizes LiveStatus records from the Message table into the dedicated LiveStatus table.
+    Can be scoped to a single user and date, or run globally for a given date.
+    """
+    from messaging.models import Message
+    from django.db.models import Max
+
+    qs = Message.objects.all()
+    if user_id:
+        qs = qs.filter(user_id=user_id)
+    if date:
+        qs = qs.filter(created_at__date=date)
+
+    aggregates = (
+        qs.annotate(activity_date=TruncDate("created_at"))
+        .values("user_id", "activity_date")
+        .annotate(
+            total_submission=Count("id"),
+            total_delivered=Count(
+                "id",
+                filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ]),
+            ),
+            total_read=Count("id", filter=Q(status=Message.Status.READ)),
+            total_failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            total_cost=Sum("cost"),
+            last_sent_at=Max("created_at"),
+        )
+    )
+
+    for item in aggregates:
+        u_id = item["user_id"]
+        act_date = item["activity_date"]
+        if not u_id or not act_date:
+            continue
+        LiveStatus.objects.update_or_create(
+            user_id=u_id,
+            date=act_date,
+            defaults={
+                "total_submission": item["total_submission"] or 0,
+                "total_delivered": item["total_delivered"] or 0,
+                "total_read": item["total_read"] or 0,
+                "total_failed": item["total_failed"] or 0,
+                "total_cost": item["total_cost"] or Decimal("0.0000"),
+                "last_sent_at": item["last_sent_at"],
+            },
+        )
+

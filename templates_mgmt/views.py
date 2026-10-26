@@ -207,6 +207,31 @@ class TemplateDetailView(RoleRequiredMixin, DetailView):
     def get_queryset(self):
         return Template.objects.for_user(self.request.user).select_related("owner", "sender_profile")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        template = self.object
+        payload = template.payload or {}
+        stand_alone = payload.get("standAlone") or {}
+        suggestions = stand_alone.get("suggestions") or payload.get("suggestions") or []
+
+        context["preview_data"] = {
+            "template_type": template.template_type,
+            "text_content": payload.get("textMessageContent") or "",
+            "document_url": payload.get("documentUrl") or "",
+            "media_order": payload.get("mediaOrder") or "media_at_top",
+            "card_title": stand_alone.get("cardTitle") or "",
+            "card_description": stand_alone.get("cardDescription") or "",
+            "card_media_url": stand_alone.get("mediaUrl") or "",
+            "card_orientation": payload.get("orientation") or "VERTICAL",
+            "card_height": payload.get("height") or "TALL_HEIGHT",
+            "suggestions": suggestions,
+            "carousel_cards": payload.get("carouselList") or [],
+            "carousel_height": payload.get("height") or "SHORT_HEIGHT",
+            "carousel_width": payload.get("width") or "MEDIUM_WIDTH",
+        }
+        context["payload_formatted"] = json.dumps(payload, indent=2)
+        return context
+
 
 class TemplateRefreshStatusView(RoleRequiredMixin, View):
     """Manually fetch latest status from OneXtel."""

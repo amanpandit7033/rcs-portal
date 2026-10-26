@@ -4,6 +4,7 @@ from django.urls import path
 from .views import (
     AdminCampaignReportListView,
     AdminDLRLogListView,
+    LiveStatusView,
     MessageLogExportCSVView,
     MISBillingView,
     ResellerMarginReportView,
@@ -13,6 +14,7 @@ from .views import (
 app_name = "reports"
 
 urlpatterns = [
+    path("live-status/", LiveStatusView.as_view(), name="live_status"),
     path("mis-billing/", MISBillingView.as_view(), name="mis_billing"),
     path("export/messages/", MessageLogExportCSVView.as_view(), name="export_messages_csv"),
     path("export/messages/csv/", MessageLogExportCSVView.as_view(), name="message_logs_export_csv"),

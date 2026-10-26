@@ -734,3 +734,143 @@ class MISBillingView(RoleRequiredMixin, View):
         )
 
 
+class LiveStatusView(RoleRequiredMixin, View):
+    """Real-time consolidated per-user live status table for submissions, deliveries, reads, failures, and costs."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+    template_name = "reports/live_status.html"
+
+    def get(self, request):
+        user = request.user
+        from .models import LiveStatus, sync_live_status
+        from datetime import datetime, timedelta
+
+        # Date handling: default to Today, but supports back-day (past dates)
+        date_str = request.GET.get("date", "").strip()
+        today = timezone.now().date()
+        if date_str:
+            try:
+                selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                selected_date = today
+        else:
+            selected_date = today
+
+        # Automatically ensure the selected date's metrics are freshly synced
+        try:
+            sync_live_status(
+                user_id=None if getattr(user, "is_admin", False) else user.id,
+                date=selected_date,
+            )
+        except Exception as sync_err:
+            logger.warning("Auto sync LiveStatus error: %s", sync_err)
+
+        # Scoped queryset
+        qs = (
+            LiveStatus.objects.for_user(user)
+            .select_related("user", "user__parent_reseller")
+            .filter(date=selected_date)
+            .order_by("-total_submission", "-total_cost")
+        )
+
+        # Filters
+        q = request.GET.get("q", "").strip()
+        role_filter = request.GET.get("role", "").strip()
+
+        if q:
+            qs = qs.filter(
+                Q(user__username__icontains=q)
+                | Q(user__company_name__icontains=q)
+                | Q(user__parent_reseller__username__icontains=q)
+            )
+
+        if role_filter in [User.Role.USER, User.Role.RESELLER]:
+            qs = qs.filter(user__role=role_filter)
+
+        # Handle CSV Export if requested
+        if request.GET.get("export") == "csv":
+            header = [
+                "Date",
+                "Username",
+                "Company Name",
+                "Role",
+                "Parent Reseller",
+                "Total Submissions",
+                "Delivered",
+                "Read",
+                "Failed",
+                "Cost (INR)",
+                "Last Sent At",
+            ]
+
+            def format_row(r):
+                return [
+                    r.date.strftime("%Y-%m-%d") if r.date else "",
+                    r.user.username if r.user else "",
+                    r.user.company_name if r.user else "",
+                    r.user.get_role_display() if r.user and hasattr(r.user, "get_role_display") else (r.user.role if r.user else ""),
+                    r.user.parent_reseller.username if (r.user and r.user.parent_reseller) else "Direct / Admin",
+                    r.total_submission,
+                    r.total_delivered,
+                    r.total_read,
+                    r.total_failed,
+                    str(r.total_cost),
+                    r.last_sent_at.strftime("%Y-%m-%d %H:%M:%S") if r.last_sent_at else "N/A",
+                ]
+
+            return stream_csv_response(
+                filename=f"live_status_{selected_date}.csv",
+                header=header,
+                queryset_iterator=qs.iterator(chunk_size=500),
+                row_formatter=format_row,
+            )
+
+        # Aggregate summary for header KPI cards
+        summary = qs.aggregate(
+            total_submission=Sum("total_submission"),
+            total_delivered=Sum("total_delivered"),
+            total_read=Sum("total_read"),
+            total_failed=Sum("total_failed"),
+            total_cost=Sum("total_cost"),
+        )
+        total_sub = summary["total_submission"] or 0
+        total_dlvr = summary["total_delivered"] or 0
+        total_read = summary["total_read"] or 0
+        total_failed = summary["total_failed"] or 0
+        total_cost = summary["total_cost"] or Decimal("0.0000")
+
+        delivery_rate = (total_dlvr / total_sub * 100) if total_sub > 0 else 0
+        read_rate = (total_read / total_sub * 100) if total_sub > 0 else 0
+
+        paginator = Paginator(qs, 25)
+        page_number = request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+
+        yesterday = today - timedelta(days=1)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "page_obj": page_obj,
+                "selected_date": selected_date.strftime("%Y-%m-%d"),
+                "today_str": today.strftime("%Y-%m-%d"),
+                "yesterday_str": yesterday.strftime("%Y-%m-%d"),
+                "is_today": selected_date == today,
+                "is_yesterday": selected_date == yesterday,
+                "search_query": q,
+                "selected_role": role_filter,
+                "summary": {
+                    "total_submission": total_sub,
+                    "total_delivered": total_dlvr,
+                    "total_read": total_read,
+                    "total_failed": total_failed,
+                    "total_cost": total_cost,
+                    "delivery_rate": delivery_rate,
+                    "read_rate": read_rate,
+                },
+            },
+        )
+
+
+

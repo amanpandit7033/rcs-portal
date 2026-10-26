@@ -4,7 +4,7 @@
 {% block header_title %}Template Details{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ viewMode: 'preview', copied: false }">
     <!-- Breadcrumb & Top Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
@@ -35,7 +35,12 @@
                     </span>
                     {% endif %}
                 </div>
-                <p class="text-xs text-slate-400 mt-1">Sender: <span class="font-mono text-slate-700 font-semibold">{{ template.sender_profile.sender_profile_name }}</span> &bull; Owner: <span class="text-slate-700 font-semibold">{{ template.owner.email }}</span></p>
+                <p class="text-xs text-slate-400 mt-1">
+                    Sender: <span class="font-mono text-slate-700 font-semibold">{{ template.sender_profile.sender_profile_name }}</span>
+                    {% if request.user.is_admin %}
+                    &bull; Owner: <span class="text-slate-700 font-semibold">{{ template.owner.email }}</span>
+                    {% endif %}
+                </p>
             </div>
         </div>
 
@@ -50,52 +55,327 @@
         </div>
     </div>
 
-    <!-- Metadata Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+    <!-- Metadata Grid (Clean and simplified for non-admins) -->
+    <div class="grid grid-cols-2 {% if request.user.is_admin %}sm:grid-cols-4{% else %}sm:grid-cols-3{% endif %} gap-4">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
             <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Template Type</span>
             <span class="block text-sm font-bold text-slate-900 mt-1">{{ template.get_template_type_display }}</span>
         </div>
-        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
             <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Message Intent</span>
             <span class="block text-sm font-bold text-slate-900 mt-1">{{ template.message_type }}</span>
         </div>
-        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+        {% if request.user.is_admin %}
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
             <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Carrier Status Raw</span>
             <span class="block text-sm font-mono font-semibold text-slate-900 mt-1">{{ template.onextel_status_raw|default:"Not synced" }}</span>
         </div>
-        <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
             <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Last Carrier Sync</span>
             <span class="block text-sm font-semibold text-slate-700 mt-1">{{ template.last_synced_at|date:"M d, Y H:i"|default:"Never" }}</span>
         </div>
+        {% else %}
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs col-span-2 sm:col-span-1">
+            <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Created</span>
+            <span class="block text-sm font-semibold text-slate-700 mt-1">{{ template.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- Detected Placeholders & Guidelines -->
-    <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3">
-        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Template Variables & Placeholders</h3>
-        {% with params=template.detected_placeholders %}
-        {% if params %}
-        <div class="flex flex-wrap gap-2">
+    <!-- Template Variables / Placeholders -->
+    {% with params=template.detected_placeholders %}
+    {% if params %}
+    <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                Template Variables & Placeholders
+            </h3>
+            <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">{{ params|length }} variable(s)</span>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1">
             {% for p in params %}
             <span class="px-3 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-mono text-xs font-semibold">
                 [{{ p }}]
             </span>
             {% endfor %}
         </div>
-        <p class="text-xs text-slate-500">When initiating sending campaigns, supply values for each variable listed above in your recipient payload.</p>
-        {% else %}
-        <p class="text-xs text-slate-400 italic">This template contains static content with no dynamic placeholders.</p>
-        {% endif %}
-        {% endwith %}
     </div>
+    {% endif %}
+    {% endwith %}
 
-    <!-- Raw Carrier Payload Preview -->
-    <div class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">JSON Payload Specification</h3>
-            <span class="text-xs font-mono text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">application/json</span>
+    <!-- Admin-Only View Mode Selector (Preview vs Payload vs Both) -->
+    {% if request.user.is_admin %}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-2 bg-slate-100 rounded-2xl border border-slate-200/80">
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-600 px-3 uppercase tracking-wider">Admin View:</span>
+            <button type="button" @click="viewMode = 'preview'"
+                    :class="viewMode === 'preview' ? 'bg-white text-blue-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                <span>Preview Only</span>
+            </button>
+            <button type="button" @click="viewMode = 'payload'"
+                    :class="viewMode === 'payload' ? 'bg-white text-blue-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                <span>JSON Payload Only</span>
+            </button>
+            <button type="button" @click="viewMode = 'both'"
+                    :class="viewMode === 'both' ? 'bg-white text-blue-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'"
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                <span>Both Side-by-Side</span>
+            </button>
         </div>
-        <pre class="p-4 rounded-xl bg-slate-900 font-mono text-xs text-slate-100 overflow-x-auto border border-slate-800 leading-relaxed shadow-inner">{{ template.payload|pprint }}</pre>
+        <div class="px-3 text-[11px] text-slate-500 hidden sm:block">
+            <span>Resellers & users see visual preview only</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Area: Visual Preview and/or JSON Payload -->
+    <div :class="viewMode === 'both' ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 items-start' : 'space-y-6'">
+
+        <!-- VISUAL PHONE PREVIEW (Visible for All: Users, Resellers & Admin) -->
+        <div x-show="viewMode === 'preview' || viewMode === 'both'"
+             :class="viewMode === 'both' ? 'lg:col-span-6 flex flex-col items-center' : 'flex flex-col items-center'"
+             class="transition-all">
+
+            <!-- Simulator Header Badge -->
+            <div class="w-full max-w-[340px] flex items-center justify-between px-2 mb-3">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live RCS Message Preview
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-semibold">
+                    <svg class="w-2.5 h-2.5 fill-current text-slate-800" viewBox="0 0 170 170"><path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.77-11.64-14.18-5.87-9.35-10.43-20.08-13.68-32.18-3.25-12.1-4.88-23.77-4.88-35.01 0-14.58 3.58-26.65 10.74-36.21 7.16-9.56 16.27-14.43 27.33-14.61 4.7 0 9.87 1.15 15.51 3.44 5.64 2.29 9.68 3.48 12.12 3.58 1.95 0 6.13-1.28 12.54-3.83 6.41-2.55 11.83-3.69 16.27-3.41 12.54.85 22.47 5.76 29.8 14.73-10.96 6.64-16.32 15.74-16.08 27.29.24 9.13 3.73 16.74 10.47 22.82 6.74 6.08 14.77 9.54 24.08 10.37-2.12 6.74-4.64 13.3-7.56 19.68zM119.22 31.84c0-7.31 2.65-14.11 7.95-20.4 5.3-6.29 11.75-10.3 19.35-12.04.47 1.45.71 2.87.71 4.26 0 7.31-2.73 14.28-8.19 20.91-5.46 6.63-12.05 10.53-19.77 11.7-.05-1.45-.05-2.92-.05-4.43z"/></svg>
+                    iPhone 17 Pro
+                </span>
+            </div>
+
+            <!-- Hardware Phone Chassis -->
+            <div class="relative w-full max-w-[340px] select-none">
+                <!-- Side Buttons -->
+                <div class="absolute -left-[3px] top-[95px] w-[3px] h-6 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[130px] w-[3px] h-10 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -left-[3px] top-[180px] w-[3px] h-10 bg-slate-600 rounded-l-xs shadow-2xs"></div>
+                <div class="absolute -right-[3px] top-[140px] w-[3px] h-14 bg-slate-600 rounded-r-xs shadow-2xs"></div>
+
+                <!-- Titanium Outer Frame -->
+                <div class="w-full rounded-[48px] bg-gradient-to-b from-[#3a3d45] via-[#202227] to-[#15161a] p-[8px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)_inset]">
+                    <!-- Screen Container -->
+                    <div class="rounded-[40px] overflow-hidden bg-[#f4f5f7] flex flex-col h-[560px] relative shadow-inner">
+
+                        <!-- iOS Status Bar & Dynamic Island -->
+                        <div class="relative z-30 pt-2.5 px-4 pb-1.5 flex items-center justify-between text-[10px] text-slate-800 font-semibold select-none bg-white/90 backdrop-blur-md border-b border-slate-100">
+                            <span class="w-10 text-left font-bold text-[11px] text-slate-900 tracking-tight">9:41</span>
+                            <div class="w-20 h-[20px] bg-black rounded-full flex items-center justify-between px-2 shadow-xs">
+                                <div class="w-2 h-2 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center">
+                                    <div class="w-0.5 h-0.5 rounded-full bg-blue-900/90"></div>
+                                </div>
+                                <div class="w-1 h-1 rounded-full bg-[#0a0f18]"></div>
+                            </div>
+                            <div class="w-10 flex items-center justify-end gap-1 text-slate-900">
+                                <span class="text-[8px] font-extrabold tracking-tighter">5G</span>
+                                <div class="w-[16px] h-[8px] border border-slate-800 rounded-[2px] p-[1px] flex items-center">
+                                    <div class="w-full h-full bg-slate-900 rounded-[0.5px]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bot Verified Header -->
+                        <div class="px-4 py-2.5 bg-white border-b border-slate-200/80 flex items-center gap-2.5 shadow-2xs">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+                                RCS
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1">
+                                    <span class="font-bold text-xs text-slate-900 truncate">{{ template.sender_profile.sender_profile_name }}</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <span class="text-[10px] text-slate-400 block -mt-0.5">RCS Verified Business</span>
+                            </div>
+                        </div>
+
+                        <!-- Chat Body Screen (Scrollable) -->
+                        <div class="flex-1 p-3.5 overflow-y-auto space-y-3 bg-[#f8fafc]">
+                            <div class="text-center">
+                                <span class="px-2.5 py-0.5 rounded-full bg-slate-200/70 text-[9px] font-semibold text-slate-500">Today</span>
+                            </div>
+
+                            <!-- 1. Rich Card (Standalone) -->
+                            {% if preview_data.template_type == 'rich_card' %}
+                            <div class="space-y-2">
+                                <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs {% if preview_data.card_orientation == 'HORIZONTAL' %}flex flex-row items-stretch{% else %}flex flex-col{% endif %}">
+                                    <!-- Card Media -->
+                                    {% if preview_data.card_media_url %}
+                                    <div class="bg-slate-100 flex items-center justify-center overflow-hidden {% if preview_data.card_orientation == 'HORIZONTAL' %}w-28 flex-shrink-0{% elif preview_data.card_height == 'SHORT_HEIGHT' %}w-full h-28{% elif preview_data.card_height == 'MEDIUM_HEIGHT' %}w-full h-36{% else %}w-full h-44{% endif %}">
+                                        <img src="{{ preview_data.card_media_url }}" alt="Card Media" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://placehold.co/600x400/e2e8f0/64748b?text=Rich+Card+Image';">
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Content -->
+                                    <div class="p-3.5 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            {% if preview_data.card_title %}
+                                            <h4 class="font-bold text-xs text-slate-900 leading-snug">{{ preview_data.card_title }}</h4>
+                                            {% endif %}
+                                            {% if preview_data.card_description %}
+                                            <p class="text-[11px] text-slate-600 mt-1.5 leading-relaxed">{{ preview_data.card_description }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-[9px] text-slate-400 text-right mt-2 font-medium">9:41 AM &bull; RCS</div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                {% if preview_data.suggestions %}
+                                <div class="space-y-1.5 pt-1">
+                                    {% for btn in preview_data.suggestions %}
+                                    <div class="px-3.5 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate flex items-center justify-center gap-1.5 transition-colors">
+                                        {% if btn.suggestionType == 'url_action' or btn.url %}
+                                        <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        {% elif btn.suggestionType == 'dialer_action' or btn.phoneNumber %}
+                                        <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                        {% else %}
+                                        <svg class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        {% endif %}
+                                        <span>{{ btn.displayText|default:"Action" }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- 2. Text Message -->
+                            {% elif preview_data.template_type == 'text_message' %}
+                            <div class="space-y-2">
+                                <div class="max-w-[88%] rounded-2xl rounded-tl-xs bg-white text-slate-900 p-3.5 shadow-xs border border-slate-200/80 text-xs whitespace-pre-wrap leading-relaxed">
+                                    {{ preview_data.text_content|default:"No text content." }}
+                                    <div class="text-[9px] text-slate-400 text-right mt-1.5 font-medium">9:41 AM &bull; RCS</div>
+                                </div>
+                                {% if preview_data.suggestions %}
+                                <div class="space-y-1.5 pt-1">
+                                    {% for btn in preview_data.suggestions %}
+                                    <div class="px-3.5 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate">
+                                        {{ btn.displayText|default:"Action" }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- 3. Text Message with Media -->
+                            {% elif preview_data.template_type == 'text_message_with_media' %}
+                            <div class="space-y-2">
+                                <div class="max-w-[90%] rounded-2xl rounded-tl-xs bg-white text-slate-900 shadow-xs border border-slate-200/80 overflow-hidden text-xs">
+                                    {% if preview_data.media_order == 'media_at_top' %}
+                                        {% if preview_data.document_url %}
+                                        <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                            <img src="{{ preview_data.document_url }}" alt="Media" class="w-full h-full object-cover">
+                                        </div>
+                                        {% endif %}
+                                        <div class="p-3.5 whitespace-pre-wrap leading-relaxed">
+                                            {{ preview_data.text_content|default:"" }}
+                                            <div class="text-[9px] text-slate-400 text-right mt-1.5">9:41 AM &bull; RCS</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="p-3.5 whitespace-pre-wrap leading-relaxed">
+                                            {{ preview_data.text_content|default:"" }}
+                                        </div>
+                                        {% if preview_data.document_url %}
+                                        <div class="w-full h-36 bg-slate-100 flex items-center justify-center overflow-hidden">
+                                            <img src="{{ preview_data.document_url }}" alt="Media" class="w-full h-full object-cover">
+                                        </div>
+                                        {% endif %}
+                                        <div class="px-3.5 py-1.5 text-[9px] text-slate-400 text-right">9:41 AM &bull; RCS</div>
+                                    {% endif %}
+                                </div>
+                                {% if preview_data.suggestions %}
+                                <div class="space-y-1.5 pt-1">
+                                    {% for btn in preview_data.suggestions %}
+                                    <div class="px-3.5 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-blue-200 text-blue-700 text-xs font-semibold text-center shadow-2xs truncate">
+                                        {{ btn.displayText|default:"Action" }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- 4. Carousel -->
+                            {% elif preview_data.template_type == 'carousel' %}
+                            <div class="space-y-2">
+                                <div class="overflow-x-auto flex gap-2.5 pb-2 -mx-1 px-1">
+                                    {% for c in preview_data.carousel_cards %}
+                                    <div class="flex-shrink-0 rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs flex flex-col {% if preview_data.carousel_width == 'SMALL_WIDTH' %}w-44{% else %}w-52{% endif %}">
+                                        {% if c.mediaUrl %}
+                                        <div class="bg-slate-100 flex items-center justify-center overflow-hidden {% if preview_data.carousel_height == 'SHORT_HEIGHT' %}h-24{% else %}h-32{% endif %}">
+                                            <img src="{{ c.mediaUrl }}" alt="Card Media" class="w-full h-full object-cover">
+                                        </div>
+                                        {% endif %}
+                                        <div class="p-3 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <h5 class="font-bold text-xs text-slate-900 truncate">{{ c.cardTitle|default:"Card" }}</h5>
+                                                <p class="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">{{ c.cardDescription|default:"" }}</p>
+                                            </div>
+                                        </div>
+                                        {% if c.suggestions %}
+                                        <div class="border-t border-slate-100 p-2 space-y-1">
+                                            {% for btn in c.suggestions %}
+                                            <div class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-semibold text-center truncate">
+                                                {{ btn.displayText|default:"Select" }}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Metadata Pills -->
+            <div class="mt-3.5 flex flex-wrap items-center justify-center gap-2 max-w-[340px]">
+                <span class="px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+                    {{ template.get_template_type_display }}
+                </span>
+                <span class="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700 shadow-2xs">
+                    {{ template.message_type }}
+                </span>
+            </div>
+        </div>
+
+        <!-- JSON PAYLOAD SPECIFICATION (Visible only for Admin!) -->
+        {% if request.user.is_admin %}
+        <div x-show="viewMode === 'payload' || viewMode === 'both'"
+             :class="viewMode === 'both' ? 'lg:col-span-6' : 'w-full'"
+             class="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 transition-all">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 tracking-wider uppercase">Admin Only</span>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Carrier JSON Payload Specification</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            @click="navigator.clipboard.writeText($refs.payloadCode.innerText); copied = true; setTimeout(() => copied = false, 2000)"
+                            class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+                        <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <svg x-show="copied" x-cloak class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span x-text="copied ? 'Copied!' : 'Copy JSON'">Copy JSON</span>
+                    </button>
+                    <span class="text-xs font-mono text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">application/json</span>
+                </div>
+            </div>
+            <pre x-ref="payloadCode" class="p-4 rounded-xl bg-slate-900 font-mono text-xs text-slate-100 overflow-x-auto border border-slate-800 leading-relaxed shadow-inner max-h-[560px]">{{ payload_formatted }}</pre>
+        </div>
+        {% endif %}
+
     </div>
 </div>
 {% endblock %}
