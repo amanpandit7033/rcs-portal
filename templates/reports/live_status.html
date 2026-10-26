@@ -19,7 +19,7 @@
             </p>
         </div>
         <div class="flex items-center gap-2.5">
-            <a href="?{% if selected_date %}date={{ selected_date }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if selected_role %}role={{ selected_role }}&{% endif %}export=csv"
+            <a href="?from_date={{ from_date }}&to_date={{ to_date }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}&export=csv"
                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs">
                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 <span>Export CSV</span>
@@ -75,33 +75,51 @@
         </div>
     </div>
 
-    <!-- Filter & Back-Day Date Picker Card -->
+    <!-- Filter & Date Range Picker Card -->
     <div class="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
         <form method="get" class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             
-            <!-- Left: Quick Date Presets & Custom Date Picker ("Back Day") -->
+            <!-- Left: Quick Date Presets & Custom From-To Range Inputs -->
             <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-semibold text-slate-600 mr-1">Activity Date:</span>
-                
                 <!-- Quick Today Button -->
-                <a href="?date={{ today_str }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                <a href="?from_date={{ today_str }}&to_date={{ today_str }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
                    class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all {% if is_today %}bg-blue-600 text-white shadow-2xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
                     Today
                 </a>
 
-                <!-- Quick Yesterday Button ("Back Day") -->
-                <a href="?date={{ yesterday_str }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                <!-- Quick Yesterday Button -->
+                <a href="?from_date={{ yesterday_str }}&to_date={{ yesterday_str }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
                    class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all {% if is_yesterday %}bg-blue-600 text-white shadow-2xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
                     Yesterday
                 </a>
 
-                <!-- Custom Specific Date Picker -->
-                <input type="date"
-                       name="date"
-                       value="{{ selected_date }}"
-                       onchange="this.form.submit()"
-                       title="Select a specific date to view live status"
-                       class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-2xs">
+                <!-- Quick Last 7 Days Button -->
+                <a href="?from_date={{ last_7_days_str }}&to_date={{ today_str }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                   class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all {% if from_date == last_7_days_str and to_date == today_str %}bg-blue-600 text-white shadow-2xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    Last 7 Days
+                </a>
+
+                <div class="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+
+                <!-- From Date Input -->
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] font-semibold text-slate-500">From:</span>
+                    <input type="date"
+                           name="from_date"
+                           value="{{ from_date }}"
+                           title="From date"
+                           class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-2xs">
+                </div>
+
+                <!-- To Date Input -->
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] font-semibold text-slate-500">To:</span>
+                    <input type="date"
+                           name="to_date"
+                           value="{{ to_date }}"
+                           title="To date"
+                           class="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-2xs">
+                </div>
             </div>
 
             <!-- Right: Search Query & Role Filters -->
@@ -109,13 +127,13 @@
                 <!-- Username / Company Search Input -->
                 <div class="relative min-w-[200px] flex-1 sm:flex-initial">
                     <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search client / company..."
-                           class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                           class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
                     <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
 
                 <!-- Role Filter (Admin Only) -->
                 {% if request.user.is_admin %}
-                <select name="role" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                <select name="role" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
                     <option value="">All Account Types</option>
                     <option value="user" {% if selected_role == 'user' %}selected{% endif %}>Direct Users</option>
                     <option value="reseller" {% if selected_role == 'reseller' %}selected{% endif %}>Resellers</option>
@@ -141,15 +159,23 @@
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Client Submissions for {{ selected_date }}
+                    {% if is_single_day %}
+                    Client Submissions for {{ from_date }}
+                    {% else %}
+                    Client Submissions: {{ from_date }} to {{ to_date }}
+                    {% endif %}
                 </h3>
                 {% if is_today %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Today
                 </span>
+                {% elif is_yesterday %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                    Yesterday Log
+                </span>
                 {% else %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
-                    Historical Log
+                    Date Range Report
                 </span>
                 {% endif %}
             </div>
@@ -279,8 +305,10 @@
                         <td colspan="{% if request.user.is_admin %}10{% else %}9{% endif %}" class="py-12 text-center text-slate-400">
                             <div class="flex flex-col items-center justify-center gap-2">
                                 <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                <span class="text-xs font-semibold text-slate-600">No message activity recorded for {{ selected_date }}</span>
-                                <span class="text-[11px] text-slate-400">Try selecting a different date or clearing your search filters.</span>
+                                <span class="text-xs font-semibold text-slate-600">
+                                    No message activity recorded for {% if is_single_day %}{{ from_date }}{% else %}{{ from_date }} to {{ to_date }}{% endif %}
+                                </span>
+                                <span class="text-[11px] text-slate-400">Try selecting a different date range or clearing your search filters.</span>
                             </div>
                         </td>
                     </tr>
@@ -295,13 +323,13 @@
             <span class="text-slate-500 font-medium">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             <div class="flex items-center gap-2">
                 {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                <a href="?page={{ page_obj.previous_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
                    class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-100 transition-colors shadow-2xs">
                     Previous
                 </a>
                 {% endif %}
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
+                <a href="?page={{ page_obj.next_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role %}&role={{ selected_role }}{% endif %}"
                    class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-100 transition-colors shadow-2xs">
                     Next
                 </a>

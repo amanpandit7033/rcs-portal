@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.db import models
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -624,31 +624,62 @@ class MISBillingView(RoleRequiredMixin, View):
         to_date = request.GET.get("to_date", "").strip()
         user_belonging = request.GET.get("user_belonging", "").strip() in ["1", "true", "on", "yes"]
 
+        is_filtered = bool(username or from_date or to_date or user_belonging)
+
+        # Autocomplete candidate usernames for filter datalist
+        if getattr(user, "is_admin", False):
+            candidate_users = User.objects.filter(is_active=True).values("username", "company_name", "role").order_by("username")
+        elif getattr(user, "is_reseller", False):
+            candidate_users = User.objects.filter(
+                Q(id=user.id) | Q(parent_reseller=user)
+            ).values("username", "company_name", "role").order_by("username")
+        else:
+            candidate_users = [{"username": user.username, "company_name": user.company_name, "role": user.role}]
+
+        if not is_filtered:
+            # By default do not show any data until user filters
+            qs = MISBilling.objects.none()
+            return render(
+                request,
+                self.template_name,
+                {
+                    "page_obj": Paginator(qs, 25).get_page(1),
+                    "summary": {
+                        "total_sent": 0,
+                        "total_delivered": 0,
+                        "total_read": 0,
+                        "total_failed": 0,
+                        "total_cost": Decimal("0.0000"),
+                        "delivery_rate": 0,
+                    },
+                    "username_query": "",
+                    "from_date": "",
+                    "to_date": "",
+                    "user_belonging": False,
+                    "candidate_users": candidate_users,
+                    "is_filtered": False,
+                },
+            )
+
         # Filter by Username & User Belonging Checkbox
         if username:
             target_user = User.objects.filter(username__iexact=username).first()
             if user_belonging:
                 if target_user:
-                    # Find all users belonging to this reseller (direct and indirect)
                     belonging_ids = list(
                         User.objects.filter(
                             Q(parent_reseller=target_user) | Q(parent_reseller__parent_reseller=target_user)
                         ).values_list("id", flat=True)
                     )
-                    # Skip the reseller's own MIS count, show only belonging users
                     qs = qs.filter(user_id__in=belonging_ids).exclude(user_id=target_user.id)
                 else:
-                    # Search by parent reseller username
                     qs = qs.filter(user__parent_reseller__username__iexact=username)
             else:
                 qs = qs.filter(user__username__icontains=username)
         elif user_belonging:
-            # Checkbox selected with no username entered
             if getattr(user, "is_reseller", False):
-                # Reseller skipping their own count, showing only their clients
                 qs = qs.filter(user__parent_reseller=user).exclude(user_id=user.id)
             elif getattr(user, "is_admin", False):
-                # Admin skipping reseller-level records, showing client accounts
                 qs = qs.filter(user__role=User.Role.USER)
 
         # Date range filtering
@@ -698,16 +729,6 @@ class MISBillingView(RoleRequiredMixin, View):
 
         delivery_rate = (total_delivered / total_sent * 100) if total_sent > 0 else 0
 
-        # Autocomplete candidate usernames for filter datalist
-        if getattr(user, "is_admin", False):
-            candidate_users = User.objects.filter(is_active=True).values("username", "company_name", "role").order_by("username")
-        elif getattr(user, "is_reseller", False):
-            candidate_users = User.objects.filter(
-                Q(id=user.id) | Q(parent_reseller=user)
-            ).values("username", "company_name", "role").order_by("username")
-        else:
-            candidate_users = [{"username": user.username, "company_name": user.company_name, "role": user.role}]
-
         paginator = Paginator(qs, 25)
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
@@ -730,6 +751,7 @@ class MISBillingView(RoleRequiredMixin, View):
                 "to_date": to_date,
                 "user_belonging": user_belonging,
                 "candidate_users": candidate_users,
+                "is_filtered": True,
             },
         )
 
@@ -745,88 +767,67 @@ class LiveStatusView(RoleRequiredMixin, View):
         from .models import LiveStatus, sync_live_status
         from datetime import datetime, timedelta
 
-        # Date handling: default to Today, but supports back-day (past dates)
-        date_str = request.GET.get("date", "").strip()
         today = timezone.now().date()
-        if date_str:
+        yesterday = today - timedelta(days=1)
+        last_7_days = today - timedelta(days=6)
+
+        # Support from_date and to_date, with backward compatibility for ?date=
+        from_date_str = request.GET.get("from_date", "").strip()
+        to_date_str = request.GET.get("to_date", "").strip()
+        single_date_str = request.GET.get("date", "").strip()
+
+        if not from_date_str and not to_date_str and single_date_str:
+            from_date_str = single_date_str
+            to_date_str = single_date_str
+
+        def parse_date(date_val, fallback):
+            if not date_val:
+                return fallback
             try:
-                selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                return datetime.strptime(date_val, "%Y-%m-%d").date()
             except ValueError:
-                selected_date = today
-        else:
-            selected_date = today
+                return fallback
 
-        # Automatically ensure the selected date's metrics are freshly synced
-        try:
-            sync_live_status(
-                user_id=None if getattr(user, "is_admin", False) else user.id,
-                date=selected_date,
-            )
-        except Exception as sync_err:
-            logger.warning("Auto sync LiveStatus error: %s", sync_err)
+        from_date = parse_date(from_date_str, today)
+        to_date = parse_date(to_date_str, today)
 
-        # Scoped queryset
-        qs = (
+        # Ensure correct date order
+        if from_date > to_date:
+            from_date, to_date = to_date, from_date
+
+        # If today is within the inspected range, ensure real-time counts are fresh
+        if from_date <= today <= to_date:
+            try:
+                sync_live_status(
+                    user_id=None if getattr(user, "is_admin", False) else user.id,
+                    date=today,
+                )
+            except Exception as sync_err:
+                logger.warning("Auto sync LiveStatus error: %s", sync_err)
+
+        # Base Scoped QuerySet for the date range
+        base_qs = (
             LiveStatus.objects.for_user(user)
+            .filter(date__gte=from_date, date__lte=to_date)
             .select_related("user", "user__parent_reseller")
-            .filter(date=selected_date)
-            .order_by("-total_submission", "-total_cost")
         )
 
-        # Filters
+        # Filters: Search query & Role filter
         q = request.GET.get("q", "").strip()
         role_filter = request.GET.get("role", "").strip()
 
         if q:
-            qs = qs.filter(
+            base_qs = base_qs.filter(
                 Q(user__username__icontains=q)
                 | Q(user__company_name__icontains=q)
                 | Q(user__parent_reseller__username__icontains=q)
             )
 
         if role_filter in [User.Role.USER, User.Role.RESELLER]:
-            qs = qs.filter(user__role=role_filter)
+            base_qs = base_qs.filter(user__role=role_filter)
 
-        # Handle CSV Export if requested
-        if request.GET.get("export") == "csv":
-            header = [
-                "Date",
-                "Username",
-                "Company Name",
-                "Role",
-                "Parent Reseller",
-                "Total Submissions",
-                "Delivered",
-                "Read",
-                "Failed",
-                "Cost (INR)",
-                "Last Sent At",
-            ]
-
-            def format_row(r):
-                return [
-                    r.date.strftime("%Y-%m-%d") if r.date else "",
-                    r.user.username if r.user else "",
-                    r.user.company_name if r.user else "",
-                    r.user.get_role_display() if r.user and hasattr(r.user, "get_role_display") else (r.user.role if r.user else ""),
-                    r.user.parent_reseller.username if (r.user and r.user.parent_reseller) else "Direct / Admin",
-                    r.total_submission,
-                    r.total_delivered,
-                    r.total_read,
-                    r.total_failed,
-                    str(r.total_cost),
-                    r.last_sent_at.strftime("%Y-%m-%d %H:%M:%S") if r.last_sent_at else "N/A",
-                ]
-
-            return stream_csv_response(
-                filename=f"live_status_{selected_date}.csv",
-                header=header,
-                queryset_iterator=qs.iterator(chunk_size=500),
-                row_formatter=format_row,
-            )
-
-        # Aggregate summary for header KPI cards
-        summary = qs.aggregate(
+        # Overall summary KPI cards (summed across date range)
+        summary = base_qs.aggregate(
             total_submission=Sum("total_submission"),
             total_delivered=Sum("total_delivered"),
             total_read=Sum("total_read"),
@@ -842,22 +843,103 @@ class LiveStatusView(RoleRequiredMixin, View):
         delivery_rate = (total_dlvr / total_sub * 100) if total_sub > 0 else 0
         read_rate = (total_read / total_sub * 100) if total_sub > 0 else 0
 
-        paginator = Paginator(qs, 25)
+        # Aggregate metrics per user over the selected date range
+        aggregated_users = (
+            base_qs.values("user_id")
+            .annotate(
+                total_submission=Sum("total_submission"),
+                total_delivered=Sum("total_delivered"),
+                total_read=Sum("total_read"),
+                total_failed=Sum("total_failed"),
+                total_cost=Sum("total_cost"),
+                last_sent_at=Max("last_sent_at"),
+            )
+            .order_by("-total_submission", "-total_cost")
+        )
+
+        user_ids = [item["user_id"] for item in aggregated_users]
+        users_map = {
+            u.id: u
+            for u in User.objects.filter(id__in=user_ids).select_related("parent_reseller")
+        }
+
+        user_rows = []
+        for item in aggregated_users:
+            account = users_map.get(item["user_id"])
+            if not account:
+                continue
+            user_rows.append(
+                {
+                    "user": account,
+                    "total_submission": item["total_submission"] or 0,
+                    "total_delivered": item["total_delivered"] or 0,
+                    "total_read": item["total_read"] or 0,
+                    "total_failed": item["total_failed"] or 0,
+                    "total_cost": item["total_cost"] or Decimal("0.0000"),
+                    "last_sent_at": item["last_sent_at"],
+                }
+            )
+
+        # Handle CSV Export if requested
+        if request.GET.get("export") == "csv":
+            header = [
+                "Username",
+                "Company Name",
+                "Role",
+                "Parent Reseller",
+                "Total Submissions",
+                "Delivered",
+                "Read",
+                "Failed",
+                "Cost (INR)",
+                "Last Sent At",
+            ]
+
+            def format_row(r):
+                u = r["user"]
+                role_str = u.get_role_display() if hasattr(u, "get_role_display") else u.role
+                parent_str = u.parent_reseller.username if u.parent_reseller else "Direct / Admin"
+                last_sent = r["last_sent_at"].strftime("%Y-%m-%d %H:%M:%S") if r["last_sent_at"] else "N/A"
+                return [
+                    u.username,
+                    u.company_name or "",
+                    role_str,
+                    parent_str,
+                    r["total_submission"],
+                    r["total_delivered"],
+                    r["total_read"],
+                    r["total_failed"],
+                    str(r["total_cost"]),
+                    last_sent,
+                ]
+
+            return stream_csv_response(
+                filename=f"live_status_{from_date}_to_{to_date}.csv",
+                header=header,
+                queryset_iterator=iter(user_rows),
+                row_formatter=format_row,
+            )
+
+        paginator = Paginator(user_rows, 25)
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
 
-        yesterday = today - timedelta(days=1)
+        is_today = (from_date == today and to_date == today)
+        is_yesterday = (from_date == yesterday and to_date == yesterday)
 
         return render(
             request,
             self.template_name,
             {
                 "page_obj": page_obj,
-                "selected_date": selected_date.strftime("%Y-%m-%d"),
+                "from_date": from_date.strftime("%Y-%m-%d"),
+                "to_date": to_date.strftime("%Y-%m-%d"),
                 "today_str": today.strftime("%Y-%m-%d"),
                 "yesterday_str": yesterday.strftime("%Y-%m-%d"),
-                "is_today": selected_date == today,
-                "is_yesterday": selected_date == yesterday,
+                "last_7_days_str": last_7_days.strftime("%Y-%m-%d"),
+                "is_today": is_today,
+                "is_yesterday": is_yesterday,
+                "is_single_day": from_date == to_date,
                 "search_query": q,
                 "selected_role": role_filter,
                 "summary": {
