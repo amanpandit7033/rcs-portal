@@ -379,12 +379,22 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
             .order_by("-created_at")
         )
 
+        today = timezone.now().date()
+        today_str = today.strftime("%Y-%m-%d")
+
         q = request.GET.get("q", "").strip()
         status = request.GET.get("status", "").strip()
         user_id = request.GET.get("user_id", "").strip()
-        from_date = request.GET.get("from_date", "").strip()
-        to_date = request.GET.get("to_date", "").strip()
-        date_str = request.GET.get("date", "").strip()
+
+        has_date_filter = ("from_date" in request.GET) or ("to_date" in request.GET) or ("date" in request.GET)
+        if not has_date_filter:
+            from_date = today_str
+            to_date = today_str
+            date_str = ""
+        else:
+            from_date = request.GET.get("from_date", "").strip()
+            to_date = request.GET.get("to_date", "").strip()
+            date_str = request.GET.get("date", "").strip()
 
         if q:
             qs = qs.filter(user__username__icontains=q)
@@ -405,8 +415,9 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
         completed_campaigns = Campaign.objects.filter(status=Campaign.Status.COMPLETED).count()
         total_recipients = Campaign.objects.aggregate(total=Sum("valid_count"))["total"] or 0
 
-        paginator = Paginator(qs, 20)
+        paginator = Paginator(qs, 10)
         page_obj = paginator.get_page(request.GET.get("page", 1))
+
 
         # Users list for filter dropdown and autocomplete
         users = User.objects.filter(role__in=["user", "reseller"]).order_by("username")

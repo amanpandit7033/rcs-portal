@@ -284,7 +284,27 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if campaigns.has_other_pages %}
+        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div>
+                Showing page <span class="font-semibold text-slate-800">{{ campaigns.number }}</span> of <span class="font-semibold text-slate-800">{{ campaigns.paginator.num_pages }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+                {% if campaigns.has_previous %}
+                <a href="?page={{ campaigns.previous_page_number }}&q={{ search_query }}&status={{ selected_status }}&from_date={{ from_date }}&to_date={{ to_date }}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">Previous</a>
+                {% endif %}
+                {% if campaigns.has_next %}
+                <a href="?page={{ campaigns.next_page_number }}&q={{ search_query }}&status={{ selected_status }}&from_date={{ from_date }}&to_date={{ to_date }}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
+
 
     <!-- Pie Chart Analytics Modal Dialog -->
     <div x-show="chartModalOpen"

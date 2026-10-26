@@ -50,10 +50,19 @@ class CampaignListView(RoleRequiredMixin, View):
             annotated_failed=Count("messages", filter=Q(messages__status="failed"), distinct=True),
         ).order_by("-created_at")
 
+        today = timezone.now().date()
+        today_str = today.strftime("%Y-%m-%d")
+
         status = request.GET.get("status")
         q = request.GET.get("q")
-        from_date = request.GET.get("from_date", "").strip()
-        to_date = request.GET.get("to_date", "").strip()
+
+        has_date_filter = ("from_date" in request.GET) or ("to_date" in request.GET)
+        if not has_date_filter:
+            from_date = today_str
+            to_date = today_str
+        else:
+            from_date = request.GET.get("from_date", "").strip()
+            to_date = request.GET.get("to_date", "").strip()
 
         if status:
             qs = qs.filter(status=status)
@@ -64,8 +73,9 @@ class CampaignListView(RoleRequiredMixin, View):
         if to_date:
             qs = qs.filter(created_at__date__lte=to_date)
 
-        paginator = Paginator(qs, 15)
+        paginator = Paginator(qs, 10)
         page_obj = paginator.get_page(request.GET.get("page", 1))
+
 
         from django.contrib.auth import get_user_model
         User = get_user_model()
