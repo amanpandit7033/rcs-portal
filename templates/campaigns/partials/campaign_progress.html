@@ -1,9 +1,10 @@
-<div id="campaign-progress-card" class="space-y-6"
-     {% if campaign.status in 'running,queued,parsing' %}
+<div id="campaign-progress-card" class="space-y-6" data-status="{{ campaign.status }}"
+     {% if campaign.status in 'running,queued,parsing,scheduled' %}
      hx-get="{% url 'campaigns:campaign_progress' campaign.id %}"
-     hx-trigger="every 2s"
+     hx-trigger="{% if campaign.status == 'scheduled' %}every 3s{% else %}every 2s{% endif %}"
      hx-swap="outerHTML"
      {% endif %}>
+
 
     <!-- Status & Live Progress Header -->
     <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">

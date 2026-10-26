@@ -84,6 +84,7 @@ def submit_message(
     ttl: Optional[int] = None,
     url_shortener_flag: bool = False,
     url_shortener_track_user: bool = False,
+    update_metrics: bool = True,
 ) -> Message:
     """Validate, debit wallet, persist queued Message in ONE atomic transaction, and queue Celery task."""
     from .tasks import send_message_task
@@ -178,6 +179,20 @@ def submit_message(
             status=Message.Status.QUEUED,
         )
 
+    if update_metrics:
+        try:
+            from reports.models import record_submission_and_cost
+            record_submission_and_cost(
+                user_id=user.id,
+                count=1,
+                cost=message.cost,
+                date=message.created_at.date() if message.created_at else None,
+                timestamp=message.created_at or None,
+            )
+        except Exception as metric_err:
+            import logging
+            logging.getLogger(__name__).warning("Failed recording submission/cost in submit_message: %s", metric_err)
+
     # Queue routing: priority for OTP/Transactional, bulk for Promotional
     if message_type in [Message.MessageType.OTP, Message.MessageType.TRANSACTIONAL]:
         queue_name = "priority"
@@ -188,3 +203,4 @@ def submit_message(
     send_message_task.apply_async(args=[str(message.id)], queue=queue_name)
 
     return message
+

@@ -249,3 +249,66 @@ def sync_live_status(user_id=None, date=None, from_date=None, to_date=None):
             },
         )
 
+
+def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), date=None, timestamp=None):
+    """
+    Directly updates total_submission / sent_count and total_cost
+    in both LiveStatus and MISBilling tables in real time upon message submission/dispatch,
+    without requiring carrier DLR callbacks.
+    """
+    if not user_id or count <= 0:
+        return
+
+    from django.utils import timezone
+    from django.db.models import F
+
+    if date is None:
+        date = timezone.now().date()
+    if timestamp is None:
+        timestamp = timezone.now()
+    if cost is None:
+        cost = Decimal("0.0000")
+    else:
+        cost = Decimal(str(cost))
+
+    # 1. Update or create LiveStatus
+    live_record, created = LiveStatus.objects.get_or_create(
+        user_id=user_id,
+        date=date,
+        defaults={
+            "total_submission": count,
+            "total_delivered": 0,
+            "total_read": 0,
+            "total_failed": 0,
+            "total_cost": cost,
+            "last_sent_at": timestamp,
+        },
+    )
+    if not created:
+        LiveStatus.objects.filter(pk=live_record.pk).update(
+            total_submission=F("total_submission") + count,
+            total_cost=F("total_cost") + cost,
+            last_sent_at=timestamp,
+            updated_at=timezone.now(),
+        )
+
+    # 2. Update or create MISBilling
+    mis_record, created = MISBilling.objects.get_or_create(
+        user_id=user_id,
+        date=date,
+        defaults={
+            "sent_count": count,
+            "delivered_count": 0,
+            "read_count": 0,
+            "failed_count": 0,
+            "total_cost": cost,
+        },
+    )
+    if not created:
+        MISBilling.objects.filter(pk=mis_record.pk).update(
+            sent_count=F("sent_count") + count,
+            total_cost=F("total_cost") + cost,
+            updated_at=timezone.now(),
+        )
+
+

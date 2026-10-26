@@ -105,8 +105,21 @@ class MessageSendAPIView(IdempotencyMixin, APIView):
                     custref5=custref5,
                     custref6=custref6,
                     ttl=ttl,
+                    update_metrics=False,
                 )
                 created_messages.append(msg)
+
+        if created_messages:
+            total_batch_cost = sum((m.cost for m in created_messages), Decimal("0.0000"))
+            try:
+                from reports.models import record_submission_and_cost
+                record_submission_and_cost(
+                    user_id=user.id,
+                    count=len(created_messages),
+                    cost=total_batch_cost,
+                )
+            except Exception as metric_err:
+                logger.warning("Failed recording API submission/cost metrics: %s", metric_err)
 
         out_serializer = SingleMessageResultSerializer(created_messages, many=True)
         resp_data = {
@@ -159,8 +172,21 @@ class BulkMessageSendAPIView(IdempotencyMixin, APIView):
                     template_id=template_id,
                     custom_params=item.get("custom_params", {}),
                     custref1=item.get("custref1", ""),
+                    update_metrics=False,
                 )
                 created_messages.append(msg)
+
+        if created_messages:
+            total_batch_cost = sum((m.cost for m in created_messages), Decimal("0.0000"))
+            try:
+                from reports.models import record_submission_and_cost
+                record_submission_and_cost(
+                    user_id=user.id,
+                    count=len(created_messages),
+                    cost=total_batch_cost,
+                )
+            except Exception as metric_err:
+                logger.warning("Failed recording bulk API submission/cost metrics: %s", metric_err)
 
         out_serializer = SingleMessageResultSerializer(created_messages, many=True)
         return Response(
@@ -171,6 +197,7 @@ class BulkMessageSendAPIView(IdempotencyMixin, APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
 
 
 # ---------------------------------------------------------------------------

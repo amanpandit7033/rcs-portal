@@ -128,4 +128,17 @@
         </div>
     </div>
 </div>
+
+<script>
+    let campaignInitialStatus = "{{ campaign.status }}";
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target && evt.detail.target.id === 'campaign-progress-card') {
+            const currentStatus = evt.detail.target.getAttribute('data-status');
+            if (campaignInitialStatus === 'scheduled' && (currentStatus === 'running' || currentStatus === 'completed')) {
+                window.location.reload();
+            }
+        }
+    });
+</script>
 {% endblock %}
+

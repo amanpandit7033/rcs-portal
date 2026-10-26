@@ -18,8 +18,39 @@ from .utils import stream_file_records
 logger = logging.getLogger(__name__)
 
 
+def parse_flexible_datetime(dt_str):
+    """Parse ISO or common datetime strings into a timezone-aware datetime."""
+    if not dt_str:
+        return None
+    dt_str = str(dt_str).strip()
+    from django.utils.dateparse import parse_datetime
+    dt = parse_datetime(dt_str)
+    if not dt:
+        from datetime import datetime
+        for fmt in [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%d-%m-%Y %H:%M",
+            "%d-%m-%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+            "%d/%m/%Y %H:%M:%S",
+            "%Y/%m/%d %H:%M",
+        ]:
+            try:
+                dt = datetime.strptime(dt_str, fmt)
+                break
+            except ValueError:
+                pass
+    if dt and timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
 @shared_task(bind=True, max_retries=2, default_retry_delay=5)
 def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, schedule_datetime: str = None):
+
     """Parse uploaded CSV/XLSX in streaming chunks without loading full file into memory.
 
     Validates phone numbers, eliminates duplicate recipients, stores contacts, and updates totals.
@@ -145,16 +176,14 @@ def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, 
 
                     is_scheduled = False
                     if schedule_datetime:
-                        from django.utils.dateparse import parse_datetime
-
-                        dt = parse_datetime(schedule_datetime)
-                        if dt and timezone.is_naive(dt):
-                            dt = timezone.make_aware(dt, timezone.get_current_timezone())
+                        dt = parse_flexible_datetime(schedule_datetime)
                         if dt and dt > timezone.now():
                             campaign.scheduled_at = dt
                             campaign.status = Campaign.Status.SCHEDULED
                             campaign.save(update_fields=["scheduled_at", "status", "updated_at"])
                             is_scheduled = True
+                            logger.info("Campaign %s scheduled for %s.", campaign.id, dt)
+
 
                     if not is_scheduled:
                         campaign.status = Campaign.Status.QUEUED
@@ -276,6 +305,14 @@ def run_campaign_task(self, campaign_id: str):
         campaign.refresh_from_db(fields=["status", "reserved_amount"])
         if campaign.status in [Campaign.Status.PAUSED, Campaign.Status.CANCELLED]:
             logger.info("Campaign %s was %s. Gracefully stopping runner loop.", campaign.id, campaign.status)
+            try:
+                from reports.models import sync_user_daily_mis, sync_live_status
+                if campaign.user_id:
+                    c_date = campaign.created_at.date() if campaign.created_at else timezone.now().date()
+                    sync_user_daily_mis(user_id=campaign.user_id, date=c_date)
+                    sync_live_status(user_id=campaign.user_id, date=c_date)
+            except Exception:
+                pass
             return
 
         pending_contacts = list(
@@ -289,6 +326,7 @@ def run_campaign_task(self, campaign_id: str):
             # All contacts processed!
             break
 
+        chunk_dispatched_messages = []
         for contact in pending_contacts:
             throttle_rate_limit()
 
@@ -335,6 +373,7 @@ def run_campaign_task(self, campaign_id: str):
             contact.status = CampaignContact.Status.DISPATCHED
             contact.message = message
             contact.save(update_fields=["status", "message"])
+            chunk_dispatched_messages.append(message)
 
             if is_skipped:
                 # Credit rebate to parent reseller based on their configured rate plan
@@ -368,6 +407,22 @@ def run_campaign_task(self, campaign_id: str):
                 # Queue on the 'bulk' queue to prevent starving priority transactional messages
                 send_message_task.apply_async(args=[str(message.id)], queue="bulk")
 
+        # Immediately update submission count and cost in LiveStatus and MISBilling
+        if chunk_dispatched_messages:
+            chunk_count = len(chunk_dispatched_messages)
+            chunk_cost = sum((m.cost for m in chunk_dispatched_messages), Decimal("0.0000"))
+            try:
+                from reports.models import record_submission_and_cost
+                record_submission_and_cost(
+                    user_id=campaign.user_id,
+                    count=chunk_count,
+                    cost=chunk_cost,
+                    date=timezone.now().date(),
+                    timestamp=timezone.now(),
+                )
+            except Exception as e:
+                logger.warning("Failed updating submission/cost metrics for campaign chunk: %s", e)
+
         # Update processed counter for live progress bar
         campaign.processed_count = CampaignContact.objects.filter(
             campaign=campaign,
@@ -378,6 +433,7 @@ def run_campaign_task(self, campaign_id: str):
             ],
         ).count()
         campaign.save(update_fields=["processed_count", "reserved_amount", "updated_at"])
+
 
     # Completed dispatch loop
     campaign.refresh_from_db()
@@ -416,20 +472,24 @@ def run_campaign_task(self, campaign_id: str):
 
 @shared_task
 def check_scheduled_campaigns():
-    """Periodic Celery Beat task scanning for scheduled campaigns ready for dispatch."""
+    """Periodic task scanning for scheduled campaigns ready for dispatch."""
     now = timezone.now()
-    scheduled_campaigns = Campaign.objects.filter(
-        status=Campaign.Status.SCHEDULED,
-        scheduled_at__lte=now,
-    )
+    ready_campaigns = []
 
-    count = 0
-    for campaign in scheduled_campaigns:
-        campaign.status = Campaign.Status.QUEUED
-        campaign.save(update_fields=["status", "updated_at"])
-        run_campaign_task.delay(campaign.id)
-        count += 1
+    with transaction.atomic():
+        ready_campaigns = list(
+            Campaign.objects.select_for_update(skip_locked=True)
+            .filter(
+                status=Campaign.Status.SCHEDULED,
+                scheduled_at__lte=now,
+            )
+        )
+        for campaign in ready_campaigns:
+            campaign.status = Campaign.Status.QUEUED
+            campaign.save(update_fields=["status", "updated_at"])
+            run_campaign_task.delay(str(campaign.id))
 
-    if count > 0:
-        logger.info("check_scheduled_campaigns: Launched %d scheduled campaigns.", count)
-    return count
+    if ready_campaigns:
+        logger.info("check_scheduled_campaigns: Launched %d scheduled campaigns.", len(ready_campaigns))
+    return len(ready_campaigns)
+

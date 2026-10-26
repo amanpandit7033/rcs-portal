@@ -362,6 +362,12 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
     template_name = "reports/admin_campaign_reports.html"
 
     def get(self, request):
+        try:
+            from campaigns.tasks import check_scheduled_campaigns
+            check_scheduled_campaigns()
+        except Exception:
+            pass
+
         qs = (
             Campaign.objects.all()
             .select_related("user", "sender_profile", "template")
@@ -578,20 +584,22 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
         ).count()
         campaign.save(update_fields=["processed_count", "updated_at"])
 
-        # 7. Sync MIS Billing for updated campaign
+        # 7. Sync MIS Billing and Live Status for updated campaign
         try:
-            from .models import sync_user_daily_mis
+            from .models import sync_user_daily_mis, sync_live_status
             if campaign.user_id:
                 c_date = campaign.created_at.date() if campaign.created_at else timezone.now().date()
                 sync_user_daily_mis(user_id=campaign.user_id, date=c_date)
+                sync_live_status(user_id=campaign.user_id, date=c_date)
         except Exception as sync_err:
-            logger.warning("Failed to sync MIS billing after status update: %s", sync_err)
+            logger.warning("Failed to sync MIS billing / Live Status after status update: %s", sync_err)
 
         messages.success(
             request,
             f"Successfully updated {actual_update_count} message(s) from '{from_status.replace('_', ' ').title()}' to '{to_status.title()}' in '{campaign.name}'.",
         )
         return redirect("reports:admin_campaign_reports")
+
 
 
 # ---------------------------------------------------------------------------
@@ -683,10 +691,22 @@ class MISBillingView(RoleRequiredMixin, View):
                 qs = qs.filter(user__role=User.Role.USER)
 
         # Date range filtering
+        today = timezone.now().date()
+        if from_date and to_date and from_date <= today <= to_date:
+            try:
+                from .models import sync_user_daily_mis
+                sync_user_daily_mis(
+                    user_id=None if getattr(user, "is_admin", False) else user.id,
+                    date=today,
+                )
+            except Exception as sync_err:
+                logger.warning("Auto sync MISBilling error: %s", sync_err)
+
         if from_date:
             qs = qs.filter(date__gte=from_date)
         if to_date:
             qs = qs.filter(date__lte=to_date)
+
 
         # Handle CSV Export if requested
         if request.GET.get("export") == "csv":

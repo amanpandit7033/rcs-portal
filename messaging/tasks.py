@@ -181,7 +181,18 @@ def send_message_task(self, message_id: str):
             )
         except Exception:
             pass
+
+        try:
+            from reports.models import sync_user_daily_mis, sync_live_status
+            if message and message.user_id:
+                m_date = message.created_at.date() if message.created_at else timezone.now().date()
+                sync_user_daily_mis(user_id=message.user_id, date=m_date)
+                sync_live_status(user_id=message.user_id, date=m_date)
+        except Exception as sync_err:
+            logger.warning("Failed syncing MIS / Live Status on send_message_task failure: %s", sync_err)
+
         raise e
+
 
 
 # Status progression ranks to prevent backwards or out-of-order transitions

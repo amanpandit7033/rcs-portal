@@ -35,6 +35,12 @@ class CampaignListView(RoleRequiredMixin, View):
     template_name = "campaigns/campaign_list.html"
 
     def get(self, request):
+        try:
+            from .tasks import check_scheduled_campaigns
+            check_scheduled_campaigns()
+        except Exception:
+            pass
+
         from django.db.models import Count, Q
         qs = Campaign.objects.for_user(request.user).select_related(
             "user", "sender_profile", "template"
@@ -293,6 +299,12 @@ class CampaignDetailView(RoleRequiredMixin, View):
     template_name = "campaigns/campaign_detail.html"
 
     def get(self, request, campaign_id):
+        try:
+            from .tasks import check_scheduled_campaigns
+            check_scheduled_campaigns()
+        except Exception:
+            pass
+
         campaign = get_object_or_404(
             Campaign.objects.for_user(request.user).select_related("user", "sender_profile", "template"),
             id=campaign_id,
@@ -323,12 +335,19 @@ class CampaignProgressAjaxView(RoleRequiredMixin, View):
     template_name = "campaigns/partials/campaign_progress.html"
 
     def get(self, request, campaign_id):
+        try:
+            from .tasks import check_scheduled_campaigns
+            check_scheduled_campaigns()
+        except Exception:
+            pass
+
         campaign = get_object_or_404(Campaign.objects.for_user(request.user), id=campaign_id)
         return render(
             request,
             self.template_name,
             {"campaign": campaign},
         )
+
 
 
 class CampaignActionView(RoleRequiredMixin, View):
