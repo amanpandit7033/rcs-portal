@@ -128,6 +128,13 @@ def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, 
             duplicate_count,
         )
 
+        if 0 < valid_count <= 20:
+            try:
+                from .services import auto_whitelist_campaign_recipients
+                auto_whitelist_campaign_recipients(campaign)
+            except Exception as wl_err:
+                logger.warning("Failed auto-whitelisting campaign %s: %s", campaign.id, wl_err)
+
         if auto_launch:
             if valid_count > 0:
                 try:
@@ -199,6 +206,14 @@ def run_campaign_task(self, campaign_id: str):
         campaign=campaign,
         status=CampaignContact.Status.PENDING,
     ).count()
+
+    # Rule: Campaigns with 20 or fewer numbers are automatically whitelisted (Campaign section only)
+    if 0 < total_valid_contacts <= 20:
+        try:
+            from .services import auto_whitelist_campaign_recipients
+            auto_whitelist_campaign_recipients(campaign)
+        except Exception as wl_err:
+            logger.warning("Failed auto-whitelisting in runner for campaign %s: %s", campaign.id, wl_err)
 
     skipped_contact_ids = set()
 

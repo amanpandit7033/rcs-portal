@@ -59,7 +59,7 @@
             <table class="w-full text-left text-xs border-collapse">
                 <thead class="bg-slate-50/80 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5 font-medium">Client Tenant</th>
+                        <th scope="col" class="px-5 py-3.5 font-medium">Username</th>
                         <th scope="col" class="px-5 py-3.5 font-medium text-center">Volume</th>
                         <th scope="col" class="px-5 py-3.5 font-medium text-center">Delivered</th>
                         <th scope="col" class="px-5 py-3.5 font-medium text-right">Billed Revenue</th>
@@ -72,7 +72,7 @@
                     {% for c in client_stats %}
                     <tr class="hover:bg-slate-50/70 transition-colors">
                         <td class="px-5 py-4">
-                            <div class="font-semibold text-slate-900">{{ c.client.company_name|default:c.client.email }}</div>
+                            <div class="font-semibold text-slate-900">{{ c.client.username }}</div>
                             <div class="text-[11px] text-slate-400 font-mono mt-0.5">{{ c.client.email }}</div>
                         </td>
                         <td class="px-5 py-4 text-center font-mono font-medium text-slate-800">{{ c.total_count }}</td>

@@ -120,7 +120,7 @@
                 <thead>
                     <tr class="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                         {% if is_admin_view %}
-                        <th class="py-3 px-5 font-medium">User / Account</th>
+                        <th class="py-3 px-5 font-medium">Username</th>
                         {% endif %}
                         <th class="py-3 px-5 font-medium">IP Address</th>
                         <th class="py-3 px-5 font-medium">Device &amp; Browser</th>
@@ -138,8 +138,8 @@
                                     {{ rec.user.username|slice:":1"|upper }}
                                 </span>
                                 <div>
-                                    <span class="font-bold text-slate-900 block">{{ rec.user.company_name|default:rec.user.username }}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono block">@{{ rec.user.username }} &bull; {{ rec.user.get_role_display|default:rec.user.role }}</span>
+                                    <span class="font-bold text-slate-900 block">{{ rec.user.username }}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono block">{{ rec.user.get_role_display|default:rec.user.role }}</span>
                                 </div>
                             </div>
                         </td>

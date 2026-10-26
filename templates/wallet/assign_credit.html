@@ -104,7 +104,7 @@
             <table class="w-full text-left text-xs border-collapse">
                 <thead>
                     <tr class="border-b border-slate-200/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                        <th class="py-3 px-3">Target Account</th>
+                        <th class="py-3 px-3">Username</th>
                         <th class="py-3 px-3">Role</th>
                         <th class="py-3 px-3">Operation</th>
                         <th class="py-3 px-3 text-right">Amount</th>
@@ -118,8 +118,7 @@
                     {% for tx in recent_transactions %}
                     <tr class="hover:bg-slate-50/70 transition-colors">
                         <td class="py-3.5 px-3">
-                            <div class="font-semibold text-slate-900">{{ tx.wallet.user.company_name|default:tx.wallet.user.username }}</div>
-                            <div class="text-[11px] text-slate-400 font-mono">@{{ tx.wallet.user.username }}</div>
+                            <div class="font-semibold text-slate-900">{{ tx.wallet.user.username }}</div>
                         </td>
                         <td class="py-3.5 px-3">
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium {% if tx.wallet.user.role == 'reseller' %}bg-amber-100 text-amber-800{% else %}bg-blue-100 text-blue-800{% endif %}">

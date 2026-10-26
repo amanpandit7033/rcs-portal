@@ -57,7 +57,7 @@
                     <tr>
                         <th class="px-5 py-3.5 font-medium">Timestamp</th>
                         {% if not request.user.is_regular_user %}
-                        <th class="px-5 py-3.5 font-medium">Account</th>
+                        <th class="px-5 py-3.5 font-medium">Username</th>
                         {% endif %}
                         <th class="px-5 py-3.5 font-medium">Type</th>
                         <th class="px-5 py-3.5 font-medium">Amount</th>
@@ -73,7 +73,7 @@
                         </td>
                         {% if not request.user.is_regular_user %}
                         <td class="px-5 py-4 text-slate-700">
-                            <div class="font-semibold text-slate-900">{{ tx.wallet.user.company_name|default:tx.wallet.user.get_full_name }}</div>
+                            <div class="font-semibold text-slate-900">{{ tx.wallet.user.username }}</div>
                             <div class="text-[11px] text-slate-500 font-mono mt-0.5">{{ tx.wallet.user.email }}</div>
                         </td>
                         {% endif %}

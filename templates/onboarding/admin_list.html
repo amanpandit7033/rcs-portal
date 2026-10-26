@@ -72,8 +72,7 @@
                             #{{ app.id }}
                         </td>
                         <td class="px-5 py-4">
-                            <div class="font-bold text-slate-900">{{ app.user.company_name|default:app.user.get_full_name|default:app.user.username }}</div>
-                            <div class="text-[11px] text-blue-600 font-mono">@{{ app.user.username }}</div>
+                            <div class="font-bold text-slate-900">{{ app.user.username }}</div>
                             {% if app.brand_spoc_name %}<div class="text-[11px] text-slate-400">SPOC: {{ app.brand_spoc_name }}</div>{% endif %}
                         </td>
                         <td class="px-5 py-4">

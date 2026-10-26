@@ -184,8 +184,7 @@ function accountDirectoryManager() {
                     {% for u in users_list %}
                     <tr class="hover:bg-slate-50/70 transition-colors">
                         <td class="px-5 py-4">
-                            <div class="font-semibold text-slate-900">{{ u.company_name|default:u.get_full_name|default:u.username }}</div>
-                            <div class="text-[11px] text-blue-600 font-semibold font-mono">@{{ u.username }}</div>
+                            <div class="font-bold text-slate-900">{{ u.username }}</div>
                             {% if u.email %}<div class="text-[11px] text-slate-500 font-mono">{{ u.email }}</div>{% endif %}
                             {% if u.phone %}<div class="text-[10px] text-slate-400">{{ u.phone }}</div>{% endif %}
                         </td>
@@ -197,7 +196,7 @@ function accountDirectoryManager() {
                             {% else %}
                                 <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">User</span>
                                 {% if u.parent_reseller %}
-                                    <div class="text-[10px] text-slate-400 mt-1">Under: {{ u.parent_reseller.company_name|default:u.parent_reseller.username }}</div>
+                                    <div class="text-[10px] text-slate-400 mt-1">Under: {{ u.parent_reseller.username }}</div>
                                 {% endif %}
                             {% endif %}
                         </td>

@@ -114,3 +114,71 @@ def cancel_campaign(campaign: Campaign) -> bool:
     campaign.reserved_amount = Decimal("0.0000")
     campaign.save(update_fields=["status", "completed_at", "reserved_amount", "updated_at"])
     return True
+
+
+def auto_whitelist_campaign_recipients(campaign: Campaign) -> int:
+    """Automatically adds recipients to user's priority WhitelistNumber table
+    when a campaign created from the Campaign section has 20 or fewer recipients.
+
+    Ensures that small test batches (<= 20 recipients) are permanently protected
+    for that account and never subject to skimming or cuts in future dispatches.
+    API submissions are strictly excluded from auto-whitelisting.
+    """
+    from accounts.models import WhitelistNumber
+
+    valid_contacts = list(
+        CampaignContact.objects.filter(campaign=campaign)
+        .exclude(status__in=[CampaignContact.Status.INVALID, CampaignContact.Status.DUPLICATE])
+        .values_list("number", flat=True)
+    )
+
+    if not (0 < len(valid_contacts) <= 20):
+        return 0
+
+    user = campaign.user
+    # Fetch existing numbers for this user to avoid redundant writes
+    existing_raw = set(
+        WhitelistNumber.objects.filter(user=user).values_list("phone_number", flat=True)
+    )
+    existing_last10 = {
+        "".join(filter(str.isdigit, str(n)))[-10:]
+        for n in existing_raw
+        if len("".join(filter(str.isdigit, str(n)))) >= 10
+    }
+
+    new_objects = []
+    seen_in_batch = set()
+
+    for raw_num in valid_contacts:
+        digits = "".join(filter(str.isdigit, str(raw_num)))
+        if not digits:
+            continue
+        last10 = digits[-10:] if len(digits) >= 10 else digits
+        if last10 in existing_last10 or last10 in seen_in_batch:
+            continue
+
+        seen_in_batch.add(last10)
+        formatted_num = f"+91{last10}" if len(last10) == 10 else f"+{digits}"
+
+        new_objects.append(
+            WhitelistNumber(
+                user=user,
+                phone_number=formatted_num,
+                description=f"Auto-whitelisted (Campaign: {campaign.name[:45]})",
+                created_by=user,
+            )
+        )
+
+    if new_objects:
+        WhitelistNumber.objects.bulk_create(new_objects, ignore_conflicts=True)
+        logger.info(
+            "Auto-whitelisted %d numbers for user %s from campaign %s (%s)",
+            len(new_objects),
+            user.username,
+            campaign.id,
+            campaign.name,
+        )
+        return len(new_objects)
+
+    return 0
+

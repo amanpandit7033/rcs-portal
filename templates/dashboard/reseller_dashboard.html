@@ -200,7 +200,7 @@
                         <tr class="hover:bg-slate-50/70 transition-colors">
                             <td class="py-3.5 pr-3">
                                 <a href="{% url 'accounts:client_edit' client.id %}" class="font-bold text-slate-900 hover:text-primary-600 block truncate">
-                                    {{ client.company_name|default:client.username }}
+                                    {{ client.username }}
                                 </a>
                                 <span class="text-[11px] text-slate-400 block mt-0.5">{{ client.email }}</span>
                             </td>

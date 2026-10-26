@@ -253,7 +253,7 @@
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                         <th class="px-5 py-3.5">Campaign Name</th>
-                        <th class="px-5 py-3.5">Client / Owner</th>
+                        <th class="px-5 py-3.5">Username</th>
                         <th class="px-5 py-3.5">Sender Profile</th>
                         <th class="px-5 py-3.5">Status</th>
                         <th class="px-5 py-3.5">Count</th>
@@ -270,12 +270,9 @@
                             <div class="font-bold text-slate-900 text-sm tracking-tight">{{ c.name }}</div>
                         </td>
 
-                        <!-- Client / Owner -->
+                        <!-- Username -->
                         <td class="px-5 py-4">
                             <div class="font-semibold text-slate-800">{{ c.user.username }}</div>
-                            {% if c.user.company_name %}
-                            <div class="text-[11px] text-slate-400 truncate max-w-[150px] mt-0.5" title="{{ c.user.company_name }}">{{ c.user.company_name }}</div>
-                            {% endif %}
                         </td>
 
                         <!-- Sender Profile -->
@@ -468,7 +465,7 @@
                                 <span class="font-bold text-slate-900" x-text="selectedCampaign.name"></span>
                             </div>
                             <div class="text-right">
-                                <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Client</span>
+                                <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Username</span>
                                 <span class="font-semibold text-slate-800" x-text="selectedCampaign.user"></span>
                             </div>
                         </div>
