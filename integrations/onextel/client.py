@@ -27,11 +27,20 @@ class OneXtelClient:
         base_url: Optional[str] = None,
         mock: Optional[bool] = None,
     ):
-        self.api_key = api_key or getattr(settings, "ONEXTEL_API_KEY", "")
+        raw_key = api_key if api_key is not None else getattr(settings, "ONEXTEL_API_KEY", "")
+        self.api_key = (raw_key or "").strip()
         self.base_url = (base_url or getattr(settings, "ONEXTEL_BASE_URL", "https://api.onexaura.com")).rstrip("/")
         self.mock = mock if mock is not None else getattr(settings, "ONEXTEL_MOCK", False)
 
+    def _ensure_api_key(self) -> None:
+        if not self.mock and not self.api_key:
+            raise OneXtelClientError(
+                "Bot API Key is missing. Each bot / sender profile requires its own API key provided by the operator. "
+                "Please configure the Bot API Key in Sender Profiles."
+            )
+
     def _get_headers(self, content_type: Optional[str] = "application/json") -> Dict[str, str]:
+        self._ensure_api_key()
         headers = {"apikey": self.api_key}
         if content_type:
             headers["Content-Type"] = content_type

@@ -47,6 +47,7 @@ class RatePlanAdmin(admin.ModelAdmin):
 
 @admin.register(SenderProfile)
 class SenderProfileAdmin(admin.ModelAdmin):
-    list_display = ("sender_profile_name", "sender_id", "user", "is_active", "created_at")
+    list_display = ("sender_profile_name", "sender_id", "api_key", "user", "is_active", "created_at")
     list_filter = ("is_active",)
-    search_fields = ("sender_profile_name", "sender_id", "user__email")
+    search_fields = ("sender_profile_name", "sender_id", "api_key", "user__email")
+

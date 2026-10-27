@@ -336,19 +336,28 @@ class ManageSenderProfilesView(AdminRequiredMixin, View):
 
     def post(self, request, user_id):
         target_user = get_object_or_404(User, id=user_id)
-        form = SenderProfileForm(request.POST)
+        profile_id = request.POST.get("profile_id")
         next_url = request.POST.get("next") or request.GET.get("next")
+        
+        if profile_id:
+            profile_instance = get_object_or_404(SenderProfile, id=profile_id, user=target_user)
+            form = SenderProfileForm(request.POST, instance=profile_instance)
+        else:
+            form = SenderProfileForm(request.POST)
+
         if form.is_valid():
             profile = form.save(commit=False)
             profile.user = target_user
             profile.save()
-            messages.success(request, f"Sender profile '{profile.sender_profile_name}' assigned to {target_user.email}.")
+            action_verb = "updated" if profile_id else "assigned to"
+            messages.success(request, f"Sender profile '{profile.sender_profile_name}' {action_verb} {target_user.email}.")
             if next_url:
                 return redirect(next_url)
             return redirect("wallet:sender_profiles", user_id=target_user.id)
 
         if next_url:
-            messages.error(request, "Failed to add sender profile. Please check the inputs.")
+            errors_str = " ".join([f"{f}: {e[0]}" for f, e in form.errors.items()]) if form.errors else "Please check the inputs."
+            messages.error(request, f"Failed to save sender profile: {errors_str}")
             return redirect(next_url)
 
         profiles = target_user.sender_profiles.all()
@@ -378,3 +387,21 @@ class ToggleSenderProfileActiveView(AdminRequiredMixin, View):
         if next_url:
             return redirect(next_url)
         return redirect("wallet:sender_profiles", user_id=profile.user_id)
+
+
+class DeleteSenderProfileView(AdminRequiredMixin, View):
+    """Delete a sender profile."""
+
+    def post(self, request, profile_id):
+        profile = get_object_or_404(SenderProfile, id=profile_id)
+        user_id = profile.user_id
+        name = profile.sender_profile_name
+        try:
+            profile.delete()
+            messages.success(request, f"Sender profile '{name}' deleted successfully.")
+        except Exception:
+            messages.error(request, f"Cannot delete sender profile '{name}': It is referenced by existing messages or campaigns.")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
+        return redirect("wallet:sender_profiles", user_id=user_id)

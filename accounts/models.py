@@ -141,6 +141,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 "id": sp.id,
                 "sender_id": sp.sender_id,
                 "sender_profile_name": sp.sender_profile_name,
+                "api_key": sp.api_key,
                 "is_active": sp.is_active,
                 "created_at": sp.created_at.strftime("%b %d, %Y") if sp.created_at else "",
             }

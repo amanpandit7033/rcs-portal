@@ -18,11 +18,16 @@ def sync_pending_templates(self):
         return "No pending templates to sync."
 
     logger.info("Starting sync for %d pending RCS templates...", total_count)
-    client = OneXtelClient()
     updated_count = 0
 
     for template in pending_templates:
         try:
+            bot_api_key = (
+                template.sender_profile.api_key.strip()
+                if (template.sender_profile and template.sender_profile.api_key)
+                else ""
+            )
+            client = OneXtelClient(api_key=bot_api_key)
             profile_name = template.sender_profile.sender_id or template.sender_profile.sender_profile_name
             resp = client.fetch_templates(
                 sender_profile=profile_name,

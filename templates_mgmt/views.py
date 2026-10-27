@@ -158,7 +158,12 @@ class TemplateCreateView(RoleRequiredMixin, View):
         data_payload["name"] = name
         data_payload["type"] = template_type
 
-        client = OneXtelClient()
+        bot_api_key = (
+            sender_profile.api_key.strip()
+            if (sender_profile and sender_profile.api_key)
+            else ""
+        )
+        client = OneXtelClient(api_key=bot_api_key)
         bot_identifier = sender_profile.sender_id or sender_profile.sender_profile_name
         try:
             resp = client.create_template(
@@ -240,7 +245,12 @@ class TemplateRefreshStatusView(RoleRequiredMixin, View):
 
     def post(self, request, pk):
         template = get_object_or_404(Template.objects.for_user(request.user), pk=pk)
-        client = OneXtelClient()
+        bot_api_key = (
+            template.sender_profile.api_key.strip()
+            if (template.sender_profile and template.sender_profile.api_key)
+            else ""
+        )
+        client = OneXtelClient(api_key=bot_api_key)
 
         try:
             bot_id = template.sender_profile.sender_id or template.sender_profile.sender_profile_name

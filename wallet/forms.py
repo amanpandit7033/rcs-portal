@@ -168,10 +168,11 @@ class SenderProfileForm(forms.ModelForm):
 
     class Meta:
         model = SenderProfile
-        fields = ["sender_id", "sender_profile_name", "is_active"]
+        fields = ["sender_id", "sender_profile_name", "api_key", "is_active"]
         widgets = {
             "sender_id": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. acme_rcs_bot_01"}),
             "sender_profile_name": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. Acme Verified Brand"}),
+            "api_key": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. onex_live_api_key_..."}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
         }
 

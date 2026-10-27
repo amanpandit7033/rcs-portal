@@ -59,7 +59,12 @@ def sync_sender_profile_templates(
         Dict with 'imported', 'updated', 'total', 'errors' count and messages.
     """
     if client is None:
-        client = OneXtelClient()
+        bot_api_key = (
+            sender_profile.api_key.strip()
+            if (sender_profile and sender_profile.api_key)
+            else ""
+        )
+        client = OneXtelClient(api_key=bot_api_key)
 
     if not message_types:
         message_types = ["promotional", "transactional", "otp"]

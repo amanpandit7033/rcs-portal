@@ -195,6 +195,13 @@ class SenderProfile(models.Model):
         max_length=255,
         help_text="Display brand name shown on customer handsets",
     )
+    api_key = models.CharField(
+        "Bot API Key",
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Bot-specific API key",
+    )
     is_active = models.BooleanField("Active", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -192,8 +192,8 @@ AXES_COOLOFF_TIME = env.int("AXES_COOLOFF_TIME", default=1)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "accounts/lockout.html"
 
-# OneXtel API Integration settings
-ONEXTEL_API_KEY = env("ONEXTEL_API_KEY", default="mock-key")
+# OneXtel API Integration settings (Per-bot keys configured in SenderProfile)
+ONEXTEL_API_KEY = env("ONEXTEL_API_KEY", default="")
 ONEXTEL_BASE_URL = env("ONEXTEL_BASE_URL", default="https://api.onexaura.com")
 ONEXTEL_MOCK = env.bool("ONEXTEL_MOCK", default=False)
 ONEXTEL_MAX_TPS = env.int("ONEXTEL_MAX_TPS", default=100)

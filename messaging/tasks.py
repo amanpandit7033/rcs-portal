@@ -118,9 +118,12 @@ def send_message_task(self, message_id: str):
         logger.info("Message %s already in state %s. Skipping.", message_id, message.status)
         return
 
-    throttle_rate_limit()
-
-    client = OneXtelClient()
+    bot_api_key = (
+        message.sender_profile.api_key.strip()
+        if (message.sender_profile and message.sender_profile.api_key)
+        else ""
+    )
+    client = OneXtelClient(api_key=bot_api_key)
     rcs_item = build_onextel_rcs_item(message)
     url_shortener = message.payload.get("urlShortener", {})
 
