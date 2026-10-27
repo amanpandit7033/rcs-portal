@@ -26,13 +26,25 @@ def wallet_context(request):
     except Exception:
         pass
 
-    # 2. Check for active reseller impersonation session
-    impersonator_id = request.session.get("_impersonator_user_id")
-    if impersonator_id:
+    # 2. Check for active impersonation session stack
+    stack = list(request.session.get("_impersonator_stack", []))
+    if not stack and request.session.get("_impersonator_user_id"):
+        stack = [request.session.get("_impersonator_user_id")]
+
+    if stack:
         try:
-            impersonator = User.objects.filter(id=impersonator_id).first()
+            prev_id = stack[-1]
+            impersonator = User.objects.filter(id=prev_id).first()
             if impersonator:
                 context["impersonator_user"] = impersonator
+
+            root_id = stack[0]
+            root_user = User.objects.filter(id=root_id).first()
+            if root_user:
+                context["original_admin_user"] = root_user
+
+            context["impersonation_depth"] = len(stack)
+            context["is_nested_impersonation"] = len(stack) > 1
         except Exception:
             pass
 

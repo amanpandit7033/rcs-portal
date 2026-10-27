@@ -8,6 +8,7 @@ from .views import (
     ComingSoonView,
     DashboardRedirectView,
     ImpersonateClientView,
+    ImpersonateUserView,
     ResellerDashboardView,
     StopImpersonationView,
     SystemSettingsView,
@@ -76,7 +77,8 @@ urlpatterns = [
     path("clients/<int:pk>/edit/", ClientEditView.as_view(), name="client_edit"),
     path("clients/<int:client_id>/toggle-status/", ToggleClientActiveView.as_view(), name="toggle_client_status"),
 
-    # Impersonation Flow ("Login as Client")
+    # Impersonation Flow ("Login as User / Client")
+    path("users/<int:user_id>/impersonate/", ImpersonateUserView.as_view(), name="impersonate_user"),
     path("clients/<int:client_id>/impersonate/", ImpersonateClientView.as_view(), name="impersonate_client"),
     path("impersonate/stop/", StopImpersonationView.as_view(), name="stop_impersonation"),
 ]

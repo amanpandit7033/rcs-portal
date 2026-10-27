@@ -71,7 +71,9 @@ def sync_sender_profile_templates(
 
     imported_count = 0
     updated_count = 0
+    deleted_count = 0
     errors: List[str] = []
+    active_carrier_names: set = set()
 
     profile_name = sender_profile.sender_id or sender_profile.sender_profile_name
 
@@ -106,13 +108,18 @@ def sync_sender_profile_templates(
                 if not t_name:
                     continue
 
+                active_carrier_names.add(t_name)
+
                 raw_status = str(item.get("status", "")).strip()
                 status_choice = map_onextel_status(raw_status)
                 template_type = map_onextel_template_type(item.get("type", ""), item)
                 message_type_choice = map_onextel_message_type(item.get("messageType", m_type))
 
-                # Check if template already exists
-                existing = Template.objects.filter(name=t_name).first()
+                # Check if template already exists for this sender profile or owner
+                existing = Template.objects.filter(sender_profile=sender_profile, name=t_name).first()
+                if not existing:
+                    existing = Template.objects.filter(name=t_name).first()
+
                 if existing:
                     existing.status = status_choice
                     existing.onextel_status_raw = raw_status
@@ -153,9 +160,24 @@ def sync_sender_profile_templates(
                 break
             page_no += 1
 
+    # Reconcile: delete templates for this sender profile that no longer exist on the operator portal
+    if not errors:
+        stale_templates = Template.objects.filter(sender_profile=sender_profile).exclude(name__in=active_carrier_names)
+        deleted_count = stale_templates.count()
+        if deleted_count > 0:
+            deleted_names = list(stale_templates.values_list("name", flat=True))
+            logger.info(
+                "Deleting %d templates for sender_profile '%s' that were removed on operator portal: %s",
+                deleted_count,
+                profile_name,
+                deleted_names,
+            )
+            stale_templates.delete()
+
     return {
         "imported": imported_count,
         "updated": updated_count,
+        "deleted": deleted_count,
         "total": imported_count + updated_count,
         "errors": errors,
         "sender_profile": profile_name,

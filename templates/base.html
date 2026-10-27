@@ -789,15 +789,43 @@
         <div class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#f4f5f7]">
 
             {% if impersonator_user %}
-            <div class="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm text-amber-900">
+            <div class="bg-amber-500 text-white px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-md sticky top-0 z-50">
                 <p class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
-                    <span><strong>Impersonation active.</strong> You are acting as <strong>{{ request.user.company_name|default:request.user.email }}</strong> (started by {{ impersonator_user.email }}).</span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-white shrink-0 animate-pulse"></span>
+                    <span>
+                        <strong>Impersonation Active:</strong> Acting as <strong>{{ request.user.username }}</strong>
+                        {% if is_nested_impersonation and original_admin_user %}
+                            (via Reseller: <strong>{{ impersonator_user.username }}</strong> &bull; Original Admin: <strong>{{ original_admin_user.username }}</strong>)
+                        {% else %}
+                            (Logged in via {{ impersonator_user.username }})
+                        {% endif %}
+                    </span>
                 </p>
-                <form method="post" action="{% url 'accounts:stop_impersonation' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-colors">Exit impersonation</button>
-                </form>
+                <div class="flex items-center gap-2">
+                    {% if is_nested_impersonation %}
+                    <form method="post" action="{% url 'accounts:stop_impersonation' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="target" value="previous">
+                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer">
+                            &larr; Back to {{ impersonator_user.username }}
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'accounts:stop_impersonation' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="target" value="admin">
+                        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-white text-amber-900 hover:bg-amber-50 font-bold text-xs transition-colors shadow-xs cursor-pointer">
+                            Exit All to Admin ({{ original_admin_user.username|default:"Admin" }}) &rarr;
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'accounts:stop_impersonation' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-white text-amber-900 hover:bg-amber-50 font-bold text-xs transition-colors shadow-xs cursor-pointer">
+                            Exit Impersonation &rarr;
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
 

@@ -337,26 +337,36 @@ class TemplateSyncView(RoleRequiredMixin, View):
 
         total_imported = 0
         total_updated = 0
+        total_deleted = 0
         all_errors = []
 
         for profile in target_profiles:
             target_owner = profile.user if profile.user else user
             res = sync_sender_profile_templates(user=target_owner, sender_profile=profile)
-            total_imported += res["imported"]
-            total_updated += res["updated"]
-            if res["errors"]:
+            total_imported += res.get("imported", 0)
+            total_updated += res.get("updated", 0)
+            total_deleted += res.get("deleted", 0)
+            if res.get("errors"):
                 all_errors.extend(res["errors"])
 
-        if total_imported > 0 or total_updated > 0:
+        msg_parts = []
+        if total_imported > 0:
+            msg_parts.append(f"{total_imported} new template(s) imported")
+        if total_updated > 0:
+            msg_parts.append(f"{total_updated} existing template(s) updated")
+        if total_deleted > 0:
+            msg_parts.append(f"{total_deleted} deleted template(s) removed")
+
+        if msg_parts:
             messages.success(
                 request,
-                f"Sync complete! {total_imported} new template(s) imported, {total_updated} existing template(s) updated from carrier.",
+                f"Sync complete! {', '.join(msg_parts)} from carrier.",
             )
         else:
             if all_errors:
                 messages.warning(request, f"Sync completed with warnings: {'; '.join(all_errors[:2])}")
             else:
-                messages.info(request, "Carrier sync completed. No new or updated templates found on carrier platform.")
+                messages.info(request, "Carrier sync completed. All templates are currently up to date with the operator portal.")
 
         return redirect("templates_mgmt:template_list")
 

@@ -637,48 +637,110 @@ class ToggleClientActiveView(ResellerRequiredMixin, View):
 
 
 # ---------------------------------------------------------------------------
-# "Login as Client" Impersonation Flow
+# ---------------------------------------------------------------------------
+# "Login as User" / "Login as Client" Impersonation Flow
 # ---------------------------------------------------------------------------
 
+class ImpersonateUserView(AdminRequiredMixin, View):
+    """Allows an Admin to impersonate any user/account."""
+
+    def post(self, request, user_id):
+        target_user = get_object_or_404(User, id=user_id)
+        if target_user.id == request.user.id:
+            messages.error(request, "You are already logged into this account.")
+            return redirect("accounts:user_list")
+
+        # Capture existing stack or start fresh with current user
+        stack = list(request.session.get("_impersonator_stack", []))
+        stack.append(request.user.id)
+
+        # Log in as target user
+        auth_login(request, target_user, backend="django.contrib.auth.backends.ModelBackend")
+
+        # Store updated stack in session
+        request.session["_impersonator_stack"] = stack
+        request.session["_impersonator_user_id"] = stack[-1]
+        request.session.modified = True
+
+        display_name = target_user.username or target_user.email
+        messages.warning(
+            request,
+            f"You are now logged in as {display_name} in Impersonation Mode."
+        )
+        return redirect("accounts:dashboard_redirect")
+
+
 class ImpersonateClientView(ResellerRequiredMixin, View):
-    """Allows a Reseller to impersonate one of their direct clients."""
+    """Allows a Reseller (or Admin impersonating a Reseller) to impersonate one of their direct clients."""
 
     def post(self, request, client_id):
         client = get_object_or_404(User, id=client_id, parent_reseller=request.user)
-        reseller_id = request.user.id
+
+        # Capture existing stack or start fresh with current user
+        stack = list(request.session.get("_impersonator_stack", []))
+        stack.append(request.user.id)
 
         # Log in as client
         auth_login(request, client, backend="django.contrib.auth.backends.ModelBackend")
 
-        # Store reseller's ID in the new authenticated session
-        request.session["_impersonator_user_id"] = reseller_id
+        # Store updated stack in the new authenticated session
+        request.session["_impersonator_stack"] = stack
+        request.session["_impersonator_user_id"] = stack[-1]
         request.session.modified = True
 
         messages.warning(
             request,
-            f"You are now logged in as {client.company_name or client.email} in Impersonation Mode."
+            f"You are now logged in as {client.username or client.email} in Impersonation Mode."
         )
         return redirect("accounts:user_dashboard")
 
 
 class StopImpersonationView(LoginRequiredMixin, View):
-    """Terminates impersonation session and returns to original Reseller account."""
+    """Terminates impersonation session and returns to previous account or root Admin."""
+
+    def get(self, request):
+        return self.post(request)
 
     def post(self, request):
-        impersonator_id = request.session.get("_impersonator_user_id")
-        if not impersonator_id:
+        stack = list(request.session.get("_impersonator_stack", []))
+        if not stack and request.session.get("_impersonator_user_id"):
+            stack = [request.session.get("_impersonator_user_id")]
+
+        if not stack:
             return redirect("accounts:dashboard_redirect")
 
-        reseller = get_object_or_404(User, id=impersonator_id)
+        target = request.POST.get("target") or request.GET.get("target")
 
-        # Restore original reseller session
-        auth_login(request, reseller, backend="django.contrib.auth.backends.ModelBackend")
-        if "_impersonator_user_id" in request.session:
-            del request.session["_impersonator_user_id"]
+        if target == "admin" or target == "root":
+            # Jump directly back to original root Admin
+            target_user_id = stack[0]
+            new_stack = []
+        else:
+            # Step back one level (pop top of stack)
+            target_user_id = stack.pop()
+            new_stack = stack
+
+        target_user = get_object_or_404(User, id=target_user_id)
+
+        # Restore user session
+        auth_login(request, target_user, backend="django.contrib.auth.backends.ModelBackend")
+
+        if new_stack:
+            request.session["_impersonator_stack"] = new_stack
+            request.session["_impersonator_user_id"] = new_stack[-1]
+        else:
+            if "_impersonator_stack" in request.session:
+                del request.session["_impersonator_stack"]
+            if "_impersonator_user_id" in request.session:
+                del request.session["_impersonator_user_id"]
         request.session.modified = True
 
-        messages.success(request, "Returned safely to your Reseller account.")
-        return redirect("accounts:reseller_dashboard")
+        messages.success(request, f"Returned safely to your account ({target_user.username or target_user.email}).")
+        if target_user.is_admin or target_user.is_superuser:
+            return redirect("accounts:user_list")
+        elif target_user.is_reseller:
+            return redirect("accounts:client_list")
+        return redirect("accounts:dashboard_redirect")
 
 
 class UserProfileView(LoginRequiredMixin, View):
