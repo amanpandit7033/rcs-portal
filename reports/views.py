@@ -854,7 +854,7 @@ class LiveStatusView(RoleRequiredMixin, View):
                 | Q(user__parent_reseller__username__icontains=q)
             )
 
-        if role_filter in [User.Role.USER, User.Role.RESELLER]:
+        if role_filter in [User.Role.USER, User.Role.RESELLER, User.Role.DISTRIBUTOR]:
             base_qs = base_qs.filter(user__role=role_filter)
 
         # Overall summary KPI cards (summed across date range)

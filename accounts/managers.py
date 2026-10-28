@@ -61,8 +61,8 @@ class RoleScopedQuerySetMixin:
 
         is_user_model = self.model._meta.model_name.lower() == "user" and self.model._meta.app_label == "accounts"
 
-        # Reseller: sees self + users where parent_reseller == user
-        if getattr(user, "role", None) == "reseller":
+        # Reseller & Distributor: sees self + users where parent_reseller == user
+        if getattr(user, "role", None) in ["reseller", "distributor"]:
             if is_user_model:
                 return self.filter(Q(id=user.id) | Q(parent_reseller=user))
             else:

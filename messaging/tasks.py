@@ -109,7 +109,9 @@ def throttle_rate_limit():
 def send_message_task(self, message_id: str):
     """Celery task to build OneXtel payload, call API, update status, and refund on permanent failure."""
     try:
-        message = Message.objects.select_related("user", "sender_profile", "template").get(id=message_id)
+        message = Message.objects.select_related(
+            "user", "user__parent_reseller", "distributor", "distributor__parent_reseller", "sender_profile", "template"
+        ).get(id=message_id)
     except Message.DoesNotExist:
         logger.error("send_message_task: Message %s not found.", message_id)
         return
@@ -161,22 +163,41 @@ def send_message_task(self, message_id: str):
         logger.error("Permanent failure for message %s after %d retries: %s", message_id, self.max_retries, e)
         message.status = Message.Status.FAILED
         message.failure_reason = str(e)
+        fields_to_update = ["status", "failure_reason"]
 
         if not message.is_refunded:
-            try:
-                refund(
-                    user=message.user,
-                    amount=message.cost,
-                    remarks=f"Refund for failed RCS message {message.id}",
-                    reference_type="MESSAGE_REFUND",
-                    reference_id=str(message.id),
-                )
-                message.is_refunded = True
-                logger.info("Refunded %s INR to user %s for failed message %s", message.cost, message.user.email, message.id)
-            except Exception as ref_err:
-                logger.critical("Failed to process refund for message %s: %s", message.id, ref_err)
+            if hasattr(message.user, "can_receive_refund") and message.user.can_receive_refund():
+                try:
+                    refund(
+                        user=message.user,
+                        amount=message.cost,
+                        remarks=f"Refund for failed RCS message {message.id}",
+                        reference_type="MESSAGE_REFUND",
+                        reference_id=str(message.id),
+                    )
+                    message.is_refunded = True
+                    fields_to_update.append("is_refunded")
+                    logger.info("Refunded %s INR to user %s for failed message %s", message.cost, message.user.email, message.id)
+                except Exception as ref_err:
+                    logger.critical("Failed to process refund for message %s: %s", message.id, ref_err)
 
-        message.save(update_fields=["status", "failure_reason", "is_refunded"])
+        if message.distributor and not message.is_distributor_refunded:
+            if hasattr(message.distributor, "can_receive_refund") and message.distributor.can_receive_refund():
+                try:
+                    refund(
+                        user=message.distributor,
+                        amount=message.distributor_cost,
+                        remarks=f"Refund for failed distributor RCS message {message.id}",
+                        reference_type="DISTRIBUTOR_MESSAGE_REFUND",
+                        reference_id=str(message.id),
+                    )
+                    message.is_distributor_refunded = True
+                    fields_to_update.append("is_distributor_refunded")
+                    logger.info("Refunded %s INR to distributor %s for failed message %s", message.distributor_cost, message.distributor.email, message.id)
+                except Exception as dist_ref_err:
+                    logger.critical("Failed to process distributor refund for message %s: %s", message.id, dist_ref_err)
+
+        message.save(update_fields=fields_to_update)
         try:
             message.campaign_contacts.filter(campaign__isnull=False).update(
                 status="failed",
@@ -243,7 +264,9 @@ def process_dlr_task(self, dlr_log_id: int):
         return
 
     # Match corresponding Message
-    message = Message.objects.select_related("user").filter(onextel_message_id=onextel_id).first()
+    message = Message.objects.select_related(
+        "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
+    ).filter(onextel_message_id=onextel_id).first()
     if not message:
         # Check by id if internal UUID was reported in reference or custrefs
         for ref_cand in [onextel_id, parsed.get("custref1"), parsed.get("custref2")]:
@@ -251,7 +274,9 @@ def process_dlr_task(self, dlr_log_id: int):
                 continue
             try:
                 val_uuid = uuid.UUID(str(ref_cand))
-                message = Message.objects.select_related("user").filter(id=val_uuid).first()
+                message = Message.objects.select_related(
+                    "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
+                ).filter(id=val_uuid).first()
                 if message:
                     break
             except (ValueError, TypeError, AttributeError):
@@ -287,21 +312,39 @@ def process_dlr_task(self, dlr_log_id: int):
             message.failure_reason = failure_reason or message.failure_reason
             fields_to_update.extend(["status", "failure_reason"])
 
-            # Refund once guard
+            # Permission-based refund for user
             if not message.is_refunded:
-                try:
-                    refund(
-                        user=message.user,
-                        amount=message.cost,
-                        remarks=f"DLR refund for failed message {message.id}: {failure_reason}",
-                        reference_type="MESSAGE_REFUND",
-                        reference_id=str(message.id),
-                    )
-                    message.is_refunded = True
-                    fields_to_update.append("is_refunded")
-                    logger.info("Refunded %s to user %s for failed DLR on %s", message.cost, message.user.email, message.id)
-                except Exception as ref_err:
-                    logger.critical("Failed refunding message %s on DLR: %s", message.id, ref_err)
+                if hasattr(message.user, "can_receive_refund") and message.user.can_receive_refund():
+                    try:
+                        refund(
+                            user=message.user,
+                            amount=message.cost,
+                            remarks=f"DLR refund for failed message {message.id}: {failure_reason}",
+                            reference_type="MESSAGE_REFUND",
+                            reference_id=str(message.id),
+                        )
+                        message.is_refunded = True
+                        fields_to_update.append("is_refunded")
+                        logger.info("Refunded %s to user %s for failed DLR on %s", message.cost, message.user.email, message.id)
+                    except Exception as ref_err:
+                        logger.critical("Failed refunding message %s on DLR: %s", message.id, ref_err)
+
+            # Permission-based refund for distributor
+            if message.distributor and not message.is_distributor_refunded:
+                if hasattr(message.distributor, "can_receive_refund") and message.distributor.can_receive_refund():
+                    try:
+                        refund(
+                            user=message.distributor,
+                            amount=message.distributor_cost,
+                            remarks=f"DLR refund to distributor for failed message {message.id}: {failure_reason}",
+                            reference_type="DISTRIBUTOR_MESSAGE_REFUND",
+                            reference_id=str(message.id),
+                        )
+                        message.is_distributor_refunded = True
+                        fields_to_update.append("is_distributor_refunded")
+                        logger.info("Refunded %s to distributor %s for failed DLR on %s", message.distributor_cost, message.distributor.email, message.id)
+                    except Exception as dist_ref_err:
+                        logger.critical("Failed distributor refund on DLR for message %s: %s", message.id, dist_ref_err)
 
     # 2. State: DELIVERED or READ or SENT (Forward Progression)
     elif new_status in STATUS_RANK:

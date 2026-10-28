@@ -130,6 +130,25 @@ class Message(models.Model):
     )
     failure_reason = models.TextField("Failure Reason", blank=True, default="")
     is_refunded = models.BooleanField("Is Refunded", default=False, db_index=True)
+    distributor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="distributor_messages",
+    )
+    distributor_cost = models.DecimalField(
+        "Distributor Cost (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+        help_text="Frozen distributor cost debited from distributor wallet",
+    )
+    is_distributor_refunded = models.BooleanField(
+        "Is Distributor Refunded",
+        default=False,
+        db_index=True,
+    )
     campaign = models.ForeignKey(
         "campaigns.Campaign",
         on_delete=models.SET_NULL,

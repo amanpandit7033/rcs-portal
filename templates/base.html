@@ -495,8 +495,8 @@
                         </div>
                     </div>
 
-                {% elif request.user.is_reseller %}
-                    <!-- Reseller: Main / Dashboard -->
+                {% elif request.user.is_reseller or request.user.is_distributor %}
+                    <!-- Reseller / Distributor: Main / Dashboard -->
                     <a href="{% url 'accounts:reseller_dashboard' %}" title="Dashboard" class="nl{% if request.resolver_match.url_name == 'reseller_dashboard' %} on{% endif %}">
                         <svg class="ic shrink-0"><use href="#i-grid"/></svg>
                         <span class="nav-text truncate">Dashboard</span>

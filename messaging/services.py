@@ -42,15 +42,22 @@ def normalize_and_validate_indian_phone(phone_input: str) -> str:
     return digits
 
 
-def get_user_rate_for_type(user, message_type: str) -> Decimal:
-    """Find rate for user and message type, checking parent reseller hierarchy if needed."""
+def get_user_rate_for_type(user, message_type: str, use_cost_rate: bool = False) -> Decimal:
+    """Find rate for user and message type, checking parent reseller hierarchy if needed.
+    
+    If use_cost_rate is True, returns the cost_rate (cost charged by upstream) falling back to rate.
+    """
     plan = RatePlan.objects.filter(user=user, message_type=message_type).first()
     if plan:
+        if use_cost_rate:
+            return plan.cost_rate if plan.cost_rate > Decimal("0.0000") else plan.rate
         return plan.rate
 
     if getattr(user, "parent_reseller", None):
         plan = RatePlan.objects.filter(user=user.parent_reseller, message_type=message_type).first()
         if plan:
+            if use_cost_rate:
+                return plan.cost_rate if plan.cost_rate > Decimal("0.0000") else plan.rate
             return plan.rate
 
     # Default standard rates fallback if no specific plan is assigned
@@ -137,17 +144,28 @@ def submit_message(
     rate_val = get_user_rate_for_type(user, message_type)
     cost = rate_val  # 1 message
 
+    # Check if user is managed by a Distributor
+    parent = getattr(user, "parent_reseller", None)
+    distributor = parent if (parent and getattr(parent, "is_distributor", False)) else None
+    distributor_cost = Decimal("0.0000")
+
+    if distributor:
+        distributor_cost = get_user_rate_for_type(distributor, message_type, use_cost_rate=True)
+        dist_wallet = getattr(distributor, "wallet", None)
+        if not dist_wallet or dist_wallet.balance < distributor_cost:
+            raise InsufficientBalanceError("Contact your account manager")
+
     # Store URL shortener options in payload for sender task
     payload_data["urlShortener"] = {
         "flag": bool(url_shortener_flag),
         "track_user": bool(url_shortener_track_user),
     }
 
-    # 5. Atomic Transaction: Debit Wallet + Persist Queued Message
+    # 5. Atomic Transaction: Debit Wallet(s) + Persist Queued Message
     msg_id = uuid.uuid4()
 
     with transaction.atomic():
-        # Debit wallet: raises InsufficientBalanceError if insufficient funds
+        # Debit user wallet: raises InsufficientBalanceError if insufficient funds
         debit(
             user=user,
             amount=cost,
@@ -156,9 +174,21 @@ def submit_message(
             reference_id=str(msg_id),
         )
 
+        # Debit distributor wallet simultaneously if user managed by a distributor
+        if distributor:
+            debit(
+                user=distributor,
+                amount=distributor_cost,
+                remarks=f"RCS {message_type} message dispatched by @{user.username} to {clean_recipient}",
+                reference_type="DISTRIBUTOR_MESSAGE",
+                reference_id=str(msg_id),
+            )
+
         message = Message.objects.create(
             id=msg_id,
             user=user,
+            distributor=distributor,
+            distributor_cost=distributor_cost,
             sender_profile=sender_profile,
             message_type=message_type,
             recipient=clean_recipient,

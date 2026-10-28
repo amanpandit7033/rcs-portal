@@ -14,6 +14,8 @@ from .views import (
     SystemSettingsView,
     ToggleClientActiveView,
     ToggleUserActiveView,
+    UpdateClientPermissionsView,
+    UpdateUserPermissionsView,
     UserCreateView,
     UserDashboardView,
     UserEditView,
@@ -59,6 +61,7 @@ urlpatterns = [
     path("users/", UserListView.as_view(), name="user_list"),
     path("users/create/", UserCreateView.as_view(), name="user_create"),
     path("users/<int:pk>/edit/", UserEditView.as_view(), name="user_edit"),
+    path("users/<int:user_id>/permissions/", UpdateUserPermissionsView.as_view(), name="update_user_permissions"),
     path("users/<int:user_id>/toggle-status/", ToggleUserActiveView.as_view(), name="toggle_user_status"),
 
     # Admin: Priority Whitelist Management
@@ -75,6 +78,7 @@ urlpatterns = [
     path("clients/", ClientListView.as_view(), name="client_list"),
     path("clients/create/", ClientCreateView.as_view(), name="client_create"),
     path("clients/<int:pk>/edit/", ClientEditView.as_view(), name="client_edit"),
+    path("clients/<int:client_id>/permissions/", UpdateClientPermissionsView.as_view(), name="update_client_permissions"),
     path("clients/<int:client_id>/toggle-status/", ToggleClientActiveView.as_view(), name="toggle_client_status"),
 
     # Impersonation Flow ("Login as User / Client")

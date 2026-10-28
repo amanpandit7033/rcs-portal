@@ -45,7 +45,7 @@ class WalletStatementView(RoleRequiredMixin, ListView):
     template_name = "wallet/statement.html"
     context_object_name = "transactions"
     paginate_by = 25
-    allowed_roles = ["admin", "reseller", "user"]
+    allowed_roles = ["admin", "reseller", "distributor", "user"]
 
     def get_queryset(self):
         user = self.request.user
@@ -53,7 +53,7 @@ class WalletStatementView(RoleRequiredMixin, ListView):
 
         # Role scoping
         if not user.is_admin:
-            if user.role == User.Role.RESELLER:
+            if user.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:
                 qs = qs.filter(
                     Q(wallet__user=user) | Q(wallet__user__parent_reseller=user)
                 )
@@ -75,7 +75,7 @@ class WalletStatementView(RoleRequiredMixin, ListView):
                 qs = qs.filter(type=tx_type)
 
         target_user_id = self.request.GET.get("user_id")
-        if target_user_id and (user.is_admin or user.is_reseller):
+        if target_user_id and (user.is_admin or user.is_reseller or user.is_distributor):
             qs = qs.filter(wallet__user_id=target_user_id)
 
         return qs
@@ -128,9 +128,9 @@ class WalletStatementView(RoleRequiredMixin, ListView):
 
 
 class AssignCreditView(RoleRequiredMixin, FormView):
-    """View to assign/add credit amounts to the wallet of any user or reseller."""
+    """View to assign/add credit amounts to the wallet of any user, reseller, or distributor."""
 
-    allowed_roles = ["superadmin", "admin", "reseller"]
+    allowed_roles = ["superadmin", "admin", "reseller", "distributor"]
     template_name = "wallet/assign_credit.html"
     form_class = AssignCreditForm
     success_url = reverse_lazy("wallet:assign_credit")
@@ -157,10 +157,10 @@ class AssignCreditView(RoleRequiredMixin, FormView):
         context["page_title"] = "Assign Wallet Credit"
         context["is_superadmin"] = user.is_admin
 
-        # Candidates for autocomplete: Admin searches everyone, Reseller searches their users/resellers
+        # Candidates for autocomplete: Admin searches everyone, Reseller/Distributor searches their users/clients
         if user.is_admin:
             context["target_users_list"] = User.objects.filter(is_active=True).select_related("wallet").order_by("username")
-        elif user.is_reseller:
+        elif user.is_reseller or user.is_distributor:
             context["target_users_list"] = User.objects.filter(parent_reseller=user, is_active=True).select_related("wallet").order_by("username")
         else:
             context["target_users_list"] = User.objects.none()
@@ -218,6 +218,32 @@ class AssignCreditView(RoleRequiredMixin, FormView):
                         self.request,
                         f"Successfully deducted ₹{amount:.2f} from {target_user.company_name or target_user.username} (@{target_user.username})."
                     )
+            elif actor.is_distributor:
+                # Distributor directly allocates credit without upfront deduction from distributor wallet balance
+                if action == "credit":
+                    credit(
+                        user=target_user,
+                        amount=amount,
+                        remarks=remarks or f"Credit allocated by distributor @{actor.username}",
+                        created_by=actor,
+                        reference_type="distributor_assign_credit",
+                    )
+                    messages.success(
+                        self.request,
+                        f"Successfully allocated ₹{amount:.2f} credit to {target_user.company_name or target_user.username} (@{target_user.username})."
+                    )
+                else:
+                    debit(
+                        user=target_user,
+                        amount=amount,
+                        remarks=remarks or f"Credit deducted by distributor @{actor.username}",
+                        created_by=actor,
+                        reference_type="distributor_deduct_credit",
+                    )
+                    messages.success(
+                        self.request,
+                        f"Successfully deducted ₹{amount:.2f} from {target_user.company_name or target_user.username} (@{target_user.username})."
+                    )
             elif actor.is_reseller:
                 # Reseller transfers from their balance to their client / sub-reseller
                 transfer(
@@ -243,24 +269,24 @@ class AssignCreditView(RoleRequiredMixin, FormView):
 class ManageRatePlansView(RoleRequiredMixin, View):
     """View to set and view Rate Plans (Promotional, Transactional, OTP).
 
-    - Admins can set rates and cost rates for any user/reseller.
-    - Resellers can set rates for their direct clients (client rate >= reseller rate).
+    - Admins can set rates and cost rates for any user/reseller/distributor.
+    - Resellers and Distributors can set rates for their direct clients (client rate >= reseller rate).
     """
 
-    allowed_roles = ["admin", "reseller"]
+    allowed_roles = ["admin", "reseller", "distributor", "superadmin"]
 
     def get_target_user(self, request, user_id):
         target = get_object_or_404(User, id=user_id)
         if request.user.is_admin:
             return target
-        if request.user.is_reseller and target.parent_reseller == request.user:
+        if (request.user.is_reseller or request.user.is_distributor) and target.parent_reseller == request.user:
             return target
         raise PermissionDenied("You do not have permission to manage rates for this user.")
 
     def get(self, request, user_id):
         if request.user.is_admin:
             return redirect(f"{reverse('accounts:user_list')}?open_rates={user_id}")
-        if request.user.is_reseller:
+        if request.user.is_reseller or request.user.is_distributor:
             return redirect(f"{reverse('accounts:client_list')}?open_rates={user_id}")
         return redirect("accounts:user_dashboard")
 

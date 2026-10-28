@@ -14,20 +14,37 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_campaign_estimate(campaign: Campaign) -> Decimal:
-    """Compute estimated cost based on valid contacts count and user rate for message type."""
+    """Compute estimated cost based on valid contacts count and user rate for message type.
+    Also computes distributor rate and estimate if user is managed by a distributor.
+    """
     rate = get_user_rate_for_type(campaign.user, campaign.message_type)
     campaign.rate_applied = rate
     campaign.estimated_cost = Decimal(campaign.valid_count) * rate
-    campaign.save(update_fields=["rate_applied", "estimated_cost"])
+
+    parent = getattr(campaign.user, "parent_reseller", None)
+    if parent and getattr(parent, "is_distributor", False):
+        campaign.distributor = parent
+        dist_rate = get_user_rate_for_type(parent, campaign.message_type, use_cost_rate=True)
+        campaign.distributor_rate_applied = dist_rate
+        campaign.distributor_estimated_cost = Decimal(campaign.valid_count) * dist_rate
+    else:
+        campaign.distributor = None
+        campaign.distributor_rate_applied = Decimal("0.0000")
+        campaign.distributor_estimated_cost = Decimal("0.0000")
+
+    campaign.save(update_fields=[
+        "rate_applied", "estimated_cost",
+        "distributor", "distributor_rate_applied", "distributor_estimated_cost",
+    ])
     return campaign.estimated_cost
 
 
 @transaction.atomic
 def reserve_campaign_funds(campaign: Campaign) -> Decimal:
-    """Verify wallet balance and reserve full estimated amount before launch.
+    """Verify both user and distributor wallet balances and reserve full estimated amounts before launch.
 
     Raises:
-        InsufficientBalanceError if user cannot cover estimated campaign cost.
+        InsufficientBalanceError if user or distributor cannot cover estimated campaign cost.
     """
     calculate_campaign_estimate(campaign)
     amount = campaign.estimated_cost
@@ -40,6 +57,19 @@ def reserve_campaign_funds(campaign: Campaign) -> Decimal:
         logger.info("Campaign %s already has reserved amount %s", campaign.id, campaign.reserved_amount)
         return campaign.reserved_amount
 
+    # 1. Verify user wallet balance
+    user_wallet = getattr(campaign.user, "wallet", None)
+    if not user_wallet or user_wallet.balance < amount:
+        raise InsufficientBalanceError(
+            f"Insufficient wallet balance. Required: ₹{amount:.2f}, Available: ₹{(user_wallet.balance if user_wallet else 0):.2f}"
+        )
+
+    # 2. Verify distributor wallet balance if managed by distributor
+    if campaign.distributor:
+        dist_wallet = getattr(campaign.distributor, "wallet", None)
+        if not dist_wallet or dist_wallet.balance < campaign.distributor_estimated_cost:
+            raise InsufficientBalanceError("Contact your account manager")
+
     # Debit user wallet with RESERVATION transaction type
     reserve(
         user=campaign.user,
@@ -48,10 +78,21 @@ def reserve_campaign_funds(campaign: Campaign) -> Decimal:
         reference_type="CAMPAIGN_RESERVATION",
         reference_id=str(campaign.id),
     )
-
     campaign.reserved_amount = amount
-    campaign.save(update_fields=["reserved_amount"])
-    logger.info("Reserved %s INR for campaign %s", amount, campaign.id)
+
+    # Debit distributor wallet with RESERVATION transaction type
+    if campaign.distributor and campaign.distributor_estimated_cost > Decimal("0.0000"):
+        reserve(
+            user=campaign.distributor,
+            amount=campaign.distributor_estimated_cost,
+            remarks=f"Balance reservation for campaign '{campaign.name}' by @{campaign.user.username}",
+            reference_type="CAMPAIGN_DISTRIBUTOR_RESERVATION",
+            reference_id=str(campaign.id),
+        )
+        campaign.distributor_reserved_amount = campaign.distributor_estimated_cost
+
+    campaign.save(update_fields=["reserved_amount", "distributor_reserved_amount"])
+    logger.info("Reserved %s INR for campaign %s (distributor: %s)", amount, campaign.id, campaign.distributor_reserved_amount)
     return amount
 
 
@@ -82,7 +123,7 @@ def resume_campaign(campaign: Campaign) -> bool:
 
 @transaction.atomic
 def cancel_campaign(campaign: Campaign) -> bool:
-    """Cancel a campaign, mark remaining contacts cancelled, and release unused reservation."""
+    """Cancel a campaign, mark remaining contacts cancelled, and release unused reservation for user and distributor."""
     if campaign.status in [Campaign.Status.COMPLETED, Campaign.Status.CANCELLED]:
         return False
 
@@ -111,8 +152,24 @@ def cancel_campaign(campaign: Campaign) -> bool:
         except Exception as e:
             logger.error("Failed releasing reserve for cancelled campaign %s: %s", campaign.id, e)
 
+    # Release unspent reservation back to distributor
+    unused_dist_reserve = campaign.distributor_reserved_amount
+    if campaign.distributor and unused_dist_reserve > Decimal("0.0000"):
+        try:
+            release(
+                user=campaign.distributor,
+                amount=unused_dist_reserve,
+                remarks=f"Release unspent distributor reserved balance for cancelled campaign '{campaign.name}'",
+                reference_type="CAMPAIGN_DISTRIBUTOR_CANCEL_RELEASE",
+                reference_id=str(campaign.id),
+            )
+            logger.info("Released %s INR unused distributor reserve for cancelled campaign %s", unused_dist_reserve, campaign.id)
+        except Exception as e:
+            logger.error("Failed releasing distributor reserve for cancelled campaign %s: %s", campaign.id, e)
+
     campaign.reserved_amount = Decimal("0.0000")
-    campaign.save(update_fields=["status", "completed_at", "reserved_amount", "updated_at"])
+    campaign.distributor_reserved_amount = Decimal("0.0000")
+    campaign.save(update_fields=["status", "completed_at", "reserved_amount", "distributor_reserved_amount", "updated_at"])
     return True
 
 

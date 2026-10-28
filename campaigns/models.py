@@ -105,6 +105,33 @@ class Campaign(models.Model):
         default=Decimal("0.0000"),
     )
 
+    # Distributor reservation
+    distributor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="distributor_campaigns",
+    )
+    distributor_rate_applied = models.DecimalField(
+        "Distributor Rate Applied (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+    distributor_estimated_cost = models.DecimalField(
+        "Distributor Estimated Cost (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+    distributor_reserved_amount = models.DecimalField(
+        "Distributor Reserved Amount (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+
     # Scheduling & Timing
     scheduled_at = models.DateTimeField("Scheduled At", null=True, blank=True, db_index=True)
     started_at = models.DateTimeField("Started At", null=True, blank=True)

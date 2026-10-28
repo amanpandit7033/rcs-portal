@@ -100,6 +100,7 @@ class UserCreateForm(forms.ModelForm):
             "GSTIN",
             "state",
             "is_active",
+            "allow_refund",
         ]
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "username"}),
@@ -113,6 +114,7 @@ class UserCreateForm(forms.ModelForm):
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "27ABCDE1234F1Z5"}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Maharashtra"}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "allow_refund": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -120,9 +122,10 @@ class UserCreateForm(forms.ModelForm):
         from .models import User
         self.fields["role"].choices = [
             (User.Role.RESELLER, "Reseller"),
+            (User.Role.DISTRIBUTOR, "Distributor"),
             (User.Role.USER, "User"),
         ]
-        self.fields["parent_reseller"].queryset = User.objects.filter(role=User.Role.RESELLER)
+        self.fields["parent_reseller"].queryset = User.objects.filter(role__in=[User.Role.RESELLER, User.Role.DISTRIBUTOR])
         self.fields["parent_reseller"].required = False
 
     def save(self, commit=True):
@@ -167,6 +170,7 @@ class UserEditForm(forms.ModelForm):
             "role",
             "parent_reseller",
             "is_active",
+            "allow_refund",
             "can_use_low_price",
             "is_low_price_applied",
             "low_price_start_from",
@@ -184,6 +188,7 @@ class UserEditForm(forms.ModelForm):
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "allow_refund": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "can_use_low_price": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "is_low_price_applied": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "low_price_start_from": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 1000", "min": "0"}),
@@ -195,9 +200,10 @@ class UserEditForm(forms.ModelForm):
         from .models import User
         self.fields["role"].choices = [
             (User.Role.RESELLER, "Reseller"),
+            (User.Role.DISTRIBUTOR, "Distributor"),
             (User.Role.USER, "User"),
         ]
-        self.fields["parent_reseller"].queryset = User.objects.filter(role=User.Role.RESELLER)
+        self.fields["parent_reseller"].queryset = User.objects.filter(role__in=[User.Role.RESELLER, User.Role.DISTRIBUTOR])
         self.fields["parent_reseller"].required = False
 
     def save(self, commit=True):
@@ -232,6 +238,7 @@ class ClientCreateForm(forms.ModelForm):
             "phone",
             "GSTIN",
             "state",
+            "allow_refund",
         ]
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "username"}),
@@ -243,17 +250,30 @@ class ClientCreateForm(forms.ModelForm):
             "phone": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "+91 9876543210"}),
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "GSTIN"}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "State"}),
+            "allow_refund": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
         }
 
     def __init__(self, *args, reseller=None, **kwargs):
         self.reseller = reseller
         super().__init__(*args, **kwargs)
         from .models import User
-        self.fields["role"].choices = [
-            (User.Role.USER, "User"),
-            (User.Role.RESELLER, "Reseller"),
-        ]
+        if self.reseller and getattr(self.reseller, "role", None) == User.Role.DISTRIBUTOR:
+            self.fields["role"].choices = [
+                (User.Role.USER, "User"),
+                (User.Role.DISTRIBUTOR, "Distributor"),
+            ]
+        else:
+            self.fields["role"].choices = [
+                (User.Role.USER, "User"),
+                (User.Role.RESELLER, "Reseller"),
+            ]
         self.fields["role"].initial = User.Role.USER
+        has_refund_perm = bool(self.reseller and (self.reseller.allow_refund or self.reseller.is_admin))
+        if has_refund_perm:
+            self.fields["allow_refund"].initial = True
+        else:
+            self.fields["allow_refund"].initial = False
+            self.fields["allow_refund"].widget = forms.HiddenInput()
 
     def save(self, commit=True):
         from .models import User
@@ -261,6 +281,9 @@ class ClientCreateForm(forms.ModelForm):
         client.role = self.cleaned_data.get("role", User.Role.USER)
         client.parent_reseller = self.reseller
         client.set_password(self.cleaned_data["password"])
+        has_refund_perm = bool(self.reseller and (self.reseller.allow_refund or self.reseller.is_admin))
+        if not has_refund_perm:
+            client.allow_refund = False
         if commit:
             client.save()
         return client
@@ -297,6 +320,7 @@ class ClientEditForm(forms.ModelForm):
             "GSTIN",
             "state",
             "is_active",
+            "allow_refund",
             "can_use_low_price",
             "is_low_price_applied",
             "low_price_start_from",
@@ -313,19 +337,38 @@ class ClientEditForm(forms.ModelForm):
             "GSTIN": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "state": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "is_active": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
+            "allow_refund": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "can_use_low_price": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "is_low_price_applied": forms.CheckboxInput(attrs={"class": TAILWIND_CHECKBOX}),
             "low_price_start_from": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 1000", "min": "0"}),
             "low_price_percentage": forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "e.g. 10.00", "step": "0.01", "min": "0", "max": "100"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, reseller=None, **kwargs):
+        self.reseller = reseller
         super().__init__(*args, **kwargs)
         from .models import User
-        self.fields["role"].choices = [
-            (User.Role.USER, "User"),
-            (User.Role.RESELLER, "Reseller"),
-        ]
+        if self.reseller and getattr(self.reseller, "role", None) == User.Role.DISTRIBUTOR:
+            self.fields["role"].choices = [
+                (User.Role.USER, "User"),
+                (User.Role.DISTRIBUTOR, "Distributor"),
+            ]
+        else:
+            self.fields["role"].choices = [
+                (User.Role.USER, "User"),
+                (User.Role.RESELLER, "Reseller"),
+            ]
+
+        has_refund_perm = bool(self.reseller and (self.reseller.allow_refund or self.reseller.is_admin))
+        if not has_refund_perm:
+            self.fields.pop("allow_refund", None)
+
+        has_low_price_perm = bool(self.reseller and (self.reseller.can_use_low_price or self.reseller.is_admin))
+        if not has_low_price_perm:
+            self.fields.pop("can_use_low_price", None)
+            self.fields.pop("is_low_price_applied", None)
+            self.fields.pop("low_price_start_from", None)
+            self.fields.pop("low_price_percentage", None)
 
     def save(self, commit=True):
         client = super().save(commit=False)

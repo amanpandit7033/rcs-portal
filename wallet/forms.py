@@ -94,8 +94,8 @@ class AssignCreditForm(forms.Form):
             if actor.is_admin:
                 if not target.is_active:
                     raise forms.ValidationError(f"User '@{target.username}' is not active.")
-            elif actor.is_reseller:
-                # Reseller can assign only to direct clients or sub-resellers under them
+            elif actor.is_reseller or actor.is_distributor:
+                # Reseller or Distributor can assign only to direct clients or sub-accounts under them
                 allowed = User.objects.filter(
                     parent_reseller=actor,
                     is_active=True,

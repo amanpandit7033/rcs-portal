@@ -214,7 +214,7 @@ def run_campaign_task(self, campaign_id: str):
     Converts wallet reservation to per-message debits and releases unused reserve on completion.
     """
     try:
-        campaign = Campaign.objects.select_related("user", "user__parent_reseller", "sender_profile", "template").get(id=campaign_id)
+        campaign = Campaign.objects.select_related("user", "user__parent_reseller", "distributor", "sender_profile", "template").get(id=campaign_id)
     except Campaign.DoesNotExist:
         logger.error("run_campaign_task: Campaign %s not found.", campaign_id)
         return
@@ -302,7 +302,7 @@ def run_campaign_task(self, campaign_id: str):
 
     while True:
         # Re-check status from DB before each chunk to allow instant pause/cancel
-        campaign.refresh_from_db(fields=["status", "reserved_amount"])
+        campaign.refresh_from_db(fields=["status", "reserved_amount", "distributor_reserved_amount"])
         if campaign.status in [Campaign.Status.PAUSED, Campaign.Status.CANCELLED]:
             logger.info("Campaign %s was %s. Gracefully stopping runner loop.", campaign.id, campaign.status)
             try:
@@ -336,6 +336,7 @@ def run_campaign_task(self, campaign_id: str):
             message = Message.objects.create(
                 campaign=campaign,
                 user=campaign.user,
+                distributor=campaign.distributor,
                 sender_profile=campaign.sender_profile,
                 message_type=campaign.message_type,
                 recipient=contact.number,
@@ -345,13 +346,14 @@ def run_campaign_task(self, campaign_id: str):
                 custom_params=contact.params,
                 rate_applied=campaign.rate_applied,
                 cost=campaign.rate_applied,
+                distributor_cost=campaign.distributor_rate_applied if campaign.distributor else Decimal("0.0000"),
                 status=Message.Status.SUBMITTED if is_skipped else Message.Status.QUEUED,
                 submitted_at=timezone.now() if is_skipped else None,
                 delivered_at=None,
                 custref6="LOW_PRICE_SKIPPED" if is_skipped else "",
             )
 
-            # Convert reservation portion into real Message DEBIT ledger row
+            # Convert reservation portion into real Message DEBIT ledger row for user
             try:
                 user_wallet = getattr(campaign.user, "wallet", None)
                 if user_wallet:
@@ -367,8 +369,30 @@ def run_campaign_task(self, campaign_id: str):
             except Exception as e:
                 logger.error("Error creating debit transaction for campaign message %s: %s", message.id, e)
 
+            # Convert reservation portion into real Message DEBIT ledger row for distributor
+            if campaign.distributor and campaign.distributor_rate_applied > Decimal("0.0000"):
+                try:
+                    distributor_wallet = getattr(campaign.distributor, "wallet", None)
+                    if distributor_wallet:
+                        WalletTransaction.objects.create(
+                            wallet=distributor_wallet,
+                            type=WalletTransaction.TransactionType.DEBIT,
+                            amount=campaign.distributor_rate_applied,
+                            balance_after=distributor_wallet.balance,
+                            reference_type="MESSAGE_DISPATCH",
+                            reference_id=str(message.id),
+                            remarks=f"Campaign '{campaign.name}' - {contact.number}",
+                        )
+                except Exception as e:
+                    logger.error("Error creating distributor debit transaction for campaign message %s: %s", message.id, e)
+
             # Deduct from reserved balance tracker
             campaign.reserved_amount = max(Decimal("0.0000"), campaign.reserved_amount - message.cost)
+            if campaign.distributor:
+                campaign.distributor_reserved_amount = max(
+                    Decimal("0.0000"),
+                    campaign.distributor_reserved_amount - campaign.distributor_rate_applied,
+                )
 
             contact.status = CampaignContact.Status.DISPATCHED
             contact.message = message
@@ -432,7 +456,7 @@ def run_campaign_task(self, campaign_id: str):
                 CampaignContact.Status.FAILED,
             ],
         ).count()
-        campaign.save(update_fields=["processed_count", "reserved_amount", "updated_at"])
+        campaign.save(update_fields=["processed_count", "reserved_amount", "distributor_reserved_amount", "updated_at"])
 
 
     # Completed dispatch loop
@@ -455,8 +479,24 @@ def run_campaign_task(self, campaign_id: str):
         except Exception as e:
             logger.error("Failed releasing unused reserve for completed campaign %s: %s", campaign.id, e)
 
+    # Release any unused reserve balance back to distributor
+    unused_distributor_reserve = campaign.distributor_reserved_amount
+    if campaign.distributor and unused_distributor_reserve > Decimal("0.0000"):
+        try:
+            release(
+                user=campaign.distributor,
+                amount=unused_distributor_reserve,
+                remarks=f"Release unused reserved balance for completed campaign '{campaign.name}'",
+                reference_type="CAMPAIGN_COMPLETE_RELEASE",
+                reference_id=str(campaign.id),
+            )
+            logger.info("Released %s unused distributor reserve for completed campaign %s", unused_distributor_reserve, campaign.id)
+        except Exception as e:
+            logger.error("Failed releasing unused distributor reserve for completed campaign %s: %s", campaign.id, e)
+
     campaign.reserved_amount = Decimal("0.0000")
-    campaign.save(update_fields=["status", "completed_at", "reserved_amount", "updated_at"])
+    campaign.distributor_reserved_amount = Decimal("0.0000")
+    campaign.save(update_fields=["status", "completed_at", "reserved_amount", "distributor_reserved_amount", "updated_at"])
     logger.info("Campaign %s completed successfully.", campaign.id)
 
     # Sync daily MIS billing and Live Status for this campaign's user

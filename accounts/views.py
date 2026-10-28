@@ -59,7 +59,7 @@ class DashboardRedirectView(LoginRequiredMixin, View):
         user = request.user
         if user.is_superuser or user.role in [User.Role.SUPERADMIN, "admin"]:
             return redirect("accounts:admin_dashboard")
-        elif user.role == User.Role.RESELLER:
+        elif user.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:
             return redirect("accounts:reseller_dashboard")
         else:
             return redirect("accounts:user_dashboard")
@@ -428,6 +428,7 @@ class UserListView(AdminRequiredMixin, ListView):
                 "GSTIN": u.GSTIN or "",
                 "role": u.role,
                 "is_active": u.is_active,
+                "allow_refund": u.allow_refund,
                 "can_use_low_price": u.can_use_low_price,
                 "is_low_price_applied": u.is_low_price_applied,
                 "low_price_start_from": u.low_price_start_from,
@@ -515,6 +516,41 @@ class ToggleUserActiveView(AdminRequiredMixin, View):
         return redirect("accounts:user_list")
 
 
+class UpdateUserPermissionsView(AdminRequiredMixin, View):
+    """Admin view to update account permissions (Allow Refund, Low Price feature, Skimming)."""
+
+    def post(self, request, user_id):
+        target = get_object_or_404(User, id=user_id)
+
+        target.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
+        target.can_use_low_price = request.POST.get("can_use_low_price") in ["on", "true", "1", True]
+        target.is_low_price_applied = request.POST.get("is_low_price_applied") in ["on", "true", "1", True]
+
+        low_price_start_from_raw = request.POST.get("low_price_start_from", "0")
+        low_price_percentage_raw = request.POST.get("low_price_percentage", "0.00")
+
+        try:
+            target.low_price_start_from = max(0, int(low_price_start_from_raw or 0))
+        except (ValueError, TypeError):
+            target.low_price_start_from = 0
+
+        try:
+            pct = Decimal(str(low_price_percentage_raw or "0.00"))
+            target.low_price_percentage = min(Decimal("100.00"), max(Decimal("0.00"), pct))
+        except Exception:
+            target.low_price_percentage = Decimal("0.00")
+
+        target.save(update_fields=[
+            "allow_refund",
+            "can_use_low_price",
+            "is_low_price_applied",
+            "low_price_start_from",
+            "low_price_percentage",
+        ])
+        messages.success(request, f"Permissions for {target.username} updated successfully.")
+        return redirect("accounts:user_list")
+
+
 # ---------------------------------------------------------------------------
 # Reseller Client Management Screens
 # ---------------------------------------------------------------------------
@@ -565,6 +601,7 @@ class ClientListView(ResellerRequiredMixin, ListView):
                 "GSTIN": c.GSTIN or "",
                 "role": c.role,
                 "is_active": c.is_active,
+                "allow_refund": c.allow_refund,
                 "can_use_low_price": c.can_use_low_price,
                 "is_low_price_applied": c.is_low_price_applied,
                 "low_price_start_from": c.low_price_start_from,
@@ -613,7 +650,7 @@ class ClientEditView(ResellerRequiredMixin, View):
 
     def post(self, request, pk, *args, **kwargs):
         client = get_object_or_404(User, pk=pk, parent_reseller=request.user)
-        form = ClientEditForm(request.POST, instance=client)
+        form = ClientEditForm(request.POST, instance=client, reseller=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, f"Client {client.email or client.username} updated successfully.")
@@ -633,6 +670,44 @@ class ToggleClientActiveView(ResellerRequiredMixin, View):
         client.save(update_fields=["is_active"])
         status_str = "Activated" if client.is_active else "Suspended"
         messages.success(request, f"Client {client.email} is now {status_str}.")
+        return redirect("accounts:client_list")
+
+
+class UpdateClientPermissionsView(ResellerRequiredMixin, View):
+    """Reseller / Distributor view to update downstream client permissions."""
+
+    def post(self, request, client_id):
+        client = get_object_or_404(User, id=client_id, parent_reseller=request.user)
+        update_fields = []
+
+        if request.user.allow_refund or request.user.is_admin:
+            client.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
+            update_fields.append("allow_refund")
+
+        if request.user.can_use_low_price or request.user.is_admin:
+            if client.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:
+                client.can_use_low_price = request.POST.get("can_use_low_price") in ["on", "true", "1", True]
+                update_fields.append("can_use_low_price")
+
+            client.is_low_price_applied = request.POST.get("is_low_price_applied") in ["on", "true", "1", True]
+            update_fields.append("is_low_price_applied")
+
+            try:
+                client.low_price_start_from = max(0, int(request.POST.get("low_price_start_from", "0") or 0))
+            except (ValueError, TypeError):
+                client.low_price_start_from = 0
+            update_fields.append("low_price_start_from")
+
+            try:
+                pct = Decimal(str(request.POST.get("low_price_percentage", "0.00") or "0.00"))
+                client.low_price_percentage = min(Decimal("100.00"), max(Decimal("0.00"), pct))
+            except Exception:
+                client.low_price_percentage = Decimal("0.00")
+            update_fields.append("low_price_percentage")
+
+        if update_fields:
+            client.save(update_fields=update_fields)
+            messages.success(request, f"Permissions for {client.username} updated successfully.")
         return redirect("accounts:client_list")
 
 

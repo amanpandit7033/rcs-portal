@@ -12,6 +12,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         SUPERADMIN = "superadmin", "Superadmin"
         RESELLER = "reseller", "Reseller"
+        DISTRIBUTOR = "distributor", "Distributor"
         USER = "user", "User"
 
     Role.ADMIN = Role.SUPERADMIN
@@ -40,8 +41,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
         related_name="clients",
-        limit_choices_to={"role": Role.RESELLER},
-        help_text="Reseller who manages this user account (if applicable)",
+        limit_choices_to={"role__in": [Role.RESELLER, Role.DISTRIBUTOR]},
+        help_text="Reseller or Distributor who manages this user account (if applicable)",
+    )
+
+    allow_refund = models.BooleanField(
+        "Allow Refunds",
+        default=True,
+        help_text="Permit automated wallet refunds on message delivery failure",
     )
 
     company_name = models.CharField("Company Name", max_length=255, blank=True)
@@ -120,8 +127,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == self.Role.RESELLER
 
     @property
+    def is_distributor(self) -> bool:
+        return self.role == self.Role.DISTRIBUTOR
+
+    @property
     def is_regular_user(self) -> bool:
         return self.role == self.Role.USER
+
+    def can_receive_refund(self) -> bool:
+        """Hierarchical refund permission check.
+
+        User gets refund only if they have allow_refund=True AND their managing parent has allow_refund=True.
+        """
+        if not self.allow_refund:
+            return False
+        if self.parent_reseller:
+            return self.parent_reseller.can_receive_refund()
+        return True
 
     def get_rates_dict(self):
         from decimal import Decimal

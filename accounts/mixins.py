@@ -35,13 +35,13 @@ class AdminRequiredMixin(RoleRequiredMixin):
 
 
 class ResellerRequiredMixin(RoleRequiredMixin):
-    """Allows Reseller users (or superadmin/admin)."""
-    allowed_roles = ["reseller", "superadmin", "admin"]
+    """Allows Reseller & Distributor users (or superadmin/admin)."""
+    allowed_roles = ["reseller", "distributor", "superadmin", "admin"]
 
 
 class UserRequiredMixin(RoleRequiredMixin):
-    """Allows standard Users, Resellers, and Superadmins/Admins."""
-    allowed_roles = ["user", "reseller", "superadmin", "admin"]
+    """Allows standard Users, Resellers, Distributors, and Superadmins/Admins."""
+    allowed_roles = ["user", "reseller", "distributor", "superadmin", "admin"]
 
 
 class RoleScopedViewMixin:
