@@ -219,6 +219,16 @@ class CampaignContact(models.Model):
     def __str__(self):
         return f"{self.number} ({self.get_status_display()})"
 
+    @property
+    def friendly_error_message(self) -> str:
+        msg = self.error_message or (self.message.friendly_failure_reason if self.message else "")
+        if not msg:
+            return ""
+        low = msg.lower()
+        if "401" in low or "unauthorized" in low or "bot api key" in low or "onexaura.com" in low or "api key" in low:
+            return "Bot API key is wrong"
+        return msg
+
 
 class ContactGroupQuerySet(RoleScopedQuerySetMixin, models.QuerySet):
     user_field = "user"

@@ -101,15 +101,10 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-[11px]">
-                            {% if c.error_message %}
-                            <span class="inline-flex items-center gap-1.5 text-rose-600 font-semibold leading-snug" title="{{ c.error_message }}">
+                            {% if c.friendly_error_message %}
+                            <span class="inline-flex items-center gap-1.5 text-rose-600 font-semibold leading-snug" title="{{ c.friendly_error_message }}">
                                 <svg class="w-3.5 h-3.5 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span>{{ c.error_message }}</span>
-                            </span>
-                            {% elif c.message and c.message.failure_reason %}
-                            <span class="inline-flex items-center gap-1.5 text-rose-600 font-semibold leading-snug" title="{{ c.message.failure_reason }}">
-                                <svg class="w-3.5 h-3.5 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span>{{ c.message.failure_reason }}</span>
+                                <span>{{ c.friendly_error_message }}</span>
                             </span>
                             {% elif c.status == 'failed' or c.message and c.message.status == 'failed' %}
                             <span class="text-rose-600 font-medium">Failed</span>

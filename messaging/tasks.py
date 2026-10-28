@@ -147,22 +147,30 @@ def send_message_task(self, message_id: str):
         return onextel_id
 
     except Exception as e:
+        err_str = str(e)
+        if "401" in err_str or "unauthorized" in err_str.lower() or "bot api key" in err_str.lower() or "api key" in err_str.lower():
+            friendly_reason = "Bot API key is wrong"
+            is_fatal_auth = True
+        else:
+            friendly_reason = err_str
+            is_fatal_auth = False
+
         logger.warning(
             "Failed sending message %s on attempt %d: %s",
             message_id,
             self.request.retries + 1,
-            e,
+            friendly_reason,
         )
 
-        # Retry with exponential backoff if retries remain
-        if self.request.retries < self.max_retries:
+        # Retry with exponential backoff if retries remain and error is not fatal auth
+        if not is_fatal_auth and self.request.retries < self.max_retries:
             countdown = 2 ** self.request.retries
             raise self.retry(exc=e, countdown=countdown)
 
         # Final failure: mark message failed and refund user if not already refunded
-        logger.error("Permanent failure for message %s after %d retries: %s", message_id, self.max_retries, e)
+        logger.error("Permanent failure for message %s after %d retries: %s", message_id, self.request.retries, friendly_reason)
         message.status = Message.Status.FAILED
-        message.failure_reason = str(e)
+        message.failure_reason = friendly_reason
         fields_to_update = ["status", "failure_reason"]
 
         if not message.is_refunded:

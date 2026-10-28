@@ -87,7 +87,7 @@ class MessageLogExportCSVView(RoleRequiredMixin, View):
                 m.get_status_display(),
                 str(m.cost),
                 "Yes" if m.is_refunded else "No",
-                m.failure_reason,
+                m.friendly_failure_reason,
                 m.created_at.strftime("%Y-%m-%d %H:%M:%S") if m.created_at else "",
                 m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m.delivered_at else "",
                 m.read_at.strftime("%Y-%m-%d %H:%M:%S") if m.read_at else "",

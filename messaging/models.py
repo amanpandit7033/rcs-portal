@@ -177,6 +177,15 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.id} -> {self.recipient} ({self.status})"
 
+    @property
+    def friendly_failure_reason(self) -> str:
+        if not self.failure_reason:
+            return ""
+        low = self.failure_reason.lower()
+        if "401" in low or "unauthorized" in low or "bot api key" in low or "onexaura.com" in low or "api key" in low:
+            return "Bot API key is wrong"
+        return self.failure_reason
+
 
 class DLRLog(models.Model):
     """Raw Delivery Report (DLR) webhook records from OneXtel."""

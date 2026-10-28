@@ -419,7 +419,7 @@ class CampaignExportCSVView(RoleRequiredMixin, View):
                 m.get_status_display() if m else "",
                 m.created_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.created_at else "",
                 m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.delivered_at else "",
-                c.error_message or (m.failure_reason if m else ""),
+                c.friendly_error_message,
             ]
 
         qs = CampaignContact.objects.filter(campaign=campaign).select_related("message").order_by("id")

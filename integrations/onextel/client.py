@@ -209,6 +209,9 @@ class OneXtelClient:
             return response.json()
         except requests.RequestException as e:
             logger.error("OneXtel send_messages failed: %s", e)
+            status_code = getattr(getattr(e, "response", None), "status_code", None)
+            if status_code == 401 or "401" in str(e) or "Unauthorized" in str(e):
+                raise OneXtelClientError("Bot API key is wrong") from e
             raise OneXtelClientError(f"Failed to send RCS messages: {e}") from e
 
     def send_message(
