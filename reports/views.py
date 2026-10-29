@@ -4,6 +4,7 @@ from datetime import timedelta
 import logging
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Count, Max, Q, Sum
@@ -802,6 +803,10 @@ class LiveStatusView(RoleRequiredMixin, View):
 
     def get(self, request):
         user = request.user
+        if not getattr(user, "is_admin", False) and not getattr(user, "is_superuser", False):
+            if not getattr(user, "can_view_live_status", False):
+                raise PermissionDenied("You do not have permission to view Live Status.")
+
         from .models import LiveStatus, sync_live_status
         from datetime import datetime, timedelta
 

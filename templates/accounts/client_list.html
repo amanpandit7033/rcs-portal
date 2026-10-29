@@ -718,6 +718,32 @@ function clientDirectoryManager() {
                 </div>
                 {% endif %}
 
+                {% if request.user.can_view_live_status or request.user.is_admin %}
+                <!-- Permission: Live Status Access -->
+                <div class="p-4 rounded-2xl border transition-all"
+                     :class="permissionsClient.can_view_live_status ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-200'">
+                    <label class="flex items-start gap-3.5 cursor-pointer">
+                        <input type="checkbox"
+                               name="can_view_live_status"
+                               id="client_perm_can_view_live_status"
+                               x-model="permissionsClient.can_view_live_status"
+                               class="mt-1 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4.5 w-4.5">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900">Live Status Access</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                      :class="permissionsClient.can_view_live_status ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
+                                      x-text="permissionsClient.can_view_live_status ? 'Enabled' : 'Disabled'">
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                When enabled, this account can view the real-time Live Status monitor. (By default disabled).
+                            </p>
+                        </div>
+                    </label>
+                </div>
+                {% endif %}
+
                 {% if request.user.can_use_low_price or request.user.is_admin %}
                 <!-- Permission: Allow Low Price Feature (for sub-resellers/distributors) -->
                 <template x-if="permissionsClient.role === 'reseller' || permissionsClient.role === 'distributor'">

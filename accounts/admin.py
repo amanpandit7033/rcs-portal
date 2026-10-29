@@ -50,6 +50,10 @@ class UserAdmin(BaseUserAdmin):
                     "is_active",
                     "is_staff",
                     "is_superuser",
+                    "allow_refund",
+                    "can_view_live_status",
+                    "can_use_low_price",
+                    "is_low_price_applied",
                     "groups",
                     "user_permissions",
                 )

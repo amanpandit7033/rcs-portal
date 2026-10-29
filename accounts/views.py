@@ -510,6 +510,7 @@ class UserListView(AdminRequiredMixin, ListView):
                 "role": u.role,
                 "is_active": u.is_active,
                 "allow_refund": u.allow_refund,
+                "can_view_live_status": u.can_view_live_status,
                 "can_use_low_price": u.can_use_low_price,
                 "is_low_price_applied": u.is_low_price_applied,
                 "low_price_start_from": u.low_price_start_from,
@@ -604,6 +605,7 @@ class UpdateUserPermissionsView(AdminRequiredMixin, View):
         target = get_object_or_404(User, id=user_id)
 
         target.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
+        target.can_view_live_status = request.POST.get("can_view_live_status") in ["on", "true", "1", True]
         target.can_use_low_price = request.POST.get("can_use_low_price") in ["on", "true", "1", True]
         target.is_low_price_applied = request.POST.get("is_low_price_applied") in ["on", "true", "1", True]
 
@@ -623,6 +625,7 @@ class UpdateUserPermissionsView(AdminRequiredMixin, View):
 
         target.save(update_fields=[
             "allow_refund",
+            "can_view_live_status",
             "can_use_low_price",
             "is_low_price_applied",
             "low_price_start_from",
@@ -683,6 +686,7 @@ class ClientListView(ResellerRequiredMixin, ListView):
                 "role": c.role,
                 "is_active": c.is_active,
                 "allow_refund": c.allow_refund,
+                "can_view_live_status": c.can_view_live_status,
                 "can_use_low_price": c.can_use_low_price,
                 "is_low_price_applied": c.is_low_price_applied,
                 "low_price_start_from": c.low_price_start_from,
@@ -764,6 +768,10 @@ class UpdateClientPermissionsView(ResellerRequiredMixin, View):
         if request.user.allow_refund or request.user.is_admin:
             client.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
             update_fields.append("allow_refund")
+
+        if request.user.can_view_live_status or request.user.is_admin:
+            client.can_view_live_status = request.POST.get("can_view_live_status") in ["on", "true", "1", True]
+            update_fields.append("can_view_live_status")
 
         if request.user.can_use_low_price or request.user.is_admin:
             if client.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:

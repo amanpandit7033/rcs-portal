@@ -562,7 +562,8 @@
                         </div>
                     </div>
 
-                    <!-- Reseller: Live Status (Main Menu Link) -->
+                    <!-- Reseller: Live Status (Main Menu Link - Permission Controlled) -->
+                    {% if request.user.can_view_live_status %}
                     <a href="{% url 'reports:live_status' %}" title="Live Status" class="nl justify-between{% if request.resolver_match.view_name == 'reports:live_status' %} on{% endif %}">
                         <span class="flex items-center gap-3 min-w-0">
                             <svg class="ic shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -570,6 +571,7 @@
                         </span>
                         <span class="nav-badge inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 tracking-wide shrink-0">LIVE</span>
                     </a>
+                    {% endif %}
 
                     <!-- Reseller: Reports (Accordion) -->
                     <div>

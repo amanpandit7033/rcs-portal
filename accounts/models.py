@@ -50,6 +50,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=True,
         help_text="Permit automated wallet refunds on message delivery failure",
     )
+    can_view_live_status = models.BooleanField(
+        "Allow Live Status Access",
+        default=False,
+        help_text="Permit this user/reseller to access the real-time Live Status report",
+    )
 
     company_name = models.CharField("Company Name", max_length=255, blank=True)
     phone = models.CharField("Phone Number", max_length=20, blank=True)
