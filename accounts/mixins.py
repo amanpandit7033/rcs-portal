@@ -13,7 +13,12 @@ class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles: List[str] = []
 
     def get_allowed_roles(self) -> List[str]:
-        return self.allowed_roles
+        roles = list(self.allowed_roles)
+        if "admin" in roles and "superadmin" not in roles:
+            roles.append("superadmin")
+        if "reseller" in roles and "distributor" not in roles:
+            roles.append("distributor")
+        return roles
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:

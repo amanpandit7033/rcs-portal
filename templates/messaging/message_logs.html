@@ -150,7 +150,7 @@
                             {% endif %}
                             <div class="text-[11px] text-slate-500 mt-0.5">
                                 Sender: {{ m.sender_profile.sender_profile_name }}
-                                {% if request.user.is_admin or request.user.is_reseller %}
+                                {% if request.user.is_admin or request.user.is_reseller or request.user.is_distributor %}
                                 &bull; {{ m.user.email }}
                                 {% endif %}
                             </div>

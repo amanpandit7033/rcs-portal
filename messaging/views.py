@@ -53,7 +53,7 @@ class MessageLogView(RoleRequiredMixin, ListView):
         user = self.request.user
         if getattr(user, "is_admin", False):
             candidate_usernames = list(User.objects.values_list("username", flat=True).order_by("username"))
-        elif getattr(user, "is_reseller", False):
+        elif getattr(user, "is_reseller", False) or getattr(user, "is_distributor", False):
             candidate_usernames = list(
                 User.objects.filter(models.Q(id=user.id) | models.Q(parent_reseller=user))
                 .values_list("username", flat=True)

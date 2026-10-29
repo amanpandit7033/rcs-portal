@@ -655,7 +655,7 @@ class MISBillingView(RoleRequiredMixin, View):
         # Autocomplete candidate usernames for filter datalist
         if getattr(user, "is_admin", False):
             candidate_users = User.objects.filter(is_active=True).values("username", "company_name", "role").order_by("username")
-        elif getattr(user, "is_reseller", False):
+        elif getattr(user, "is_reseller", False) or getattr(user, "is_distributor", False):
             candidate_users = User.objects.filter(
                 Q(id=user.id) | Q(parent_reseller=user)
             ).values("username", "company_name", "role").order_by("username")
@@ -703,7 +703,7 @@ class MISBillingView(RoleRequiredMixin, View):
             else:
                 qs = qs.filter(user__username__icontains=username)
         elif user_belonging:
-            if getattr(user, "is_reseller", False):
+            if getattr(user, "is_reseller", False) or getattr(user, "is_distributor", False):
                 qs = qs.filter(user__parent_reseller=user).exclude(user_id=user.id)
             elif getattr(user, "is_admin", False):
                 qs = qs.filter(user__role=User.Role.USER)

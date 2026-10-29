@@ -81,7 +81,7 @@ class CampaignListView(RoleRequiredMixin, View):
         User = get_user_model()
         if getattr(request.user, "is_admin", False):
             candidate_usernames = list(User.objects.values_list("username", flat=True).order_by("username"))
-        elif getattr(request.user, "is_reseller", False):
+        elif getattr(request.user, "is_reseller", False) or getattr(request.user, "is_distributor", False):
             candidate_usernames = list(
                 User.objects.filter(Q(id=request.user.id) | Q(parent_reseller=request.user))
                 .values_list("username", flat=True)
