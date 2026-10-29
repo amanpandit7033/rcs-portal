@@ -836,10 +836,19 @@ class LiveStatusView(RoleRequiredMixin, View):
         # If today is within the inspected range, ensure real-time counts are fresh
         if from_date <= today <= to_date:
             try:
-                sync_live_status(
-                    user_id=None if getattr(user, "is_admin", False) else user.id,
-                    date=today,
-                )
+                if getattr(user, "is_admin", False):
+                    sync_live_status(user_id=None, date=today)
+                elif getattr(user, "is_reseller", False) or getattr(user, "is_distributor", False):
+                    managed_ids = list(
+                        User.objects.filter(
+                            Q(id=user.id)
+                            | Q(parent_reseller=user)
+                            | Q(parent_reseller__parent_reseller=user)
+                        ).values_list("id", flat=True)
+                    )
+                    sync_live_status(user_ids=managed_ids, date=today)
+                else:
+                    sync_live_status(user_id=user.id, date=today)
             except Exception as sync_err:
                 logger.warning("Auto sync LiveStatus error: %s", sync_err)
 

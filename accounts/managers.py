@@ -61,14 +61,20 @@ class RoleScopedQuerySetMixin:
 
         is_user_model = self.model._meta.model_name.lower() == "user" and self.model._meta.app_label == "accounts"
 
-        # Reseller & Distributor: sees self + users where parent_reseller == user
+        # Reseller & Distributor: sees self + direct clients + downstream clients
         if getattr(user, "role", None) in ["reseller", "distributor"]:
             if is_user_model:
-                return self.filter(Q(id=user.id) | Q(parent_reseller=user))
+                return self.filter(
+                    Q(id=user.id)
+                    | Q(parent_reseller=user)
+                    | Q(parent_reseller__parent_reseller=user)
+                )
             else:
                 uf = getattr(self, "user_field", "user")
                 return self.filter(
-                    Q(**{uf: user}) | Q(**{f"{uf}__parent_reseller": user})
+                    Q(**{uf: user})
+                    | Q(**{f"{uf}__parent_reseller": user})
+                    | Q(**{f"{uf}__parent_reseller__parent_reseller": user})
                 )
 
         # Standard client user: sees only self / own data

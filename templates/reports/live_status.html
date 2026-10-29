@@ -226,7 +226,7 @@
                     <tr class="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                         <th class="px-5 py-3">Username</th>
                         <th class="px-4 py-3">Account Type</th>
-                        {% if request.user.is_admin %}
+                        {% if request.user.is_admin or request.user.is_distributor %}
                         <th class="px-4 py-3">Parent Reseller</th>
                         {% endif %}
                         <th class="px-4 py-3 text-right">Submissions</th>
@@ -260,6 +260,10 @@
                             <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-semibold text-[10px] border border-purple-200">
                                 Admin
                             </span>
+                            {% elif row.user.is_distributor %}
+                            <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold text-[10px] border border-indigo-200">
+                                Distributor
+                            </span>
                             {% elif row.user.is_reseller %}
                             <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-semibold text-[10px] border border-amber-200">
                                 Reseller
@@ -271,8 +275,8 @@
                             {% endif %}
                         </td>
 
-                        <!-- Parent Reseller (Admin Only) -->
-                        {% if request.user.is_admin %}
+                        <!-- Parent Reseller / Distributor -->
+                        {% if request.user.is_admin or request.user.is_distributor %}
                         <td class="px-4 py-3.5 whitespace-nowrap">
                             {% if row.user.parent_reseller %}
                             <span class="inline-flex items-center gap-1 text-slate-700 font-medium">

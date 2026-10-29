@@ -197,16 +197,18 @@ class LiveStatus(models.Model):
         return f"{self.user.username} - {self.date} (Submissions: {self.total_submission}, Cost: ₹{self.total_cost})"
 
 
-def sync_live_status(user_id=None, date=None, from_date=None, to_date=None):
+def sync_live_status(user_id=None, user_ids=None, date=None, from_date=None, to_date=None):
     """
     Synchronizes LiveStatus records from the Message table into the dedicated LiveStatus table.
-    Can be scoped to a single user, a single date, or a date range (from_date to to_date).
+    Can be scoped to a single user, a list of users, a single date, or a date range (from_date to to_date).
     """
     from messaging.models import Message
     from django.db.models import Max
 
     qs = Message.objects.all()
-    if user_id:
+    if user_ids is not None:
+        qs = qs.filter(user_id__in=user_ids)
+    elif user_id:
         qs = qs.filter(user_id=user_id)
     if date:
         qs = qs.filter(created_at__date=date)
