@@ -1,6 +1,6 @@
 """Django admin configuration for wallet models."""
 from django.contrib import admin
-from .models import RatePlan, SenderProfile, Wallet, WalletTransaction
+from .models import RatePlan, RefundRecord, SenderProfile, Wallet, WalletTransaction
 
 
 @admin.register(Wallet)
@@ -50,4 +50,22 @@ class SenderProfileAdmin(admin.ModelAdmin):
     list_display = ("sender_profile_name", "sender_id", "api_key", "user", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("sender_profile_name", "sender_id", "api_key", "user__email")
+
+
+@admin.register(RefundRecord)
+class RefundRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at",
+        "user",
+        "refund_type",
+        "campaign_name",
+        "campaign_total_count",
+        "refund_count",
+        "formatted_cost",
+        "formatted_before_balance",
+        "formatted_after_balance",
+    )
+    list_filter = ("refund_type", "created_at")
+    search_fields = ("user__email", "user__username", "campaign_name", "remarks")
+    readonly_fields = [f.name for f in RefundRecord._meta.fields]
 

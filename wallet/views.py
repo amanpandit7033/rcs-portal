@@ -15,10 +15,11 @@ from accounts.mixins import AdminRequiredMixin, ResellerRequiredMixin, RoleRequi
 from .forms import (
     AssignCreditForm,
     RatePlansForm,
+    RefundLedgerFilterForm,
     SenderProfileForm,
     WalletStatementFilterForm,
 )
-from .models import RatePlan, SenderProfile, Wallet, WalletTransaction
+from .models import RatePlan, RefundRecord, SenderProfile, Wallet, WalletTransaction
 from .services import (
     InsufficientBalanceError,
     InvalidAmountError,
@@ -49,7 +50,36 @@ class WalletStatementView(RoleRequiredMixin, ListView):
 
     def get_queryset(self):
         user = self.request.user
-        qs = WalletTransaction.objects.select_related("wallet__user", "created_by").order_by("-created_at")
+        qs = WalletTransaction.objects.select_related(
+            "wallet__user", "wallet__user__parent_reseller", "created_by"
+        ).order_by("-created_at")
+
+        # Restrict strictly to credit/debit allocations related to the Assign Credit feature (exclude campaigns, messages, refunds)
+        excluded_dispatch_ref_types = [
+            "CAMPAIGN_RESERVATION",
+            "CAMPAIGN_DISTRIBUTOR_RESERVATION",
+            "CAMPAIGN_COMPLETE_RELEASE",
+            "CAMPAIGN_CANCEL_RELEASE",
+            "campaign_reservation",
+            "campaign_release",
+            "MESSAGE_DISPATCH",
+            "MESSAGE",
+            "DISTRIBUTOR_MESSAGE",
+            "MESSAGE_REFUND",
+            "DISTRIBUTOR_MESSAGE_REFUND",
+            "LOW_PRICE_REBATE",
+            "message_refund",
+        ]
+        qs = qs.filter(
+            type__in=[
+                WalletTransaction.TransactionType.CREDIT,
+                WalletTransaction.TransactionType.DEBIT,
+                WalletTransaction.TransactionType.TRANSFER_IN,
+                WalletTransaction.TransactionType.TRANSFER_OUT,
+            ]
+        ).exclude(
+            reference_type__in=excluded_dispatch_ref_types
+        )
 
         # Role scoping
         if not user.is_admin:
@@ -71,8 +101,20 @@ class WalletStatementView(RoleRequiredMixin, ListView):
                 qs = qs.filter(created_at__date__gte=start_date)
             if end_date:
                 qs = qs.filter(created_at__date__lte=end_date)
-            if tx_type:
-                qs = qs.filter(type=tx_type)
+            if tx_type == "credit":
+                qs = qs.filter(
+                    type__in=[
+                        WalletTransaction.TransactionType.CREDIT,
+                        WalletTransaction.TransactionType.TRANSFER_IN,
+                    ]
+                )
+            elif tx_type == "debit":
+                qs = qs.filter(
+                    type__in=[
+                        WalletTransaction.TransactionType.DEBIT,
+                        WalletTransaction.TransactionType.TRANSFER_OUT,
+                    ]
+                )
 
         target_user_id = self.request.GET.get("user_id")
         if target_user_id and (user.is_admin or user.is_reseller or user.is_distributor):
@@ -88,42 +130,162 @@ class WalletStatementView(RoleRequiredMixin, ListView):
 
     def export_csv(self, queryset):
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="wallet_statement.csv"'
+        response["Content-Disposition"] = 'attachment; filename="credit_debit_ledger.csv"'
 
         writer = csv.writer(response)
         writer.writerow([
             "Timestamp",
+            "Account Username",
             "Account Email",
             "Company",
-            "Type",
+            "Operation",
             "Amount (INR)",
             "Balance After (INR)",
-            "Reference Type",
-            "Reference ID",
+            "Assigned By",
             "Remarks",
-            "Initiated By",
         ])
 
         for tx in queryset:
+            op_label = "Credit (+)" if tx.type in ["credit", "transfer_in"] else "Debit (-)"
+            assigned_by = tx.assigned_by_display
             writer.writerow([
                 tx.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                tx.wallet.user.username,
                 tx.wallet.user.email,
                 tx.wallet.user.company_name or "-",
-                tx.get_type_display(),
+                op_label,
                 f"{tx.amount:.4f}",
                 f"{tx.balance_after:.4f}",
-                tx.reference_type or "-",
-                tx.reference_id or "-",
+                assigned_by,
                 tx.remarks or "-",
-                tx.created_by.email if tx.created_by else "System",
+            ])
+
+        return response
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Sum
+
+        context = super().get_context_data(**kwargs)
+        context["filter_form"] = getattr(self, "filter_form", WalletStatementFilterForm(self.request.GET))
+        context["page_title"] = "Credit & Debit Ledger"
+
+        qs = self.get_queryset()
+        context["total_credits_assigned"] = qs.filter(
+            type__in=[WalletTransaction.TransactionType.CREDIT, WalletTransaction.TransactionType.TRANSFER_IN]
+        ).aggregate(s=Sum("amount"))["s"] or Decimal("0.0000")
+        context["total_debits_deducted"] = qs.filter(
+            type__in=[WalletTransaction.TransactionType.DEBIT, WalletTransaction.TransactionType.TRANSFER_OUT]
+        ).aggregate(s=Sum("amount"))["s"] or Decimal("0.0000")
+        return context
+
+
+class RefundLedgerView(RoleRequiredMixin, ListView):
+    """View to list refunds from failed messages and low price cutting rebates."""
+
+    model = RefundRecord
+    template_name = "wallet/refund_ledger.html"
+    context_object_name = "refunds"
+    paginate_by = 25
+    allowed_roles = ["admin", "reseller", "distributor", "user"]
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("accounts:login")
+
+        # Clients (regular users) without refund permission cannot access this path
+        if request.user.role == User.Role.USER and not request.user.can_receive_refund():
+            raise PermissionDenied("You do not have permission to access the refund ledger.")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = RefundRecord.objects.select_related("user", "campaign").order_by("-created_at")
+
+        # Role scoping
+        if not user.is_admin:
+            if user.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:
+                qs = qs.filter(
+                    Q(user=user) | Q(user__parent_reseller=user)
+                )
+            else:
+                qs = qs.filter(user=user)
+
+        # Filters
+        self.filter_form = RefundLedgerFilterForm(self.request.GET)
+        if self.filter_form.is_valid():
+            q = self.filter_form.cleaned_data.get("q")
+            start_date = self.filter_form.cleaned_data.get("start_date")
+            end_date = self.filter_form.cleaned_data.get("end_date")
+            refund_type = self.filter_form.cleaned_data.get("refund_type")
+
+            if q:
+                qs = qs.filter(
+                    Q(user__username__icontains=q)
+                    | Q(user__email__icontains=q)
+                    | Q(campaign_name__icontains=q)
+                )
+            if start_date:
+                qs = qs.filter(created_at__date__gte=start_date)
+            if end_date:
+                qs = qs.filter(created_at__date__lte=end_date)
+            if refund_type:
+                qs = qs.filter(refund_type=refund_type)
+
+        return qs
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get("export") == "csv":
+            return self.export_csv(self.get_queryset())
+        return super().get(request, *args, **kwargs)
+
+    def export_csv(self, queryset):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="refund_ledger.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Timestamp",
+            "Username",
+            "Email",
+            "Refund Type",
+            "Campaign Name",
+            "Campaign Total Count",
+            "Refunded Contacts",
+            "Cost of Refund (INR)",
+            "Before Refund Balance (INR)",
+            "After Refund Balance (INR)",
+            "Remarks",
+        ])
+
+        for r in queryset:
+            writer.writerow([
+                r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                r.user.username,
+                r.user.email,
+                r.get_refund_type_display(),
+                r.campaign_name or "-",
+                r.campaign_total_count,
+                r.refund_count,
+                f"{r.cost_of_refund:.4f}",
+                f"{r.before_balance:.4f}",
+                f"{r.after_balance:.4f}",
+                r.remarks or "-",
             ])
 
         return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["filter_form"] = getattr(self, "filter_form", WalletStatementFilterForm(self.request.GET))
-        context["page_title"] = "Wallet Ledger Statement"
+        context["filter_form"] = getattr(self, "filter_form", RefundLedgerFilterForm(self.request.GET))
+        context["page_title"] = "Refund Ledger"
+
+        # Summary aggregates
+        from django.db.models import Sum
+        qs = self.get_queryset()
+        context["total_refund_amount"] = qs.aggregate(s=Sum("cost_of_refund"))["s"] or Decimal("0.0000")
+        context["failed_refund_amount"] = qs.filter(refund_type="failed").aggregate(s=Sum("cost_of_refund"))["s"] or Decimal("0.0000")
+        context["cutting_refund_amount"] = qs.filter(refund_type="cutting").aggregate(s=Sum("cost_of_refund"))["s"] or Decimal("0.0000")
         return context
 
 

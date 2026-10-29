@@ -24,6 +24,11 @@ class TemplateFilterForm(forms.Form):
         widget=forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Search by template name..."}),
         label="Search",
     )
+    username = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Search by username..."}),
+        label="Username",
+    )
     status = forms.ChoiceField(
         required=False,
         choices=[("", "All Statuses")] + list(Template.Status.choices),

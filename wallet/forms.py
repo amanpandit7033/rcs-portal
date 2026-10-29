@@ -178,7 +178,7 @@ class SenderProfileForm(forms.ModelForm):
 
 
 class WalletStatementFilterForm(forms.Form):
-    """Filter form for wallet transaction statement."""
+    """Filter form for wallet credit/debit transaction statement."""
 
     start_date = forms.DateField(
         required=False,
@@ -192,7 +192,37 @@ class WalletStatementFilterForm(forms.Form):
     )
     tx_type = forms.ChoiceField(
         required=False,
-        choices=[("", "All Types")] + list(WalletTransaction.TransactionType.choices),
+        choices=[
+            ("", "All Operations"),
+            ("credit", "Credit / Added (+)"),
+            ("debit", "Debit / Deducted (-)"),
+        ],
         widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
-        label="Transaction Type",
+        label="Operation",
+    )
+
+
+class RefundLedgerFilterForm(forms.Form):
+    """Filter form for refund and cutting ledger."""
+
+    q = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": TAILWIND_INPUT, "placeholder": "Search username or campaign..."}),
+        label="Search",
+    )
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"class": TAILWIND_INPUT, "type": "date"}),
+        label="From Date",
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"class": TAILWIND_INPUT, "type": "date"}),
+        label="To Date",
+    )
+    refund_type = forms.ChoiceField(
+        required=False,
+        choices=[("", "All Refund Types"), ("failed", "Failed Message Refund"), ("cutting", "Cutting Refund / Rebate")],
+        widget=forms.Select(attrs={"class": TAILWIND_SELECT}),
+        label="Refund Type",
     )

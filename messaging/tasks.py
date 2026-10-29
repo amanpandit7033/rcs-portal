@@ -186,6 +186,19 @@ def send_message_task(self, message_id: str):
                     message.is_refunded = True
                     fields_to_update.append("is_refunded")
                     logger.info("Refunded %s INR to user %s for failed message %s", message.cost, message.user.email, message.id)
+                    try:
+                        from wallet.services import record_campaign_refund
+                        contact = message.campaign_contacts.select_related("campaign").first()
+                        record_campaign_refund(
+                            user=message.user,
+                            campaign=contact.campaign if contact else None,
+                            refund_type="failed",
+                            amount=message.cost,
+                            count=1,
+                            remarks=f"Message {message.id} failed",
+                        )
+                    except Exception as rec_err:
+                        logger.warning("Failed to record campaign refund for message %s: %s", message.id, rec_err)
                 except Exception as ref_err:
                     logger.critical("Failed to process refund for message %s: %s", message.id, ref_err)
 
@@ -334,6 +347,19 @@ def process_dlr_task(self, dlr_log_id: int):
                         message.is_refunded = True
                         fields_to_update.append("is_refunded")
                         logger.info("Refunded %s to user %s for failed DLR on %s", message.cost, message.user.email, message.id)
+                        try:
+                            from wallet.services import record_campaign_refund
+                            contact = message.campaign_contacts.select_related("campaign").first()
+                            record_campaign_refund(
+                                user=message.user,
+                                campaign=contact.campaign if contact else None,
+                                refund_type="failed",
+                                amount=message.cost,
+                                count=1,
+                                remarks=f"DLR failed for message {message.id}",
+                            )
+                        except Exception as rec_err:
+                            logger.warning("Failed to record campaign refund for DLR %s: %s", message.id, rec_err)
                     except Exception as ref_err:
                         logger.critical("Failed refunding message %s on DLR: %s", message.id, ref_err)
 

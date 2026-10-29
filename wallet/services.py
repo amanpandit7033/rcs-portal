@@ -291,3 +291,56 @@ def set_user_rate(
         },
     )
     return rate_plan
+
+
+def record_campaign_refund(
+    user,
+    campaign,
+    refund_type: str,
+    amount: Union[Decimal, float, int, str],
+    count: int = 1,
+    remarks: str = "",
+):
+    """Record or aggregate a campaign-level refund row in the Refund Ledger."""
+    from .models import RefundRecord
+
+    dec_amount = _to_decimal(amount)
+    if dec_amount <= Decimal("0.0000") and count <= 0:
+        return None
+
+    wallet = getattr(user, "wallet", None)
+    current_bal = wallet.balance if wallet else Decimal("0.0000")
+
+    campaign_name = campaign.name if campaign else "Direct API Message"
+    total_count = campaign.total if campaign else count
+
+    record = None
+    if campaign:
+        record = RefundRecord.objects.filter(
+            user=user,
+            campaign=campaign,
+            refund_type=refund_type,
+        ).first()
+
+    if record:
+        record.cost_of_refund += dec_amount
+        record.refund_count += count
+        record.after_balance = current_bal
+        if remarks and remarks not in record.remarks:
+            record.remarks = f"{record.remarks} | {remarks}" if record.remarks else remarks
+        record.save(update_fields=["cost_of_refund", "refund_count", "after_balance", "remarks"])
+        return record
+    else:
+        before_bal = max(Decimal("0.0000"), current_bal - dec_amount)
+        return RefundRecord.objects.create(
+            user=user,
+            refund_type=refund_type,
+            campaign=campaign,
+            campaign_name=campaign_name,
+            campaign_total_count=total_count,
+            refund_count=count,
+            cost_of_refund=dec_amount,
+            before_balance=before_bal,
+            after_balance=current_bal,
+            remarks=remarks,
+        )

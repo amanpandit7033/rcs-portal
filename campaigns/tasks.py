@@ -425,6 +425,18 @@ def run_campaign_task(self, campaign_id: str):
                             reference_type="LOW_PRICE_REBATE",
                             reference_id=str(message.id),
                         )
+                        try:
+                            from wallet.services import record_campaign_refund
+                            record_campaign_refund(
+                                user=parent_reseller,
+                                campaign=campaign,
+                                refund_type="cutting",
+                                amount=rebate_amount,
+                                count=1,
+                                remarks=f"Cutting rebate for {contact.number}",
+                            )
+                        except Exception as rec_err:
+                            logger.warning("Failed to record cutting rebate for campaign %s: %s", campaign.id, rec_err)
                     except Exception as e:
                         logger.error("Failed to credit low price rebate to reseller %s: %s", parent_reseller.username, e)
             else:

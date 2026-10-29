@@ -7,6 +7,7 @@ from .views import (
     ManageSenderProfilesView,
     ToggleSenderProfileActiveView,
     DeleteSenderProfileView,
+    RefundLedgerView,
     WalletStatementView,
 )
 
@@ -14,6 +15,7 @@ app_name = "wallet"
 
 urlpatterns = [
     path("statement/", WalletStatementView.as_view(), name="statement"),
+    path("refunds/", RefundLedgerView.as_view(), name="refund_ledger"),
     path("assign-credit/", AssignCreditView.as_view(), name="assign_credit"),
     path("transfer/", RedirectView.as_view(pattern_name="wallet:assign_credit", permanent=False), name="transfer"),
     path("rates/<int:user_id>/", ManageRatePlansView.as_view(), name="manage_rates"),

@@ -430,19 +430,12 @@ function clientDirectoryManager() {
                             <input type="email" name="email" x-model="editClient.email" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Account Type <span class="text-rose-500">*</span></label>
-                            <select name="role" x-model="editClient.role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                                <option value="user">User</option>
-                                {% if request.user.is_distributor %}
-                                <option value="distributor">Distributor</option>
-                                {% else %}
-                                <option value="reseller">Reseller</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5">Company Name <span class="text-rose-500">*</span></label>
                             <input type="text" name="company_name" x-model="editClient.company_name" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number</label>
+                            <input type="text" name="phone" x-model="editClient.phone" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5">First Name</label>
@@ -453,14 +446,10 @@ function clientDirectoryManager() {
                             <input type="text" name="last_name" x-model="editClient.last_name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number</label>
-                            <input type="text" name="phone" x-model="editClient.phone" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                        </div>
-                        <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5">State</label>
                             <input type="text" name="state" x-model="editClient.state" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
-                        <div class="sm:col-span-2">
+                        <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5">GSTIN</label>
                             <input type="text" name="GSTIN" x-model="editClient.GSTIN" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
@@ -757,27 +746,33 @@ function clientDirectoryManager() {
                 </template>
 
                 <!-- Permission: Campaign Skimming / Cutting -->
-                <div class="p-4 rounded-2xl bg-amber-50/40 border border-amber-200/70 space-y-3">
-                    <div class="flex items-center justify-between pb-2 border-b border-amber-200/50">
-                        <div class="flex items-center gap-2">
-                            <span class="w-5 h-5 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-[11px]">%</span>
-                            <span class="text-xs font-bold text-slate-900">Campaign Skimming / Cutting</span>
-                        </div>
-                        <span class="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">Margin Optimizer</span>
-                    </div>
-
-                    <label class="flex items-center gap-2 cursor-pointer">
+                <div class="p-4 rounded-2xl border transition-all"
+                     :class="permissionsClient.is_low_price_applied ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'">
+                    <label class="flex items-start gap-3.5 cursor-pointer">
                         <input type="checkbox"
                                name="is_low_price_applied"
                                id="client_perm_is_low_price_applied"
                                x-model="permissionsClient.is_low_price_applied"
-                               class="rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4 w-4">
-                        <span class="text-xs font-semibold text-slate-800">
-                            Apply Low Price cutting on this client's campaigns
-                        </span>
+                               class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900">Campaign Skimming / Cutting</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                      :class="permissionsClient.is_low_price_applied ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
+                                      x-text="permissionsClient.is_low_price_applied ? 'Enabled' : 'Disabled'">
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                When enabled, automated percentage-based contact skimming is applied directly to campaigns dispatched by this client once recipients reach the defined threshold.
+                            </p>
+                        </div>
                     </label>
 
-                    <div class="grid grid-cols-2 gap-3 pt-1" x-show="permissionsClient.is_low_price_applied">
+                    <div class="mt-3 pt-3 border-t border-amber-200/60 grid grid-cols-2 gap-3"
+                         x-show="permissionsClient.is_low_price_applied"
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0">
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-700 mb-1">Start From (Min Recipients)</label>
                             <input type="number"
@@ -785,7 +780,7 @@ function clientDirectoryManager() {
                                    name="low_price_start_from"
                                    x-model="permissionsClient.low_price_start_from"
                                    placeholder="e.g. 1000"
-                                   class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all">
+                                   class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all">
                         </div>
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-700 mb-1">Percentage (%)</label>
@@ -796,21 +791,21 @@ function clientDirectoryManager() {
                                    name="low_price_percentage"
                                    x-model="permissionsClient.low_price_percentage"
                                    placeholder="e.g. 10.00"
-                                   class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all">
+                                   class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all">
                         </div>
                     </div>
                 </div>
                 {% endif %}
 
                 <!-- Modal Footer -->
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                     <button type="button"
                             @click="showPermissionsModal = false"
-                            class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
+                            class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer">
                         Cancel
                     </button>
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 shadow-sm transition-all focus:ring-4 focus:ring-purple-100 cursor-pointer">
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-sm shadow-purple-200 transition-all focus:ring-4 focus:ring-purple-100 cursor-pointer">
                         <span>Save Permissions</span>
                     </button>
                 </div>

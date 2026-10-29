@@ -4,6 +4,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -39,13 +40,23 @@ class TemplateListView(RoleRequiredMixin, ListView):
         self.filter_form = TemplateFilterForm(self.request.GET, user=user)
         if self.filter_form.is_valid():
             q = self.filter_form.cleaned_data.get("q")
+            username = self.filter_form.cleaned_data.get("username")
             status = self.filter_form.cleaned_data.get("status")
             template_type = self.filter_form.cleaned_data.get("template_type")
             message_type = self.filter_form.cleaned_data.get("message_type")
             owner = self.filter_form.cleaned_data.get("owner")
 
             if q:
-                qs = qs.filter(name__icontains=q)
+                if user.is_admin or user.is_superuser or user.is_reseller or user.is_distributor:
+                    qs = qs.filter(
+                        Q(name__icontains=q) | Q(owner__username__icontains=q)
+                    )
+                else:
+                    qs = qs.filter(name__icontains=q)
+
+            if username and (user.is_admin or user.is_superuser or user.is_reseller or user.is_distributor):
+                qs = qs.filter(owner__username__icontains=username)
+
             if status:
                 qs = qs.filter(status=status)
             if template_type:

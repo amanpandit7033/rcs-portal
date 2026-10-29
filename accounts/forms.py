@@ -167,7 +167,6 @@ class UserEditForm(forms.ModelForm):
             "phone",
             "GSTIN",
             "state",
-            "role",
             "parent_reseller",
             "is_active",
             "allow_refund",
@@ -179,7 +178,6 @@ class UserEditForm(forms.ModelForm):
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "email": forms.EmailInput(attrs={"class": TAILWIND_INPUT}),
-            "role": forms.Select(attrs={"class": TAILWIND_SELECT}),
             "parent_reseller": forms.Select(attrs={"class": TAILWIND_SELECT}),
             "company_name": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "first_name": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
@@ -198,11 +196,6 @@ class UserEditForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from .models import User
-        self.fields["role"].choices = [
-            (User.Role.RESELLER, "Reseller"),
-            (User.Role.DISTRIBUTOR, "Distributor"),
-            (User.Role.USER, "User"),
-        ]
         self.fields["parent_reseller"].queryset = User.objects.filter(role__in=[User.Role.RESELLER, User.Role.DISTRIBUTOR])
         self.fields["parent_reseller"].required = False
 
@@ -312,7 +305,6 @@ class ClientEditForm(forms.ModelForm):
         fields = [
             "username",
             "email",
-            "role",
             "company_name",
             "first_name",
             "last_name",
@@ -329,7 +321,6 @@ class ClientEditForm(forms.ModelForm):
         widgets = {
             "username": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "email": forms.EmailInput(attrs={"class": TAILWIND_INPUT}),
-            "role": forms.Select(attrs={"class": TAILWIND_SELECT}),
             "company_name": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "first_name": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
             "last_name": forms.TextInput(attrs={"class": TAILWIND_INPUT}),
@@ -347,17 +338,6 @@ class ClientEditForm(forms.ModelForm):
     def __init__(self, *args, reseller=None, **kwargs):
         self.reseller = reseller
         super().__init__(*args, **kwargs)
-        from .models import User
-        if self.reseller and getattr(self.reseller, "role", None) == User.Role.DISTRIBUTOR:
-            self.fields["role"].choices = [
-                (User.Role.USER, "User"),
-                (User.Role.DISTRIBUTOR, "Distributor"),
-            ]
-        else:
-            self.fields["role"].choices = [
-                (User.Role.USER, "User"),
-                (User.Role.RESELLER, "Reseller"),
-            ]
 
         has_refund_perm = bool(self.reseller and (self.reseller.allow_refund or self.reseller.is_admin))
         if not has_refund_perm:

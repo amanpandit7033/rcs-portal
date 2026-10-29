@@ -113,6 +113,16 @@ class WalletTransaction(models.Model):
     def formatted_balance_after(self) -> str:
         return format_inr(self.balance_after, decimal_places=2)
 
+    @property
+    def assigned_by_display(self) -> str:
+        """Returns the username of the parent/actor who performed the credit/debit."""
+        if self.created_by:
+            return self.created_by.username
+        parent = getattr(getattr(self.wallet, "user", None), "parent_reseller", None)
+        if parent:
+            return parent.username
+        return "admin"
+
     def save(self, *args, **kwargs):
         """Strict append-only constraint: updates to existing rows are disallowed."""
         if self.pk:
@@ -212,3 +222,74 @@ class SenderProfile(models.Model):
 
     def __str__(self):
         return f"{self.sender_profile_name} ({self.sender_id}) - {self.user.email}"
+
+
+class RefundRecord(models.Model):
+    """Financial ledger tracking refunds for failed messages and cutting rebates."""
+
+    class RefundType(models.TextChoices):
+        FAILED = "failed", "Failed Message Refund"
+        CUTTING = "cutting", "Cutting Refund / Rebate"
+
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="refund_records",
+    )
+    refund_type = models.CharField(
+        "Refund Type",
+        max_length=20,
+        choices=RefundType.choices,
+        db_index=True,
+    )
+    campaign = models.ForeignKey(
+        "campaigns.Campaign",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="refund_records",
+    )
+    campaign_name = models.CharField("Campaign Name", max_length=255, blank=True)
+    campaign_total_count = models.PositiveIntegerField("Campaign Total Count", default=0)
+    refund_count = models.PositiveIntegerField("Refunded / Skipped Contacts Count", default=0)
+    cost_of_refund = models.DecimalField(
+        "Cost of Refund (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+    before_balance = models.DecimalField(
+        "Before Refund Balance (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+    after_balance = models.DecimalField(
+        "After Refund Balance (INR)",
+        max_digits=14,
+        decimal_places=4,
+        default=Decimal("0.0000"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    remarks = models.TextField("Remarks", blank=True)
+
+    class Meta:
+        verbose_name = "Refund Record"
+        verbose_name_plural = "Refund Records"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_refund_type_display()} of {format_inr(self.cost_of_refund)} ({self.user.username})"
+
+    @property
+    def formatted_cost(self) -> str:
+        return format_inr(self.cost_of_refund, decimal_places=4)
+
+    @property
+    def formatted_before_balance(self) -> str:
+        return format_inr(self.before_balance, decimal_places=4)
+
+    @property
+    def formatted_after_balance(self) -> str:
+        return format_inr(self.after_balance, decimal_places=4)
