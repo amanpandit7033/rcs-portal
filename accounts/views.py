@@ -605,7 +605,10 @@ class UpdateUserPermissionsView(AdminRequiredMixin, View):
         target = get_object_or_404(User, id=user_id)
 
         target.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
-        target.can_view_live_status = request.POST.get("can_view_live_status") in ["on", "true", "1", True]
+        if target.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR]:
+            target.can_view_live_status = request.POST.get("can_view_live_status") in ["on", "true", "1", True]
+        else:
+            target.can_view_live_status = False
         target.can_use_low_price = request.POST.get("can_use_low_price") in ["on", "true", "1", True]
         target.is_low_price_applied = request.POST.get("is_low_price_applied") in ["on", "true", "1", True]
 
@@ -769,7 +772,7 @@ class UpdateClientPermissionsView(ResellerRequiredMixin, View):
             client.allow_refund = request.POST.get("allow_refund") in ["on", "true", "1", True]
             update_fields.append("allow_refund")
 
-        if request.user.can_view_live_status or request.user.is_admin:
+        if client.role in [User.Role.RESELLER, User.Role.DISTRIBUTOR] and (request.user.can_view_live_status or request.user.is_admin):
             client.can_view_live_status = request.POST.get("can_view_live_status") in ["on", "true", "1", True]
             update_fields.append("can_view_live_status")
 

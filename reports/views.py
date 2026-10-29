@@ -804,8 +804,8 @@ class LiveStatusView(RoleRequiredMixin, View):
     def get(self, request):
         user = request.user
         if not getattr(user, "is_admin", False) and not getattr(user, "is_superuser", False):
-            if not getattr(user, "can_view_live_status", False):
-                raise PermissionDenied("You do not have permission to view Live Status.")
+            if getattr(user, "role", None) not in [User.Role.RESELLER, User.Role.DISTRIBUTOR] or not getattr(user, "can_view_live_status", False):
+                raise PermissionDenied("Live Status is only accessible to Resellers and Distributors with explicit permission.")
 
         from .models import LiveStatus, sync_live_status
         from datetime import datetime, timedelta

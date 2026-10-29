@@ -913,29 +913,31 @@ function accountDirectoryManager() {
                     </label>
                 </div>
 
-                <!-- Permission 2: Live Status Access -->
-                <div class="p-4 rounded-2xl border transition-all"
-                     :class="permissionsUser.can_view_live_status ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-200'">
-                    <label class="flex items-start gap-3.5 cursor-pointer">
-                        <input type="checkbox"
-                               name="can_view_live_status"
-                               id="modal_perm_can_view_live_status"
-                               x-model="permissionsUser.can_view_live_status"
-                               class="mt-1 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4.5 w-4.5">
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-900">Live Status Access</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                                      :class="permissionsUser.can_view_live_status ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
-                                      x-text="permissionsUser.can_view_live_status ? 'Enabled' : 'Disabled'">
-                                </span>
+                <!-- Permission 2: Live Status Access (Only for Resellers & Distributors) -->
+                <template x-if="permissionsUser.role === 'reseller' || permissionsUser.role === 'distributor'">
+                    <div class="p-4 rounded-2xl border transition-all"
+                         :class="permissionsUser.can_view_live_status ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-200'">
+                        <label class="flex items-start gap-3.5 cursor-pointer">
+                            <input type="checkbox"
+                                   name="can_view_live_status"
+                                   id="modal_perm_can_view_live_status"
+                                   x-model="permissionsUser.can_view_live_status"
+                                   class="mt-1 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4.5 w-4.5">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-900">Live Status Access</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                          :class="permissionsUser.can_view_live_status ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
+                                          x-text="permissionsUser.can_view_live_status ? 'Enabled' : 'Disabled'">
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                    When enabled, this <span class="capitalize" x-text="permissionsUser.role"></span> can view the real-time Live Status report to track message submissions, carrier delivery receipts, customer reads, and cost metrics for their own users. (By default disabled).
+                                </p>
                             </div>
-                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                When enabled, this account can view the real-time Live Status report to track message submissions, carrier delivery receipts, customer reads, and cost metrics for their own users. (By default disabled).
-                            </p>
-                        </div>
-                    </label>
-                </div>
+                        </label>
+                    </div>
+                </template>
 
                 <!-- Permission 2: Allow Low Price Feature (for Resellers & Distributors) -->
                 <template x-if="permissionsUser.role === 'reseller' || permissionsUser.role === 'distributor'">
