@@ -373,7 +373,7 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
             .select_related("user", "sender_profile", "template")
             .annotate(
                 annotated_read=Count("messages", filter=Q(messages__status="read"), distinct=True),
-                annotated_delivered=Count("messages", filter=Q(messages__status="delivered"), distinct=True),
+                annotated_delivered=Count("messages", filter=Q(messages__status__in=["delivered", "read"]), distinct=True),
                 annotated_failed=Count("messages", filter=Q(messages__status="failed"), distinct=True),
             )
             .order_by("-created_at")
@@ -584,16 +584,23 @@ class AdminCampaignReportListView(AdminRequiredMixin, View):
             error_message="" if to_status != "failed" else "Failed - Operator Delivery Failure",
         )
 
-        # 6. Refresh campaign processed counters
+        # 6. Refresh campaign processed and status counters
         campaign.processed_count = CampaignContact.objects.filter(
             campaign=campaign,
             status__in=[
                 CampaignContact.Status.DISPATCHED,
                 CampaignContact.Status.DELIVERED,
+                CampaignContact.Status.READ,
                 CampaignContact.Status.FAILED,
             ],
         ).count()
-        campaign.save(update_fields=["processed_count", "updated_at"])
+        c_stats = CampaignContact.objects.filter(campaign=campaign).aggregate(
+            dlvr=Count("id", filter=Q(status__in=[CampaignContact.Status.DELIVERED, CampaignContact.Status.READ])),
+            fail=Count("id", filter=Q(status=CampaignContact.Status.FAILED)),
+        )
+        campaign.delivered_count = c_stats["dlvr"] or 0
+        campaign.failed_count = c_stats["fail"] or 0
+        campaign.save(update_fields=["processed_count", "delivered_count", "failed_count", "updated_at"])
 
         # 7. Sync MIS Billing and Live Status for updated campaign
         try:

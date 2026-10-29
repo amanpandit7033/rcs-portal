@@ -13,12 +13,14 @@
         const read = Number(c.read) || 0;
         const delivered = Number(c.delivered) || 0;
         const failed = Number(c.failed) || 0;
-        const other = Math.max(0, total - read - delivered - failed);
+        const deliveredUnread = Math.max(0, delivered - read);
+        const other = Math.max(0, total - delivered - failed);
         this.chartCampaign = {
             name: c.name || '',
             total: total,
             read: read,
             delivered: delivered,
+            deliveredUnread: deliveredUnread,
             failed: failed,
             other: other
         };
@@ -35,11 +37,11 @@
             this.chartInstance = null;
         }
         const read = this.chartCampaign.read;
-        const delivered = this.chartCampaign.delivered;
+        const deliveredUnread = this.chartCampaign.deliveredUnread;
         const failed = this.chartCampaign.failed;
         const other = this.chartCampaign.other;
-        const hasData = (read + delivered + failed + other) > 0;
-        const dataValues = hasData ? [read, delivered, failed, other] : [1];
+        const hasData = (read + deliveredUnread + failed + other) > 0;
+        const dataValues = hasData ? [read, deliveredUnread, failed, other] : [1];
         const dataColors = hasData ? ['#8b5cf6', '#10b981', '#ef4444', '#3b82f6'] : ['#e2e8f0'];
         const dataLabels = hasData ? ['Read', 'Delivered (Unread)', 'Failed', 'Pending / In-Transit'] : ['No dispatches'];
 
@@ -388,7 +390,7 @@
                         <div class="flex items-center gap-1">
                             <span class="text-slate-500 font-medium">Delivered:</span>
                             <span class="font-bold font-mono text-emerald-600"
-                                  x-text="(chartCampaign.total > 0 ? (((chartCampaign.delivered + chartCampaign.read) / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
+                                  x-text="(chartCampaign.total > 0 ? ((chartCampaign.delivered / chartCampaign.total) * 100).toFixed(1) : 0) + '%'"></span>
                         </div>
                         <div class="flex items-center gap-1">
                             <span class="text-slate-500 font-medium">Read Rate:</span>
