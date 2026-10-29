@@ -192,9 +192,10 @@ class RefundLedgerView(RoleRequiredMixin, ListView):
         if not request.user.is_authenticated:
             return redirect("accounts:login")
 
-        # Clients (regular users) without refund permission cannot access this path
-        if request.user.role == User.Role.USER and not request.user.can_receive_refund():
-            raise PermissionDenied("You do not have permission to access the refund ledger.")
+        # Non-superadmin/admin users without refund permission cannot access this path
+        if not (request.user.is_superuser or getattr(request.user, "is_superadmin", False) or getattr(request.user, "is_admin", False)):
+            if not request.user.can_receive_refund():
+                raise PermissionDenied("You do not have permission to access the refund ledger.")
 
         return super().dispatch(request, *args, **kwargs)
 

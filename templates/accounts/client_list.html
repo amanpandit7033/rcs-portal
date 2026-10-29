@@ -490,11 +490,11 @@ function clientDirectoryManager() {
                         {% endif %}
 
                         {% if request.user.can_use_low_price or request.user.is_admin %}
-                        <!-- Low Price & Skimming Configuration -->
+                        <!-- Low Price & Skip Configuration -->
                         <div class="sm:col-span-2 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
                             <div class="flex items-center gap-2 pb-2 border-b border-amber-200/60">
                                 <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">%</span>
-                                <span class="text-xs font-bold text-slate-900">Low Price &amp; Skimming Routing</span>
+                                <span class="text-xs font-bold text-slate-900">Low Price &amp; Skip Routing</span>
                             </div>
 
                             <template x-if="editClient.role === 'reseller' || editClient.role === 'distributor'">
@@ -745,7 +745,7 @@ function clientDirectoryManager() {
                     </div>
                 </template>
 
-                <!-- Permission: Campaign Skimming / Cutting -->
+                <!-- Permission: Campaign Skip / Cutting -->
                 <div class="p-4 rounded-2xl border transition-all"
                      :class="permissionsClient.is_low_price_applied ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'">
                     <label class="flex items-start gap-3.5 cursor-pointer">
@@ -756,14 +756,14 @@ function clientDirectoryManager() {
                                class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
                         <div class="flex-1">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-900">Campaign Skimming / Cutting</span>
+                                <span class="text-xs font-bold text-slate-900">Campaign Skip / Cutting</span>
                                 <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
                                       :class="permissionsClient.is_low_price_applied ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
                                       x-text="permissionsClient.is_low_price_applied ? 'Enabled' : 'Disabled'">
                                 </span>
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                When enabled, automated percentage-based contact skimming is applied directly to campaigns dispatched by this client once recipients reach the defined threshold.
+                                When enabled, automated percentage-based contact Skip is applied directly to campaigns dispatched by this client once recipients reach the defined threshold.
                             </p>
                         </div>
                     </label>

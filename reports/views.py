@@ -958,6 +958,13 @@ class LiveStatusView(RoleRequiredMixin, View):
         is_today = (from_date == today and to_date == today)
         is_yesterday = (from_date == yesterday and to_date == yesterday)
 
+        if request.user.is_admin or request.user.is_superuser:
+            candidate_usernames = list(User.objects.filter(is_active=True).values_list("username", flat=True)[:50])
+        elif request.user.is_reseller or request.user.is_distributor:
+            candidate_usernames = list(User.objects.filter(parent_reseller=request.user, is_active=True).values_list("username", flat=True)[:50])
+        else:
+            candidate_usernames = []
+
         return render(
             request,
             self.template_name,
@@ -972,6 +979,7 @@ class LiveStatusView(RoleRequiredMixin, View):
                 "is_yesterday": is_yesterday,
                 "is_single_day": from_date == to_date,
                 "search_query": q,
+                "candidate_usernames": candidate_usernames,
                 "selected_role": role_filter,
                 "summary": {
                     "total_submission": total_sub,

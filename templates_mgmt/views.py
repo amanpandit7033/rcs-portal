@@ -76,8 +76,13 @@ class TemplateListView(RoleRequiredMixin, ListView):
         if user.is_admin or user.is_superuser:
             admin_profiles = SenderProfile.objects.filter(user=user, is_active=True)
             context["sender_profiles"] = admin_profiles if admin_profiles.exists() else SenderProfile.objects.filter(is_active=True)
+            context["candidate_usernames"] = list(User.objects.filter(is_active=True).values_list("username", flat=True)[:50])
+        elif user.is_reseller or user.is_distributor:
+            context["sender_profiles"] = SenderProfile.objects.filter(user=user, is_active=True)
+            context["candidate_usernames"] = list(User.objects.filter(parent_reseller=user, is_active=True).values_list("username", flat=True)[:50])
         else:
             context["sender_profiles"] = SenderProfile.objects.filter(user=user, is_active=True)
+            context["candidate_usernames"] = []
         return context
 
 

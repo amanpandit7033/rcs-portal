@@ -116,6 +116,38 @@ class AdminDashboardView(AdminRequiredMixin, TemplateView):
         total_delivered_all = msg_agg["total_delivered"] or 0
         context["platform_delivery_rate"] = f"{(total_delivered_all / total_sent_all * 100):.1f}%" if total_sent_all > 0 else "0.0%"
 
+        # Today's core operational metrics (Submission, Delivered, Failed, Read, Cost)
+        from reports.models import LiveStatus
+        today_msgs = all_msgs.filter(created_at__date=today_date)
+        today_agg = today_msgs.aggregate(
+            today_submission=Count("id"),
+            today_delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
+            today_failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            today_read=Count("id", filter=Q(status=Message.Status.READ)),
+            today_cost=Sum("cost"),
+        )
+        ls_today = LiveStatus.objects.filter(date=today_date).aggregate(
+            sub=Sum("total_submission"),
+            dlvr=Sum("total_delivered"),
+            failed=Sum("total_failed"),
+            read=Sum("total_read"),
+            cost=Sum("total_cost"),
+        )
+        today_sub = max(today_agg["today_submission"] or 0, ls_today["sub"] or 0)
+        today_dlvr = max(today_agg["today_delivered"] or 0, ls_today["dlvr"] or 0)
+        today_failed = max(today_agg["today_failed"] or 0, ls_today["failed"] or 0)
+        today_read = max(today_agg["today_read"] or 0, ls_today["read"] or 0)
+        today_cost = max(today_agg["today_cost"] or Decimal("0.0000"), ls_today["cost"] or Decimal("0.0000"))
+
+        context["today_total_submission"] = today_sub
+        context["today_total_delivered"] = today_dlvr
+        context["today_total_failed"] = today_failed
+        context["today_total_read"] = today_read
+        context["today_total_cost"] = today_cost
+        context["today_delivery_rate"] = f"{(today_dlvr / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_read_rate"] = f"{(today_read / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_failure_rate"] = f"{(today_failed / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+
         # Campaigns, Templates, Onboardings & KYC
         context["total_campaigns"] = Campaign.objects.count()
         context["active_campaigns"] = Campaign.objects.filter(status__in=[Campaign.Status.RUNNING, Campaign.Status.QUEUED]).count()
@@ -192,7 +224,7 @@ class ResellerDashboardView(ResellerRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         from datetime import timedelta
         from django.utils import timezone
-        from django.db.models import Count, Q
+        from django.db.models import Count, Q, Sum
         from django.db.models.functions import TruncDate
         from messaging.models import Message
         from campaigns.models import Campaign
@@ -208,9 +240,39 @@ class ResellerDashboardView(ResellerRequiredMixin, TemplateView):
         reseller_wallet = getattr(reseller, "wallet", None)
         context["reseller_balance"] = format_inr(reseller_wallet.balance) if reseller_wallet else "₹ 0.00"
 
-        # Client messages aggregates
-        client_ids = list(clients.values_list("id", flat=True))
-        reseller_msgs = Message.objects.filter(user_id__in=client_ids)
+        # Client and own messages aggregates
+        reseller_msgs = Message.objects.for_user(reseller)
+        now = timezone.now()
+        today_date = timezone.localdate()
+
+        # Today's core metrics for Reseller / Distributor
+        today_msgs = reseller_msgs.filter(created_at__date=today_date)
+        today_agg = today_msgs.aggregate(
+            today_submission=Count("id"),
+            today_delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
+            today_failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            today_read=Count("id", filter=Q(status=Message.Status.READ)),
+        )
+        from reports.models import LiveStatus
+        ls_today = LiveStatus.objects.for_user(reseller).filter(date=today_date).aggregate(
+            sub=Sum("total_submission"),
+            dlvr=Sum("total_delivered"),
+            failed=Sum("total_failed"),
+            read=Sum("total_read"),
+        )
+        today_sub = max(today_agg["today_submission"] or 0, ls_today["sub"] or 0)
+        today_dlvr = max(today_agg["today_delivered"] or 0, ls_today["dlvr"] or 0)
+        today_failed = max(today_agg["today_failed"] or 0, ls_today["failed"] or 0)
+        today_read = max(today_agg["today_read"] or 0, ls_today["read"] or 0)
+
+        context["today_submission"] = today_sub
+        context["today_delivered"] = today_dlvr
+        context["today_failed"] = today_failed
+        context["today_read"] = today_read
+        context["today_delivery_rate"] = f"{(today_dlvr / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_read_rate"] = f"{(today_read / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_failure_rate"] = f"{(today_failed / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+
         msg_agg = reseller_msgs.aggregate(
             sent=Count("id", filter=~Q(status=Message.Status.QUEUED)),
             delivered=Count("id", filter=Q(status__in=[Message.Status.DELIVERED, Message.Status.READ])),
@@ -230,8 +292,6 @@ class ResellerDashboardView(ResellerRequiredMixin, TemplateView):
         context["read_rate"] = f"{(total_read / total_sent * 100):.1f}%" if total_sent > 0 else "0.0%"
 
         # 7-day trend chart
-        now = timezone.now()
-        today_date = timezone.localdate()
         chart_since = now - timedelta(days=7)
         daily_records = (
             reseller_msgs.filter(created_at__gte=chart_since)
@@ -262,9 +322,9 @@ class ResellerDashboardView(ResellerRequiredMixin, TemplateView):
         context["reseller_chart_delivered"] = reseller_chart_delivered
         context["reseller_chart_failed"] = reseller_chart_failed
 
-        # Recent client campaigns
+        # Recent campaigns for reseller and managed clients
         context["recent_client_campaigns"] = (
-            Campaign.objects.filter(user_id__in=client_ids)
+            Campaign.objects.for_user(reseller)
             .select_related("user")
             .order_by("-created_at")[:5]
         )
@@ -278,7 +338,7 @@ class UserDashboardView(UserRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         from django.utils import timezone
-        from django.db.models import Count, Q
+        from django.db.models import Count, Q, Sum
         from django.db.models.functions import TruncHour
         from messaging.models import Message
         from templates_mgmt.models import Template
@@ -303,12 +363,33 @@ class UserDashboardView(UserRequiredMixin, TemplateView):
             failed=Count("id", filter=Q(status=Message.Status.FAILED)),
             read=Count("id", filter=Q(status=Message.Status.READ)),
         )
+
+        from reports.models import LiveStatus
+        ls_today = LiveStatus.objects.filter(user=user, date=today_date).aggregate(
+            sub=Sum("total_submission"),
+            dlvr=Sum("total_delivered"),
+            failed=Sum("total_failed"),
+            read=Sum("total_read"),
+        )
+        today_sub = max(agg["total"] or 0, ls_today["sub"] or 0)
+        today_dlvr = max(agg["delivered"] or 0, ls_today["dlvr"] or 0)
+        today_failed = max(agg["failed"] or 0, ls_today["failed"] or 0)
+        today_read = max(agg["read"] or 0, ls_today["read"] or 0)
+
+        context["today_submission"] = today_sub
+        context["today_delivered"] = today_dlvr
+        context["today_failed"] = today_failed
+        context["today_read"] = today_read
+        context["today_delivery_rate"] = f"{(today_dlvr / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_read_rate"] = f"{(today_read / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+        context["today_failure_rate"] = f"{(today_failed / today_sub * 100):.1f}%" if today_sub > 0 else "0.0%"
+
         active_stats = {
-            "total": agg["total"] or 0,
+            "total": today_sub,
             "sent": agg["sent"] or 0,
-            "delivered": agg["delivered"] or 0,
-            "failed": agg["failed"] or 0,
-            "read": agg["read"] or 0,
+            "delivered": today_dlvr,
+            "failed": today_failed,
+            "read": today_read,
         }
 
         # Hourly breakdown for today (fast, index-bounded)
@@ -1111,14 +1192,22 @@ class WhitelistListView(AdminRequiredMixin, ListView):
                 | Q(user__company_name__icontains=search)
             )
         user_id = self.request.GET.get("user_id")
+        username = self.request.GET.get("username")
         if user_id:
             qs = qs.filter(user_id=user_id)
+        elif username:
+            qs = qs.filter(user__username__iexact=username.strip().lstrip("@"))
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["search_query"] = self.request.GET.get("q", "")
-        context["selected_user_id"] = self.request.GET.get("user_id", "")
+        selected_user_id = self.request.GET.get("user_id", "")
+        context["selected_user_id"] = selected_user_id
+        if selected_user_id:
+            user_obj = User.objects.filter(id=selected_user_id).first()
+            if user_obj:
+                context["selected_username"] = user_obj.username
         context["page_title"] = "Priority Whitelist"
         if "form" not in context:
             context["form"] = WhitelistNumberForm()

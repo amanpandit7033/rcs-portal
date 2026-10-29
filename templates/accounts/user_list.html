@@ -126,7 +126,7 @@ function accountDirectoryManager() {
     <!-- Top Action Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">System Accounts Directory</h1>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manage Users</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Manage administrators, partner resellers, and enterprise client partitions.</p>
         </div>
         <button type="button"
@@ -544,11 +544,11 @@ function accountDirectoryManager() {
                             </label>
                         </div>
 
-                        <!-- Low Price & Skimming Configuration -->
+                        <!-- Low Price & Skip Configuration -->
                         <div class="sm:col-span-2 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
                             <div class="flex items-center gap-2 pb-2 border-b border-amber-200/60">
                                 <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">%</span>
-                                <span class="text-xs font-bold text-slate-900">Low Price &amp; Skimming Routing</span>
+                                <span class="text-xs font-bold text-slate-900">Low Price &amp; Skip Routing</span>
                             </div>
 
                             <template x-if="editUser.role === 'reseller'">
@@ -925,21 +925,21 @@ function accountDirectoryManager() {
                                    class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
                             <div class="flex-1">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-slate-900">Allow Low Price &amp; Skimming Feature</span>
+                                    <span class="text-xs font-bold text-slate-900">Allow Low Price &amp; Skip Feature</span>
                                     <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
                                           :class="permissionsUser.can_use_low_price ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
                                           x-text="permissionsUser.can_use_low_price ? 'Enabled' : 'Disabled'">
                                     </span>
                                 </div>
                                 <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                    Permits this <span class="capitalize" x-text="permissionsUser.role"></span> to access and configure low price contact skimming for their clients and earn margin rebates. If unassigned, they cannot see or use this feature in their client list.
+                                    Permits this <span class="capitalize" x-text="permissionsUser.role"></span> to access and configure low price contact Skip for their clients and earn margin rebates. If unassigned, they cannot see or use this feature in their client list.
                                 </p>
                             </div>
                         </label>
                     </div>
                 </template>
 
-                <!-- Permission 3: Direct Low Price Skimming Application -->
+                <!-- Permission 3: Direct Low Price Skip Application -->
                 <div class="p-4 rounded-2xl border transition-all"
                      :class="permissionsUser.is_low_price_applied ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'">
                     <label class="flex items-start gap-3.5 cursor-pointer">
@@ -950,14 +950,14 @@ function accountDirectoryManager() {
                                class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
                         <div class="flex-1">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-900">Campaign Skimming / Cutting</span>
+                                <span class="text-xs font-bold text-slate-900">Campaign Skip / Cutting</span>
                                 <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
                                       :class="permissionsUser.is_low_price_applied ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
                                       x-text="permissionsUser.is_low_price_applied ? 'Enabled' : 'Disabled'">
                                 </span>
                             </div>
                             <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                When enabled, automated percentage-based contact skimming is applied directly to campaigns dispatched by this account once recipients reach the defined threshold.
+                                When enabled, automated percentage-based contact Skip is applied directly to campaigns dispatched by this account once recipients reach the defined threshold.
                             </p>
                         </div>
                     </label>

@@ -220,6 +220,7 @@
         <symbol id="i-out" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></symbol>
         <symbol id="i-chev" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></symbol>
         <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h6m-6 4h4"/></symbol>
+        <symbol id="i-refund" viewBox="0 0 24 24"><path d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"/></symbol>
         <symbol id="i-shield" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></symbol>
     </svg>
 
@@ -230,11 +231,12 @@
              sidebarCollapsed: false,
              userMenuOpen: false,
              openMenus: {
-                 campaigns: {% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %},
+                 manager: {% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' or 'whitelist' in request.resolver_match.url_name %}true{% else %}false{% endif %},
                  reports: {% if request.resolver_match.view_name == 'reports:admin_campaign_reports' or request.resolver_match.url_name == 'campaign_list' or request.resolver_match.url_name == 'campaign_detail' or request.resolver_match.view_name == 'messaging:message_logs' or request.resolver_match.url_name == 'user_usage' %}true{% else %}false{% endif %},
-                 users: {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_edit' or request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_create' or request.resolver_match.url_name == 'client_edit' or request.resolver_match.namespace == 'onboarding' or 'admin_kyc' in request.resolver_match.url_name %}true{% else %}false{% endif %},
-                 wallet: {% if request.resolver_match.namespace == 'wallet' or 'assign_credit' in request.resolver_match.url_name or 'statement' in request.resolver_match.url_name or 'whitelist' in request.resolver_match.url_name %}true{% else %}false{% endif %},
-                 settings: {% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' or 'system_settings' in request.resolver_match.url_name %}true{% else %}false{% endif %}
+                 users: {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_edit' or request.resolver_match.view_name == 'onboarding:admin_list' or 'admin_kyc' in request.resolver_match.url_name %}true{% else %}false{% endif %},
+                 wallet: {% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'refund_ledger' %}true{% else %}false{% endif %},
+                 profile: {% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %}true{% else %}false{% endif %},
+                 settings: {% if request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or 'system_settings' in request.resolver_match.url_name %}true{% else %}false{% endif %}
              },
              toggleSidebar() {
                  if (window.innerWidth < 1024) {
@@ -312,25 +314,27 @@
                         <span class="nav-text truncate">Dashboard</span>
                     </a>
 
-                    <!-- Admin: Campaigns (Accordion) -->
+                    <!-- Admin: Send RCS (Main Menu Link) -->
+                    <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-send"/></svg>
+                        <span class="nav-text truncate">Send RCS</span>
+                    </a>
+
+                    <!-- Admin: Manager (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('campaigns')" title="Campaigns"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.campaigns && !{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('manager')" title="Manager"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' or 'whitelist' in request.resolver_match.url_name %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.manager && !{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' or 'whitelist' in request.resolver_match.url_name %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-camp"/></svg>
-                                <span class="nav-text truncate">Campaigns</span>
+                                <span class="nav-text truncate">Manager</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.campaigns}">
+                                 :class="{'rotate-180 text-blue-900': openMenus.manager}">
                                 <use href="#i-chev"/>
                             </svg>
                         </button>
-                        <div x-show="openMenus.campaigns" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="sub-nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Send RCS</span>
-                            </a>
+                        <div x-show="openMenus.manager" x-cloak class="sub-nav-container space-y-0.5">
                             <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="sub-nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Manage Groups</span>
@@ -338,6 +342,10 @@
                             <a href="{% url 'templates_mgmt:template_list' %}" title="Manage Templates" class="sub-nl{% if request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Manage Templates</span>
+                            </a>
+                            <a href="{% url 'accounts:whitelist_list' %}" title="Whitelist" class="sub-nl{% if request.resolver_match.url_name == 'whitelist_list' %} on{% endif %}">
+                                <span class="sub-dot"></span>
+                                <span class="truncate">Whitelist Numbers</span>
                             </a>
                         </div>
                     </div>
@@ -404,7 +412,7 @@
                         <div x-show="openMenus.users" x-cloak class="sub-nav-container space-y-0.5">
                             <a href="{% url 'accounts:user_list' %}" title="User Management" class="sub-nl{% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_edit' %} on{% endif %}">
                                 <span class="sub-dot"></span>
-                                <span class="truncate">User Management</span>
+                                <span class="truncate">Manage Users</span>
                             </a>
                             <a href="{% url 'onboarding:admin_list' %}" title="Onboarding Requests" class="sub-nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}">
                                 <span class="sub-dot"></span>
@@ -417,14 +425,14 @@
                         </div>
                     </div>
 
-                    <!-- Admin: Wallet & Billing (Accordion) -->
+                    <!-- Admin: Wallet (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('wallet')" title="Wallet & Billing"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'whitelist_list' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.wallet && !{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'whitelist_list' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('wallet')" title="Wallet"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'refund_ledger' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.wallet && !{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'refund_ledger' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-coin"/></svg>
-                                <span class="nav-text truncate">Wallet & Billing</span>
+                                <span class="nav-text truncate">Wallet</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
                                  :class="{'rotate-180 text-blue-900': openMenus.wallet}">
@@ -444,9 +452,41 @@
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Refund Ledger</span>
                             </a>
-                            <a href="{% url 'accounts:whitelist_list' %}" title="Whitelist" class="sub-nl{% if request.resolver_match.url_name == 'whitelist_list' %} on{% endif %}">
+                        </div>
+                    </div>
+
+                    <!-- Admin: API Collection (Main Menu Link) -->
+                    <a href="{% url 'api:settings' %}" title="API Collection" class="nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-code"/></svg>
+                        <span class="nav-text truncate">API Collection</span>
+                    </a>
+
+                    <!-- Admin: My Profile (Accordion) -->
+                    <div>
+                        <button type="button" @click="toggleSubmenu('profile')" title="My Profile"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.profile && !{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %}true{% else %}false{% endif %}}">
+                            <span class="flex items-center gap-3 min-w-0">
+                                <svg class="ic shrink-0"><use href="#i-user"/></svg>
+                                <span class="nav-text truncate">My Profile</span>
+                            </span>
+                            <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
+                                 :class="{'rotate-180 text-blue-900': openMenus.profile}">
+                                <use href="#i-chev"/>
+                            </svg>
+                        </button>
+                        <div x-show="openMenus.profile" x-cloak class="sub-nav-container space-y-0.5">
+                            <a href="{% url 'accounts:user_profile' %}" title="Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
                                 <span class="sub-dot"></span>
-                                <span class="truncate">Whitelist</span>
+                                <span class="truncate">Profile</span>
+                            </a>
+                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Details" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
+                                <span class="sub-dot"></span>
+                                <span class="truncate">KYC Details</span>
+                            </a>
+                            <a href="{% url 'accounts:login_history' %}" title="Login History" class="sub-nl{% if request.resolver_match.url_name == 'login_history' %} on{% endif %}">
+                                <span class="sub-dot"></span>
+                                <span class="truncate">Login History</span>
                             </a>
                         </div>
                     </div>
@@ -454,8 +494,8 @@
                     <!-- Admin: Settings (Accordion) -->
                     <div>
                         <button type="button" @click="toggleSubmenu('settings')" title="Settings"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' or 'system_settings' in request.resolver_match.url_name %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.settings && !{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' or 'system_settings' in request.resolver_match.url_name %}true{% else %}false{% endif %}}">
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or 'system_settings' in request.resolver_match.url_name %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.settings && !{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' or 'whitelabel' in request.resolver_match.url_name or 'system_settings' in request.resolver_match.url_name %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-cog"/></svg>
                                 <span class="nav-text truncate">Settings</span>
@@ -466,18 +506,6 @@
                             </svg>
                         </button>
                         <div x-show="openMenus.settings" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'accounts:user_profile' %}" title="My Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">My Profile</span>
-                            </a>
-                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Verification" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">KYC Details</span>
-                            </a>
-                            <a href="{% url 'accounts:login_history' %}" title="Login History" class="sub-nl{% if request.resolver_match.url_name == 'login_history' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Login History</span>
-                            </a>
                             <a href="{% url 'reports:admin_dlr_logs' %}" title="Marketplace Sync" class="sub-nl{% if request.resolver_match.view_name == 'reports:admin_dlr_logs' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Marketplace Sync</span>
@@ -485,10 +513,6 @@
                             <a href="{% url 'accounts:whitelabel_list' %}" title="White Label" class="sub-nl{% if 'whitelabel' in request.resolver_match.url_name %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">White Label</span>
-                            </a>
-                            <a href="{% url 'api:settings' %}" title="API Collection" class="sub-nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">API Collection</span>
                             </a>
                             {% if request.user.is_superadmin %}
                             <a href="{% url 'accounts:system_settings' %}" title="Settings" class="sub-nl{% if request.resolver_match.url_name == 'system_settings' %} on{% endif %}">
@@ -506,25 +530,27 @@
                         <span class="nav-text truncate">Dashboard</span>
                     </a>
 
-                    <!-- Reseller: Campaigns (Accordion) -->
+                    <!-- Reseller: Send RCS (Main Menu Link) -->
+                    <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-send"/></svg>
+                        <span class="nav-text truncate">Send RCS</span>
+                    </a>
+
+                    <!-- Reseller: Manager (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('campaigns')" title="Campaigns"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.campaigns && !{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('manager')" title="Manager"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.manager && !{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-camp"/></svg>
-                                <span class="nav-text truncate">Campaigns</span>
+                                <span class="nav-text truncate">Manager</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.campaigns}">
+                                 :class="{'rotate-180 text-blue-900': openMenus.manager}">
                                 <use href="#i-chev"/>
                             </svg>
                         </button>
-                        <div x-show="openMenus.campaigns" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="sub-nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Send RCS</span>
-                            </a>
+                        <div x-show="openMenus.manager" x-cloak class="sub-nav-container space-y-0.5">
                             <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="sub-nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Manage Groups</span>
@@ -580,41 +606,29 @@
                         <svg class="ic shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         <span class="nav-text truncate">MIS Billing</span>
                     </a>
+                    
+                    <!-- Reseller: User Management (Direct link) -->
+                    <a href="{% url 'accounts:client_list' %}" title="User Management" class="nl{% if request.resolver_match.view_name == 'accounts:client_list' or request.resolver_match.view_name == 'accounts:client_create' or request.resolver_match.view_name == 'accounts:client_edit' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-users"/></svg>
+                        <span class="nav-text truncate">User Management</span>
+                    </a>
 
-                    <!-- Reseller: Client Management (Accordion) -->
-                    <div>
-                        <button type="button" @click="toggleSubmenu('users')" title="Client Management"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_create' or request.resolver_match.url_name == 'client_edit' or request.resolver_match.namespace == 'onboarding' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.users && !{% if request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_create' or request.resolver_match.url_name == 'client_edit' or request.resolver_match.namespace == 'onboarding' %}true{% else %}false{% endif %}}">
-                            <span class="flex items-center gap-3 min-w-0">
-                                <svg class="ic shrink-0"><use href="#i-users"/></svg>
-                                <span class="nav-text truncate">Client Management</span>
-                            </span>
-                            <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.users}">
-                                <use href="#i-chev"/>
-                            </svg>
-                        </button>
-                        <div x-show="openMenus.users" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'accounts:client_list' %}" title="Clients" class="sub-nl{% if request.resolver_match.url_name == 'client_list' or request.resolver_match.url_name == 'client_create' or request.resolver_match.url_name == 'client_edit' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Clients</span>
-                            </a>
-                            <a href="{% url 'onboarding:client_list' %}" title="Bot Onboarding" class="sub-nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Bot Onboarding</span>
-                            </a>
-                        </div>
-                    </div>
+                    <!-- Reseller: Bot Onboarding (Main Menu Link) -->
+                    <a href="{% url 'onboarding:client_list' %}" title="Bot Onboarding" class="nl{% if request.resolver_match.namespace == 'onboarding' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-clipboard"/></svg>
+                        <span class="nav-text truncate">Bot Onboarding</span>
+                    </a>
 
-                    <!-- Reseller: Wallet & Billing (Accordion) -->
+                    
+
+                    <!-- Reseller: Wallet (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('wallet')" title="Wallet & Billing"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.wallet && !{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('wallet')" title="Wallet"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'refund_ledger' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.wallet && !{% if request.resolver_match.url_name == 'assign_credit' or request.resolver_match.url_name == 'statement' or request.resolver_match.url_name == 'refund_ledger' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-coin"/></svg>
-                                <span class="nav-text truncate">Wallet & Billing</span>
+                                <span class="nav-text truncate">Wallet</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
                                  :class="{'rotate-180 text-blue-900': openMenus.wallet}">
@@ -630,43 +644,47 @@
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Wallet Ledger</span>
                             </a>
+                            {% if request.user.can_receive_refund %}
                             <a href="{% url 'wallet:refund_ledger' %}" title="Refund Ledger" class="sub-nl{% if request.resolver_match.url_name == 'refund_ledger' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Refund Ledger</span>
                             </a>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Reseller: Settings (Accordion) -->
+                    <!-- Reseller: API Collection (Main Menu Link) -->
+                    <a href="{% url 'api:settings' %}" title="API Collection" class="nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-code"/></svg>
+                        <span class="nav-text truncate">API Collection</span>
+                    </a>
+
+                    <!-- Reseller: My Profile (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('settings')" title="Settings"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.settings && !{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('profile')" title="My Profile"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.profile && !{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
-                                <svg class="ic shrink-0"><use href="#i-cog"/></svg>
-                                <span class="nav-text truncate">Settings</span>
+                                <svg class="ic shrink-0"><use href="#i-user"/></svg>
+                                <span class="nav-text truncate">My Profile</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.settings}">
+                                 :class="{'rotate-180 text-blue-900': openMenus.profile}">
                                 <use href="#i-chev"/>
                             </svg>
                         </button>
-                        <div x-show="openMenus.settings" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'accounts:user_profile' %}" title="My Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
+                        <div x-show="openMenus.profile" x-cloak class="sub-nav-container space-y-0.5">
+                            <a href="{% url 'accounts:user_profile' %}" title="Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
                                 <span class="sub-dot"></span>
-                                <span class="truncate">My Profile</span>
+                                <span class="truncate">Profile</span>
                             </a>
-                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Verification" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
+                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Details" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">KYC Details</span>
                             </a>
                             <a href="{% url 'accounts:login_history' %}" title="Login History" class="sub-nl{% if request.resolver_match.url_name == 'login_history' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Login History</span>
-                            </a>
-                            <a href="{% url 'api:settings' %}" title="API Collection" class="sub-nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">API Collection</span>
                             </a>
                         </div>
                     </div>
@@ -678,25 +696,27 @@
                         <span class="nav-text truncate">Dashboard</span>
                     </a>
 
-                    <!-- User: Campaigns (Accordion) -->
+                    <!-- User: Send RCS (Main Menu Link) -->
+                    <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-send"/></svg>
+                        <span class="nav-text truncate">Send RCS</span>
+                    </a>
+
+                    <!-- User: Manager (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('campaigns')" title="Campaigns"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.campaigns && !{% if request.resolver_match.url_name == 'campaign_create' or 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('manager')" title="Manager"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.manager && !{% if 'group' in request.resolver_match.url_name or request.resolver_match.namespace == 'templates_mgmt' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
                                 <svg class="ic shrink-0"><use href="#i-camp"/></svg>
-                                <span class="nav-text truncate">Campaigns</span>
+                                <span class="nav-text truncate">Manager</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.campaigns}">
+                                 :class="{'rotate-180 text-blue-900': openMenus.manager}">
                                 <use href="#i-chev"/>
                             </svg>
                         </button>
-                        <div x-show="openMenus.campaigns" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'campaigns:campaign_create' %}" title="Send RCS" class="sub-nl{% if request.resolver_match.url_name == 'campaign_create' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">Send RCS</span>
-                            </a>
+                        <div x-show="openMenus.manager" x-cloak class="sub-nav-container space-y-0.5">
                             <a href="{% url 'campaigns:group_list' %}" title="Manage Groups" class="sub-nl{% if 'group' in request.resolver_match.url_name %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Manage Groups</span>
@@ -753,7 +773,7 @@
                     {% if request.user.can_receive_refund %}
                     <!-- User: Refund Ledger (Direct link) -->
                     <a href="{% url 'wallet:refund_ledger' %}" title="Refund Ledger" class="nl{% if request.resolver_match.url_name == 'refund_ledger' %} on{% endif %}">
-                        <svg class="ic shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <svg class="ic shrink-0"><use href="#i-refund"/></svg>
                         <span class="nav-text truncate">Refund Ledger</span>
                     </a>
                     {% endif %}
@@ -764,36 +784,38 @@
                         <span class="nav-text truncate">Bot Onboarding</span>
                     </a>
 
-                    <!-- User: Settings (Accordion) -->
+                    <!-- User: API Collection (Main Menu Link) -->
+                    <a href="{% url 'api:settings' %}" title="API Collection" class="nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
+                        <svg class="ic shrink-0"><use href="#i-code"/></svg>
+                        <span class="nav-text truncate">API Collection</span>
+                    </a>
+
+                    <!-- User: My Profile (Accordion) -->
                     <div>
-                        <button type="button" @click="toggleSubmenu('settings')" title="Settings"
-                                class="nl w-full text-left justify-between select-none cursor-pointer{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' %} on{% endif %}"
-                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.settings && !{% if 'user_profile' in request.resolver_match.url_name or 'kyc_details' in request.resolver_match.url_name or 'login_history' in request.resolver_match.url_name or request.resolver_match.namespace == 'api' %}true{% else %}false{% endif %}}">
+                        <button type="button" @click="toggleSubmenu('profile')" title="My Profile"
+                                class="nl w-full text-left justify-between select-none cursor-pointer{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %} on{% endif %}"
+                                :class="{'!bg-slate-100/70 !text-slate-900': openMenus.profile && !{% if request.resolver_match.url_name == 'user_profile' or request.resolver_match.url_name == 'kyc_details' or request.resolver_match.url_name == 'login_history' %}true{% else %}false{% endif %}}">
                             <span class="flex items-center gap-3 min-w-0">
-                                <svg class="ic shrink-0"><use href="#i-cog"/></svg>
-                                <span class="nav-text truncate">Settings</span>
+                                <svg class="ic shrink-0"><use href="#i-user"/></svg>
+                                <span class="nav-text truncate">My Profile</span>
                             </span>
                             <svg class="menu-chevron shrink-0 w-3.5 h-3.5 text-slate-400"
-                                 :class="{'rotate-180 text-blue-900': openMenus.settings}">
+                                 :class="{'rotate-180 text-blue-900': openMenus.profile}">
                                 <use href="#i-chev"/>
                             </svg>
                         </button>
-                        <div x-show="openMenus.settings" x-cloak class="sub-nav-container space-y-0.5">
-                            <a href="{% url 'accounts:user_profile' %}" title="My Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
+                        <div x-show="openMenus.profile" x-cloak class="sub-nav-container space-y-0.5">
+                            <a href="{% url 'accounts:user_profile' %}" title="Profile" class="sub-nl{% if request.resolver_match.url_name == 'user_profile' %} on{% endif %}">
                                 <span class="sub-dot"></span>
-                                <span class="truncate">My Profile</span>
+                                <span class="truncate">Profile</span>
                             </a>
-                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Verification" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
+                            <a href="{% url 'accounts:kyc_details' %}" title="KYC Details" class="sub-nl{% if request.resolver_match.url_name == 'kyc_details' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">KYC Details</span>
                             </a>
                             <a href="{% url 'accounts:login_history' %}" title="Login History" class="sub-nl{% if request.resolver_match.url_name == 'login_history' %} on{% endif %}">
                                 <span class="sub-dot"></span>
                                 <span class="truncate">Login History</span>
-                            </a>
-                            <a href="{% url 'api:settings' %}" title="API Collection" class="sub-nl{% if request.resolver_match.namespace == 'api' %} on{% endif %}">
-                                <span class="sub-dot"></span>
-                                <span class="truncate">API Collection</span>
                             </a>
                         </div>
                     </div>
