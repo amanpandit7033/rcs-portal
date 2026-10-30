@@ -890,101 +890,81 @@ function accountDirectoryManager() {
                 {% csrf_token %}
 
                 <!-- Permission 1: Allow Refund -->
-                <div class="p-4 rounded-2xl border transition-all"
+                <div class="p-3.5 rounded-2xl border transition-all"
                      :class="permissionsUser.allow_refund ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/50 border-slate-200'">
-                    <label class="flex items-start gap-3.5 cursor-pointer">
+                    <label class="flex items-center gap-3.5 cursor-pointer">
                         <input type="checkbox"
                                name="allow_refund"
                                id="modal_perm_allow_refund"
                                x-model="permissionsUser.allow_refund"
-                               class="mt-1 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 h-4.5 w-4.5">
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-900">Allow Automated Refunds</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                                      :class="permissionsUser.allow_refund ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'"
-                                      x-text="permissionsUser.allow_refund ? 'Enabled' : 'Disabled'">
-                                </span>
-                            </div>
-                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                When enabled, failed RCS messages for this account receive automated wallet refunds. For Resellers &amp; Distributors, this grants them the capability to manage refunds for their clients. If unassigned, downstream clients cannot receive refunds.
-                            </p>
+                               class="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 h-4.5 w-4.5 shrink-0">
+                        <div class="flex-1 flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-900">Allow Automated Refunds</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                  :class="permissionsUser.allow_refund ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'"
+                                  x-text="permissionsUser.allow_refund ? 'Enabled' : 'Disabled'">
+                            </span>
                         </div>
                     </label>
                 </div>
 
                 <!-- Permission 2: Live Status Access (Only for Resellers & Distributors) -->
                 <template x-if="permissionsUser.role === 'reseller' || permissionsUser.role === 'distributor'">
-                    <div class="p-4 rounded-2xl border transition-all"
+                    <div class="p-3.5 rounded-2xl border transition-all"
                          :class="permissionsUser.can_view_live_status ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-200'">
-                        <label class="flex items-start gap-3.5 cursor-pointer">
+                        <label class="flex items-center gap-3.5 cursor-pointer">
                             <input type="checkbox"
                                    name="can_view_live_status"
                                    id="modal_perm_can_view_live_status"
                                    x-model="permissionsUser.can_view_live_status"
-                                   class="mt-1 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4.5 w-4.5">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-slate-900">Live Status Access</span>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                                          :class="permissionsUser.can_view_live_status ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
-                                          x-text="permissionsUser.can_view_live_status ? 'Enabled' : 'Disabled'">
-                                    </span>
-                                </div>
-                                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                    When enabled, this <span class="capitalize" x-text="permissionsUser.role"></span> can view the real-time Live Status report to track message submissions, carrier delivery receipts, customer reads, and cost metrics for their own users. (By default disabled).
-                                </p>
+                                   class="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4.5 w-4.5 shrink-0">
+                            <div class="flex-1 flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900">Live Status Access</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                      :class="permissionsUser.can_view_live_status ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
+                                      x-text="permissionsUser.can_view_live_status ? 'Enabled' : 'Disabled'">
+                                </span>
                             </div>
                         </label>
                     </div>
                 </template>
 
-                <!-- Permission 2: Allow Low Price Feature (for Resellers & Distributors) -->
+                <!-- Permission 3: Allow Low Price Feature (for Resellers & Distributors) -->
                 <template x-if="permissionsUser.role === 'reseller' || permissionsUser.role === 'distributor'">
-                    <div class="p-4 rounded-2xl border transition-all"
+                    <div class="p-3.5 rounded-2xl border transition-all"
                          :class="permissionsUser.can_use_low_price ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'">
-                        <label class="flex items-start gap-3.5 cursor-pointer">
+                        <label class="flex items-center gap-3.5 cursor-pointer">
                             <input type="checkbox"
                                    name="can_use_low_price"
                                    id="modal_perm_can_use_low_price"
                                    x-model="permissionsUser.can_use_low_price"
-                                   class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-slate-900">Allow Low Price &amp; Skip Feature</span>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                                          :class="permissionsUser.can_use_low_price ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
-                                          x-text="permissionsUser.can_use_low_price ? 'Enabled' : 'Disabled'">
-                                    </span>
-                                </div>
-                                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                    Permits this <span class="capitalize" x-text="permissionsUser.role"></span> to access and configure low price contact Skip for their clients and earn margin rebates. If unassigned, they cannot see or use this feature in their client list.
-                                </p>
+                                   class="rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5 shrink-0">
+                            <div class="flex-1 flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-900">Allow Low Price &amp; Skip Feature</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                      :class="permissionsUser.can_use_low_price ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
+                                      x-text="permissionsUser.can_use_low_price ? 'Enabled' : 'Disabled'">
+                                </span>
                             </div>
                         </label>
                     </div>
                 </template>
 
-                <!-- Permission 3: Direct Low Price Skip Application -->
-                <div class="p-4 rounded-2xl border transition-all"
+                <!-- Permission 4: Direct Low Price Skip Application -->
+                <div class="p-3.5 rounded-2xl border transition-all"
                      :class="permissionsUser.is_low_price_applied ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'">
-                    <label class="flex items-start gap-3.5 cursor-pointer">
+                    <label class="flex items-center gap-3.5 cursor-pointer">
                         <input type="checkbox"
                                name="is_low_price_applied"
                                id="modal_perm_is_low_price_applied"
                                x-model="permissionsUser.is_low_price_applied"
-                               class="mt-1 rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5">
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-900">Campaign Skip / Cutting</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
-                                      :class="permissionsUser.is_low_price_applied ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
-                                      x-text="permissionsUser.is_low_price_applied ? 'Enabled' : 'Disabled'">
-                                </span>
-                            </div>
-                            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                When enabled, automated percentage-based contact Skip is applied directly to campaigns dispatched by this account once recipients reach the defined threshold.
-                            </p>
+                               class="rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4.5 w-4.5 shrink-0">
+                        <div class="flex-1 flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-900">Campaign Skip / Cutting</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                                  :class="permissionsUser.is_low_price_applied ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'"
+                                  x-text="permissionsUser.is_low_price_applied ? 'Enabled' : 'Disabled'">
+                            </span>
                         </div>
                     </label>
 
