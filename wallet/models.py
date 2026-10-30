@@ -135,7 +135,7 @@ class WalletTransaction(models.Model):
 
 
 class RatePlan(models.Model):
-    """RCS messaging rates per message type for users/clients and cost rates for resellers."""
+    """RCS messaging rates per message type for users/clients/resellers."""
 
     class MessageType(models.TextChoices):
         PROMOTIONAL = "PROMOTIONAL", "Promotional"
@@ -158,13 +158,6 @@ class RatePlan(models.Model):
         decimal_places=4,
         help_text="Customer selling price per message",
     )
-    cost_rate = models.DecimalField(
-        "Cost Rate (INR)",
-        max_digits=14,
-        decimal_places=4,
-        default=Decimal("0.0000"),
-        help_text="Underlying cost rate for margin computation",
-    )
     valid_from = models.DateTimeField("Valid From", default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -181,10 +174,6 @@ class RatePlan(models.Model):
     @property
     def formatted_rate(self) -> str:
         return format_inr(self.rate, decimal_places=4)
-
-    @property
-    def formatted_cost_rate(self) -> str:
-        return format_inr(self.cost_rate, decimal_places=4)
 
 
 class SenderProfile(models.Model):

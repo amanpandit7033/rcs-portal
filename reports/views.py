@@ -189,9 +189,9 @@ class ResellerMarginReportView(ResellerRequiredMixin, View):
         reseller = request.user
         clients = User.objects.filter(parent_reseller=reseller)
 
-        # Pre-fetch reseller rate plans (cost basis for reseller)
+        # Pre-fetch reseller rate plans (reseller's own buy rate is their cost basis)
         reseller_rates = {
-            rp.message_type: rp.cost_rate
+            rp.message_type: rp.rate
             for rp in RatePlan.objects.filter(user=reseller)
         }
 
@@ -213,11 +213,11 @@ class ResellerMarginReportView(ResellerRequiredMixin, View):
             total_count = aggregates["total_count"] or 0
             revenue = aggregates["revenue"] or Decimal("0.0000")
 
-            # Calculate reseller underlying cost based on message types
+            # Calculate reseller cost based on message types
             client_cost = Decimal("0.0000")
-            for m_type, cost_rate in reseller_rates.items():
+            for m_type, reseller_rate in reseller_rates.items():
                 m_count = client_msgs.filter(message_type=m_type).count()
-                client_cost += Decimal(m_count) * cost_rate
+                client_cost += Decimal(m_count) * reseller_rate
 
             margin = revenue - client_cost
 

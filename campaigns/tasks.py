@@ -411,9 +411,7 @@ def run_campaign_task(self, campaign_id: str):
                         message_type=campaign.message_type,
                     ).first()
 
-                    rebate_amount = Decimal("0.0000")
-                    if reseller_plan:
-                        rebate_amount = reseller_plan.cost_rate if reseller_plan.cost_rate > Decimal("0.0000") else reseller_plan.rate
+                    rebate_amount = reseller_plan.rate if reseller_plan else Decimal("0.0000")
                     if rebate_amount <= Decimal("0.0000"):
                         rebate_amount = message.cost
 

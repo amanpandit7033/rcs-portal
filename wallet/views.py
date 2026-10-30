@@ -432,7 +432,7 @@ class AssignCreditView(RoleRequiredMixin, FormView):
 class ManageRatePlansView(RoleRequiredMixin, View):
     """View to set and view Rate Plans (Promotional, Transactional, OTP).
 
-    - Admins can set rates and cost rates for any user/reseller/distributor.
+    - Admins can set rates for any user/reseller/distributor.
     - Resellers and Distributors can set rates for their direct clients (client rate >= reseller rate).
     """
 
@@ -464,21 +464,18 @@ class ManageRatePlansView(RoleRequiredMixin, View):
                     user=target_user,
                     message_type="PROMOTIONAL",
                     rate=form.cleaned_data["promotional_rate"],
-                    cost_rate=form.cleaned_data.get("promotional_cost_rate") or Decimal("0.0000"),
                 )
                 # 2. Transactional
                 set_user_rate(
                     user=target_user,
                     message_type="TRANSACTIONAL",
                     rate=form.cleaned_data["transactional_rate"],
-                    cost_rate=form.cleaned_data.get("transactional_cost_rate") or Decimal("0.0000"),
                 )
                 # 3. OTP
                 set_user_rate(
                     user=target_user,
                     message_type="OTP",
                     rate=form.cleaned_data["otp_rate"],
-                    cost_rate=form.cleaned_data.get("otp_cost_rate") or Decimal("0.0000"),
                 )
 
                 messages.success(request, f"Rate plans successfully saved for {target_user.email}.")

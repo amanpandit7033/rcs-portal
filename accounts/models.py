@@ -155,11 +155,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         rates = {rp.message_type: rp for rp in self.rate_plans.all()}
         return {
             "promotional_rate": str(rates.get("PROMOTIONAL").rate if rates.get("PROMOTIONAL") else Decimal("0.2500")),
-            "promotional_cost_rate": str(rates.get("PROMOTIONAL").cost_rate if rates.get("PROMOTIONAL") else Decimal("0.1800")),
             "transactional_rate": str(rates.get("TRANSACTIONAL").rate if rates.get("TRANSACTIONAL") else Decimal("0.2000")),
-            "transactional_cost_rate": str(rates.get("TRANSACTIONAL").cost_rate if rates.get("TRANSACTIONAL") else Decimal("0.1500")),
             "otp_rate": str(rates.get("OTP").rate if rates.get("OTP") else Decimal("0.1500")),
-            "otp_cost_rate": str(rates.get("OTP").cost_rate if rates.get("OTP") else Decimal("0.1000")),
         }
 
     def get_sender_profiles_list(self):

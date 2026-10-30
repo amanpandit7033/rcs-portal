@@ -119,14 +119,6 @@ class RatePlansForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2500", "step": "any"}),
         label="Promotional Rate (INR)",
     )
-    promotional_cost_rate = forms.DecimalField(
-        max_digits=14,
-        decimal_places=4,
-        min_value=Decimal("0.0000"),
-        required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1800", "step": "any"}),
-        label="Promotional Cost Rate (INR)",
-    )
 
     # Transactional
     transactional_rate = forms.DecimalField(
@@ -136,14 +128,6 @@ class RatePlansForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.2000", "step": "any"}),
         label="Transactional Rate (INR)",
     )
-    transactional_cost_rate = forms.DecimalField(
-        max_digits=14,
-        decimal_places=4,
-        min_value=Decimal("0.0000"),
-        required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "any"}),
-        label="Transactional Cost Rate (INR)",
-    )
 
     # OTP
     otp_rate = forms.DecimalField(
@@ -152,14 +136,6 @@ class RatePlansForm(forms.Form):
         min_value=Decimal("0.0001"),
         widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1500", "step": "any"}),
         label="OTP Rate (INR)",
-    )
-    otp_cost_rate = forms.DecimalField(
-        max_digits=14,
-        decimal_places=4,
-        min_value=Decimal("0.0000"),
-        required=False,
-        widget=forms.NumberInput(attrs={"class": TAILWIND_INPUT, "placeholder": "0.1000", "step": "any"}),
-        label="OTP Cost Rate (INR)",
     )
 
 

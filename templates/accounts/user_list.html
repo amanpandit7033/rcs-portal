@@ -70,11 +70,8 @@ function accountDirectoryManager() {
             if (!this.ratesUser.rates) {
                 this.ratesUser.rates = {
                     promotional_rate: '0.2500',
-                    promotional_cost_rate: '0.1800',
                     transactional_rate: '0.2000',
-                    transactional_cost_rate: '0.1500',
-                    otp_rate: '0.1500',
-                    otp_cost_rate: '0.1000'
+                    otp_rate: '0.1500'
                 };
             }
             this.showRatesModal = true;
@@ -604,7 +601,7 @@ function accountDirectoryManager() {
                         </div>
                         <div>
                             <h2 class="text-base font-bold text-slate-900 tracking-tight">Rate Plan Configuration</h2>
-                            <p class="text-xs text-slate-500 mt-0.5">Configure per-message selling &amp; carrier cost rates for <strong x-text="ratesUser.company_name || ratesUser.username" class="text-slate-800"></strong></p>
+                            <p class="text-xs text-slate-500 mt-0.5">Configure per-message rates for <strong x-text="ratesUser.company_name || ratesUser.username" class="text-slate-800"></strong></p>
                         </div>
                     </div>
                     <button type="button" @click="showRatesModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
@@ -616,56 +613,47 @@ function accountDirectoryManager() {
                     <input type="hidden" name="next" value="{% url 'accounts:user_list' %}">
 
                     <!-- Promotional Section -->
-                    <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-100/80 space-y-3">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                            <span class="text-xs font-bold text-blue-900 uppercase tracking-wider">Promotional RCS</span>
+                    <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-100/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                                <span class="text-xs font-bold text-blue-900 uppercase tracking-wider">Promotional RCS</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400">Marketing & Carousels</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
-                                <input type="number" step="0.0001" min="0.0001" name="promotional_rate" :value="ratesUser.rates ? ratesUser.rates.promotional_rate : '0.2500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
-                                <input type="number" step="0.0001" min="0.0000" name="promotional_cost_rate" :value="ratesUser.rates ? ratesUser.rates.promotional_cost_rate : '0.1800'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
+                            <input type="number" step="0.0001" min="0.0001" name="promotional_rate" :value="ratesUser.rates ? ratesUser.rates.promotional_rate : '0.2500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>
 
                     <!-- Transactional Section -->
-                    <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/80 space-y-3">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <span class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Transactional RCS</span>
+                    <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                <span class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Transactional RCS</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400">Alerts & Notifications</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
-                                <input type="number" step="0.0001" min="0.0001" name="transactional_rate" :value="ratesUser.rates ? ratesUser.rates.transactional_rate : '0.2000'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
-                                <input type="number" step="0.0001" min="0.0000" name="transactional_cost_rate" :value="ratesUser.rates ? ratesUser.rates.transactional_cost_rate : '0.1500'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
+                            <input type="number" step="0.0001" min="0.0001" name="transactional_rate" :value="ratesUser.rates ? ratesUser.rates.transactional_rate : '0.2000'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>
 
                     <!-- OTP Section -->
-                    <div class="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/80 space-y-3">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                            <span class="text-xs font-bold text-amber-900 uppercase tracking-wider">OTP / Authentication</span>
+                    <div class="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                <span class="text-xs font-bold text-amber-900 uppercase tracking-wider">OTP / Authentication</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400">One-Time Passcodes</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
-                                <input type="number" step="0.0001" min="0.0001" name="otp_rate" :value="ratesUser.rates ? ratesUser.rates.otp_rate : '0.1500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Cost Rate (INR) [Margin]</label>
-                                <input type="number" step="0.0001" min="0.0000" name="otp_cost_rate" :value="ratesUser.rates ? ratesUser.rates.otp_cost_rate : '0.1000'" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
-                            </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
+                            <input type="number" step="0.0001" min="0.0001" name="otp_rate" :value="ratesUser.rates ? ratesUser.rates.otp_rate : '0.1500'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>
 

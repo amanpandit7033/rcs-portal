@@ -24,7 +24,7 @@ def calculate_campaign_estimate(campaign: Campaign) -> Decimal:
     parent = getattr(campaign.user, "parent_reseller", None)
     if parent and getattr(parent, "is_distributor", False):
         campaign.distributor = parent
-        dist_rate = get_user_rate_for_type(parent, campaign.message_type, use_cost_rate=True)
+        dist_rate = get_user_rate_for_type(parent, campaign.message_type)
         campaign.distributor_rate_applied = dist_rate
         campaign.distributor_estimated_cost = Decimal(campaign.valid_count) * dist_rate
     else:

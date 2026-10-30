@@ -40,7 +40,7 @@ class WalletTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(RatePlan)
 class RatePlanAdmin(admin.ModelAdmin):
-    list_display = ("user", "message_type", "rate", "cost_rate", "valid_from")
+    list_display = ("user", "message_type", "rate", "valid_from")
     list_filter = ("message_type",)
     search_fields = ("user__email",)
 

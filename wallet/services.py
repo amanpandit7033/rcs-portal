@@ -273,11 +273,9 @@ def set_user_rate(
     user,
     message_type: str,
     rate: Union[Decimal, str, float],
-    cost_rate: Union[Decimal, str, float] = Decimal("0.0000"),
 ) -> RatePlan:
     """Configure or update a user's rate plan with hierarchy validation."""
     dec_rate = _to_decimal(rate)
-    dec_cost_rate = _to_decimal(cost_rate) if cost_rate else Decimal("0.0000")
 
     # If user has a parent reseller, validate client rate is >= reseller's rate
     validate_client_rate(user, message_type, dec_rate)
@@ -287,7 +285,6 @@ def set_user_rate(
         message_type=message_type,
         defaults={
             "rate": dec_rate,
-            "cost_rate": dec_cost_rate,
         },
     )
     return rate_plan
