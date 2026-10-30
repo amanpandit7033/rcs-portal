@@ -537,12 +537,6 @@ function accountDirectoryManager() {
                                 Account is Active and authorized to dispatch messages
                             </label>
                         </div>
-                        <div class="sm:col-span-2 flex items-center gap-2 pt-1">
-                            <input type="checkbox" name="allow_refund" id="edit_allow_refund" x-model="editUser.allow_refund" class="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
-                            <label for="edit_allow_refund" class="text-xs font-semibold text-slate-700 cursor-pointer">
-                                Allow Automated Refunds on Failed Messages
-                            </label>
-                        </div>
 
                         <!-- Low Price & Skip Configuration -->
                         <div class="sm:col-span-2 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
@@ -550,15 +544,6 @@ function accountDirectoryManager() {
                                 <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">%</span>
                                 <span class="text-xs font-bold text-slate-900">Low Price &amp; Skip Routing</span>
                             </div>
-
-                            <template x-if="editUser.role === 'reseller'">
-                                <div class="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-amber-200/60">
-                                    <input type="checkbox" name="can_use_low_price" id="edit_can_use_low_price" x-model="editUser.can_use_low_price" class="rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4 w-4">
-                                    <label for="edit_can_use_low_price" class="text-xs font-semibold text-slate-700 cursor-pointer">
-                                        Allow Low Price Feature for Reseller (Can configure cutting on sub-clients)
-                                    </label>
-                                </div>
-                            </template>
 
                             <div class="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-amber-200/60">
                                 <input type="checkbox" name="is_low_price_applied" id="edit_is_low_price_applied" x-model="editUser.is_low_price_applied" class="rounded-md border-slate-300 text-amber-600 focus:ring-amber-500 h-4 w-4">
