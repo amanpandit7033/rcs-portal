@@ -547,7 +547,7 @@ function clientDirectoryManager() {
                         </div>
                         <div>
                             <h2 class="text-base font-bold text-slate-900 tracking-tight">Rate Plan Configuration</h2>
-                            <p class="text-xs text-slate-500 mt-0.5">Configure per-message selling rates for <strong x-text="ratesClient.company_name || ratesClient.username" class="text-slate-800"></strong></p>
+                            <p class="text-xs text-slate-500 mt-0.5">Configure per-message rates for <strong x-text="ratesClient.company_name || ratesClient.username" class="text-slate-800"></strong></p>
                         </div>
                     </div>
                     <button type="button" @click="showRatesModal = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Close dialog">
@@ -560,15 +560,14 @@ function clientDirectoryManager() {
 
                     <!-- Reseller Baseline Rates Notice -->
                     {% if reseller_rates %}
-                    <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-xs text-amber-900 shadow-2xs">
-                        <div class="flex items-center gap-2 font-bold mb-1">
-                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Your Minimum Baseline Rates (Cost):</span>
-                        </div>
-                        <div class="text-[11px] text-amber-800 space-y-0.5 ml-6">
-                            <p>&bull; Promotional: <strong>₹ {{ reseller_rates.promotional_rate }}</strong> (Client rate must be &ge; ₹ {{ reseller_rates.promotional_rate }})</p>
-                            <p>&bull; Transactional: <strong>₹ {{ reseller_rates.transactional_rate }}</strong> (Client rate must be &ge; ₹ {{ reseller_rates.transactional_rate }})</p>
-                            <p>&bull; OTP: <strong>₹ {{ reseller_rates.otp_rate }}</strong> (Client rate must be &ge; ₹ {{ reseller_rates.otp_rate }})</p>
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 shadow-2xs">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-medium text-slate-500">Your Base Rate:</span>
+                            <div class="flex items-center gap-3 font-semibold text-slate-700 font-mono">
+                                <span>Promo: ₹{{ reseller_rates.promotional_rate }}</span>
+                                <span>Txn: ₹{{ reseller_rates.transactional_rate }}</span>
+                                <span>OTP: ₹{{ reseller_rates.otp_rate }}</span>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -583,7 +582,7 @@ function clientDirectoryManager() {
                             <span class="text-[10px] text-slate-400">Marketing & Carousels</span>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
                             <input type="number" step="0.0001" min="0.0001" name="promotional_rate" :value="ratesClient.rates ? ratesClient.rates.promotional_rate : '{{ reseller_rates.promotional_rate|default:'0.2500' }}'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>
@@ -598,7 +597,7 @@ function clientDirectoryManager() {
                             <span class="text-[10px] text-slate-400">Alerts & Notifications</span>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
                             <input type="number" step="0.0001" min="0.0001" name="transactional_rate" :value="ratesClient.rates ? ratesClient.rates.transactional_rate : '{{ reseller_rates.transactional_rate|default:'0.2000' }}'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>
@@ -613,7 +612,7 @@ function clientDirectoryManager() {
                             <span class="text-[10px] text-slate-400">One-Time Passcodes</span>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Selling Rate (INR) *</label>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Rate (INR) *</label>
                             <input type="number" step="0.0001" min="0.0001" name="otp_rate" :value="ratesClient.rates ? ratesClient.rates.otp_rate : '{{ reseller_rates.otp_rate|default:'0.1500' }}'" required class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-mono font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all shadow-2xs">
                         </div>
                     </div>

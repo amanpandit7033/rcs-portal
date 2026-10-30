@@ -247,25 +247,10 @@ def transfer(
 
 
 def validate_client_rate(client, message_type: str, client_rate: Union[Decimal, str, float]) -> None:
-    """Validate that a client's rate is not lower than their parent reseller's rate."""
+    """Validate client rate. Distributors and Resellers can set any rate for their clients."""
     dec_client_rate = _to_decimal(client_rate)
-
-    parent_reseller = getattr(client, "parent_reseller", None)
-    if not parent_reseller:
-        return
-
-    reseller_rate_plan = RatePlan.objects.filter(
-        user=parent_reseller,
-        message_type=message_type,
-    ).first()
-
-    if reseller_rate_plan:
-        reseller_rate = reseller_rate_plan.rate
-        if dec_client_rate < reseller_rate:
-            raise RateValidationError(
-                f"Client rate ({dec_client_rate}) cannot be lower than reseller rate ({reseller_rate}) "
-                f"for message type '{message_type}'."
-            )
+    if dec_client_rate <= Decimal("0.0000"):
+        raise RateValidationError("Rate must be greater than zero.")
 
 
 @transaction.atomic

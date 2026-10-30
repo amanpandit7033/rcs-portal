@@ -494,7 +494,7 @@ class ManageRatePlansView(RoleRequiredMixin, View):
                 for err in errors:
                     messages.error(request, f"{field.title()}: {err}")
 
-        if request.user.is_reseller:
+        if request.user.is_reseller or request.user.is_distributor:
             return redirect(f"{reverse('accounts:client_list')}?open_rates={user_id}")
         return redirect(f"{reverse('accounts:user_list')}?open_rates={user_id}")
 
