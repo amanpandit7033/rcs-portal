@@ -136,7 +136,16 @@ def send_message_task(self, message_id: str):
             url_shortener=url_shortener,
         )
 
-        onextel_id = resp.get("messageId")
+        onextel_id = (
+            resp.get("messageId")
+            or resp.get("message_id")
+            or resp.get("msgId")
+            or resp.get("id")
+            or resp.get("refId")
+            or ""
+        )
+        if not onextel_id and isinstance(resp.get("data"), dict):
+            onextel_id = resp["data"].get("messageId") or resp["data"].get("msgId") or ""
         message.onextel_message_id = onextel_id or ""
         message.status = Message.Status.SUBMITTED
         message.submitted_at = timezone.now()

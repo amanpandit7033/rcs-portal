@@ -223,5 +223,13 @@ class OneXtelClient:
         """Convenience method for sending a single RCS message."""
         results = self.send_messages([rcs_item], prefix=prefix, url_shortener=url_shortener)
         if not results:
-            raise OneXtelClientError("OneXtel returned an empty response list for message.")
-        return results[0]
+            raise OneXtelClientError("OneXtel returned an empty response for message.")
+        if isinstance(results, list):
+            item = results[0] if results else {}
+            return item if isinstance(item, dict) else {"messageId": str(item)}
+        if isinstance(results, dict):
+            if "data" in results and isinstance(results["data"], list) and results["data"]:
+                first_d = results["data"][0]
+                return first_d if isinstance(first_d, dict) else {"messageId": str(first_d)}
+            return results
+        return {"data": results}
