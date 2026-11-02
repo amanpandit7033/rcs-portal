@@ -100,7 +100,11 @@ def fast_dispatch(campaign_id: str, batch_size: int = 50):
             contacts_to_update.append(contact)
 
             rcs_items.append(build_onextel_rcs_item(msg))
-            msg_map[contact.number] = msg
+            clean_digits = "".join(filter(str.isdigit, str(contact.number)))
+            msg_map[str(contact.number)] = msg
+            msg_map[clean_digits] = msg
+            if len(clean_digits) >= 10:
+                msg_map[clean_digits[-10:]] = msg
 
             if user_wallet:
                 transactions_to_create.append(
@@ -118,16 +122,49 @@ def fast_dispatch(campaign_id: str, batch_size: int = 50):
         # Send batch to OneXtel in ONE single HTTP call!
         try:
             results = client.send_messages(rcs_items, prefix="+91")
-            # Map carrier response message IDs
-            if isinstance(results, list):
-                for res in results:
+            
+            # Extract raw response list
+            raw_list = results
+            if isinstance(results, dict):
+                if "data" in results and isinstance(results["data"], list):
+                    raw_list = results["data"]
+                elif "result" in results and isinstance(results["result"], list):
+                    raw_list = results["result"]
+
+            if isinstance(raw_list, list):
+                for idx, res in enumerate(raw_list):
                     if isinstance(res, dict):
-                        recip = res.get("recipient")
-                        mid = res.get("messageId")
-                        if recip and mid and recip in msg_map:
-                            msg_map[recip].onextel_message_id = mid
-                            msg_map[recip].status = Message.Status.SUBMITTED
-                            msg_map[recip].submitted_at = timezone.now()
+                        recip = str(res.get("recipient") or res.get("number") or "").strip()
+                        mid = (
+                            res.get("messageId")
+                            or res.get("message_id")
+                            or res.get("msgId")
+                            or res.get("id")
+                            or res.get("refId")
+                            or ""
+                        )
+                        matched_msg = None
+                        if recip:
+                            r_digits = "".join(filter(str.isdigit, recip))
+                            matched_msg = msg_map.get(recip) or msg_map.get(r_digits) or (msg_map.get(r_digits[-10:]) if len(r_digits) >= 10 else None)
+                        if not matched_msg and idx < len(created_msgs):
+                            matched_msg = created_msgs[idx]
+
+                        if matched_msg:
+                            matched_msg.onextel_message_id = mid
+                            matched_msg.status = Message.Status.SUBMITTED
+                            matched_msg.submitted_at = timezone.now()
+            elif isinstance(results, dict):
+                mid = (
+                    results.get("messageId")
+                    or results.get("message_id")
+                    or results.get("msgId")
+                    or ""
+                )
+                for msg in created_msgs:
+                    msg.onextel_message_id = mid
+                    msg.status = Message.Status.SUBMITTED
+                    msg.submitted_at = timezone.now()
             else:
                 for msg in created_msgs:
                     msg.status = Message.Status.SUBMITTED
@@ -188,3 +225,4 @@ def fast_dispatch(campaign_id: str, batch_size: int = 50):
 if __name__ == "__main__":
     cid = sys.argv[1] if len(sys.argv) > 1 else "1acd4fe0-0954-4c07-885b-a8ef0bd58249"
     fast_dispatch(cid)
+
