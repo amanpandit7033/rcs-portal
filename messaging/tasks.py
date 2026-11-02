@@ -313,6 +313,20 @@ def process_dlr_task(self, dlr_log_id: int):
                 pass
 
     if not message:
+        # Match by recipient phone number if messageId was not found
+        recipient_phone = parsed.get("recipient")
+        if recipient_phone:
+            clean_digits = "".join(filter(str.isdigit, str(recipient_phone)))
+            last10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+            if last10:
+                message = Message.objects.select_related(
+                    "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
+                ).filter(recipient__endswith=last10).order_by("-id").first()
+                if message and not message.onextel_message_id:
+                    message.onextel_message_id = onextel_id
+                    message.save(update_fields=["onextel_message_id"])
+
+    if not message:
         logger.warning("No message matched for OneXtel ID '%s'. Marking DLR pending reprocess.", onextel_id)
         dlr_log.error_message = f"Message with carrier ID '{onextel_id}' not found."
         dlr_log.save(update_fields=["onextel_message_id", "status_extracted", "error_message"])
