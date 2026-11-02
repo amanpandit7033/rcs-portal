@@ -163,9 +163,9 @@ def parse_dlr_payload(payload: Any) -> Dict[str, Any]:
         "failure_reason": failure_reason,
         "event_timestamp": event_timestamp or timezone.now(),
         "recipient": recipient,
-        "custref1": str(data.get("custref1") or "").strip(),
-        "custref2": str(data.get("custref2") or "").strip(),
-        "custref3": str(data.get("custref3") or "").strip(),
+        "custref1": str(data.get("custref1") or entity.get("custref1") or "").strip(),
+        "custref2": str(data.get("custref2") or entity.get("custref2") or "").strip(),
+        "custref3": str(data.get("custref3") or entity.get("custref3") or "").strip(),
         "bot_id": str(data.get("botId") or "").strip(),
         "raw": data,
     }

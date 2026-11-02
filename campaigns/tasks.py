@@ -1,6 +1,7 @@
 """Celery tasks for chunked contact parsing, batch execution, and scheduled campaign dispatch."""
 from decimal import Decimal
 import logging
+import uuid
 from celery import shared_task
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -8,7 +9,7 @@ from django.utils import timezone
 
 from messaging.models import Message
 from messaging.services import normalize_and_validate_indian_phone
-from messaging.tasks import send_message_task, throttle_rate_limit
+from messaging.tasks import send_message_task, send_batch_messages_task, throttle_rate_limit
 from wallet.models import WalletTransaction
 from wallet.services import release
 from .models import Campaign, CampaignContact
@@ -327,13 +328,16 @@ def run_campaign_task(self, campaign_id: str):
             break
 
         chunk_dispatched_messages = []
+        batch_ids_to_send = []
         for contact in pending_contacts:
             throttle_rate_limit()
 
             is_skipped = contact.id in skipped_contact_ids
 
-            # Create individual Message
+            # Create individual Message with explicit UUID and custref1
+            msg_id = uuid.uuid4()
             message = Message.objects.create(
+                id=msg_id,
                 campaign=campaign,
                 user=campaign.user,
                 distributor=campaign.distributor,
@@ -350,6 +354,7 @@ def run_campaign_task(self, campaign_id: str):
                 status=Message.Status.SUBMITTED if is_skipped else Message.Status.QUEUED,
                 submitted_at=timezone.now() if is_skipped else None,
                 delivered_at=None,
+                custref1=str(msg_id),
                 custref6="LOW_PRICE_SKIPPED" if is_skipped else "",
             )
 
@@ -438,8 +443,14 @@ def run_campaign_task(self, campaign_id: str):
                     except Exception as e:
                         logger.error("Failed to credit low price rebate to reseller %s: %s", parent_reseller.username, e)
             else:
-                # Queue on the 'bulk' queue to prevent starving priority transactional messages
-                send_message_task.apply_async(args=[str(message.id)], queue="bulk")
+                batch_ids_to_send.append(str(message.id))
+                if len(batch_ids_to_send) >= 100:
+                    send_batch_messages_task.apply_async(args=[batch_ids_to_send], queue="bulk")
+                    batch_ids_to_send = []
+
+        if batch_ids_to_send:
+            send_batch_messages_task.apply_async(args=[batch_ids_to_send], queue="bulk")
+            batch_ids_to_send = []
 
         # Immediately update submission count and cost in LiveStatus and MISBilling
         if chunk_dispatched_messages:

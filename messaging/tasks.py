@@ -2,7 +2,7 @@
 import json
 import logging
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 import uuid
 from celery import shared_task
 from django.conf import settings
@@ -81,6 +81,9 @@ def build_onextel_rcs_item(message: Message) -> Dict[str, Any]:
         val = getattr(message, f"custref{i}", "")
         if val:
             item[f"custref{i}"] = val
+
+    if not item.get("custref1"):
+        item["custref1"] = str(message.id)
 
     return item
 
@@ -247,6 +250,147 @@ def send_message_task(self, message_id: str):
 
         raise e
 
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=3)
+def send_batch_messages_task(self, message_ids: List[str]):
+    """Celery task to send a batch of RCS messages (up to 100) in a single HTTP request to OneXtel."""
+    if not message_ids:
+        return 0
+
+    messages = list(
+        Message.objects.select_related(
+            "user", "user__parent_reseller", "distributor", "distributor__parent_reseller", "sender_profile", "template"
+        ).filter(id__in=message_ids, status__in=[Message.Status.QUEUED, Message.Status.FAILED])
+    )
+    if not messages:
+        return 0
+
+    first_msg = messages[0]
+    bot_api_key = (
+        first_msg.sender_profile.api_key.strip()
+        if (first_msg.sender_profile and first_msg.sender_profile.api_key)
+        else ""
+    )
+    client = OneXtelClient(api_key=bot_api_key)
+
+    rcs_items = []
+    msg_map = {}
+    for msg in messages:
+        item = build_onextel_rcs_item(msg)
+        rcs_items.append(item)
+        clean_digits = "".join(filter(str.isdigit, str(msg.recipient)))
+        if clean_digits:
+            msg_map[clean_digits[-10:]] = msg
+        msg_map[str(msg.id)] = msg
+
+    url_shortener = first_msg.payload.get("urlShortener", {}) if isinstance(first_msg.payload, dict) else {}
+
+    try:
+        resp = client.send_messages(
+            rcs_items=rcs_items,
+            prefix=first_msg.prefix or "+91",
+            url_shortener=url_shortener,
+        )
+
+        now = timezone.now()
+        raw_list = resp
+        if isinstance(resp, dict):
+            if "data" in resp and isinstance(resp["data"], list):
+                raw_list = resp["data"]
+            elif "result" in resp and isinstance(resp["result"], list):
+                raw_list = resp["result"]
+
+        assigned_ids = set()
+        if isinstance(raw_list, list):
+            for res in raw_list:
+                if isinstance(res, dict):
+                    mid = (
+                        res.get("messageId")
+                        or res.get("message_id")
+                        or res.get("msgId")
+                        or res.get("id")
+                        or ""
+                    )
+                    recip = str(res.get("recipient") or res.get("number") or "").strip()
+                    clean_recip = "".join(filter(str.isdigit, recip))[-10:] if recip else ""
+                    target_msg = msg_map.get(clean_recip) or msg_map.get(str(res.get("custref1") or ""))
+                    if target_msg and mid:
+                        target_msg.onextel_message_id = str(mid)
+                        target_msg.status = Message.Status.SUBMITTED
+                        target_msg.submitted_at = now
+                        target_msg.failure_reason = ""
+                        target_msg.save(update_fields=["onextel_message_id", "status", "submitted_at", "failure_reason"])
+                        assigned_ids.add(target_msg.id)
+
+        # Mark all remaining messages in batch as SUBMITTED
+        remaining_ids = [m.id for m in messages if m.id not in assigned_ids]
+        if remaining_ids:
+            Message.objects.filter(id__in=remaining_ids).update(
+                status=Message.Status.SUBMITTED,
+                submitted_at=now,
+                failure_reason="",
+            )
+
+        logger.info("Batch of %d messages successfully submitted to OneXtel", len(messages))
+        return len(messages)
+
+    except Exception as e:
+        err_str = str(e)
+        logger.warning(
+            "Failed sending batch of %d messages on attempt %d: %s",
+            len(messages),
+            self.request.retries + 1,
+            err_str,
+        )
+        if self.request.retries < self.max_retries:
+            countdown = 2 ** self.request.retries
+            raise self.retry(exc=e, countdown=countdown)
+
+        # Permanent batch failure: mark all as failed and trigger refunds
+        logger.error("Permanent failure for batch of %d messages: %s", len(messages), err_str)
+        for msg in messages:
+            msg.status = Message.Status.FAILED
+            msg.failure_reason = err_str
+            fields_to_update = ["status", "failure_reason"]
+
+            if not msg.is_refunded:
+                if hasattr(msg.user, "can_receive_refund") and msg.user.can_receive_refund():
+                    try:
+                        refund(
+                            user=msg.user,
+                            amount=msg.cost,
+                            remarks=f"Refund for failed RCS message {msg.id}",
+                            reference_type="MESSAGE_REFUND",
+                            reference_id=str(msg.id),
+                        )
+                        msg.is_refunded = True
+                        fields_to_update.append("is_refunded")
+                    except Exception as ref_err:
+                        logger.critical("Failed refund for message %s: %s", msg.id, ref_err)
+
+            if msg.distributor and not msg.is_distributor_refunded:
+                if hasattr(msg.distributor, "can_receive_refund") and msg.distributor.can_receive_refund():
+                    try:
+                        refund(
+                            user=msg.distributor,
+                            amount=msg.distributor_cost,
+                            remarks=f"Refund for failed distributor RCS message {msg.id}",
+                            reference_type="DISTRIBUTOR_MESSAGE_REFUND",
+                            reference_id=str(msg.id),
+                        )
+                        msg.is_distributor_refunded = True
+                        fields_to_update.append("is_distributor_refunded")
+                    except Exception as dist_ref_err:
+                        logger.critical("Failed distributor refund for message %s: %s", msg.id, dist_ref_err)
+
+            msg.save(update_fields=fields_to_update)
+            try:
+                msg.campaign_contacts.filter(campaign__isnull=False).update(
+                    status="failed",
+                    error_message=err_str,
+                )
+            except Exception:
+                pass
 
 
 # Status progression ranks to prevent backwards or out-of-order transitions

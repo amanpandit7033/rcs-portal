@@ -31,6 +31,7 @@ class OneXtelClient:
         self.api_key = (raw_key or "").strip()
         self.base_url = (base_url or getattr(settings, "ONEXTEL_BASE_URL", "https://api.onexaura.com")).rstrip("/")
         self.mock = mock if mock is not None else getattr(settings, "ONEXTEL_MOCK", False)
+        self.session = requests.Session()
 
     def _ensure_api_key(self) -> None:
         if not self.mock and not self.api_key:
@@ -165,7 +166,7 @@ class OneXtelClient:
 
         headers = self._get_headers(content_type="application/json")
         try:
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=30)
+            response = self.session.post(endpoint, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -204,7 +205,7 @@ class OneXtelClient:
             payload["urlShortener"] = url_shortener
         headers = self._get_headers(content_type="application/json")
         try:
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=30)
+            response = self.session.post(endpoint, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
