@@ -1,5 +1,6 @@
 """Fast batch campaign dispatcher for urgent bulk dispatches.
-Sends contacts to OneXtel in batches of 50-100 per HTTP call.
+Sends messages to OneXtel in batches of 50-100 per HTTP call.
+Handles both existing QUEUED messages and PENDING contacts.
 """
 import os
 import sys
@@ -39,177 +40,186 @@ def fast_dispatch(campaign_id: str, batch_size: int = 50):
 
     client = OneXtelClient(api_key=bot_api_key)
 
-    total_pending = CampaignContact.objects.filter(campaign=campaign, status=CampaignContact.Status.PENDING).count()
-    print(f"Starting fast dispatch for '{campaign.name}' (ID: {campaign.id})")
-    print(f"Total Pending Contacts: {total_pending} | Batch size: {batch_size}")
+    queued_count = Message.objects.filter(campaign=campaign, status=Message.Status.QUEUED).count()
+    pending_contacts_count = CampaignContact.objects.filter(campaign=campaign, status=CampaignContact.Status.PENDING).count()
+
+    print(f"==================================================")
+    print(f"Starting Fast Dispatch for: '{campaign.name}' ({campaign.id})")
+    print(f"Queued Messages waiting to send to Carrier: {queued_count}")
+    print(f"Pending Contacts waiting to generate: {pending_contacts_count}")
+    print(f"Batch Size: {batch_size} messages per HTTP request")
+    print(f"==================================================")
 
     campaign.status = Campaign.Status.RUNNING
     if not campaign.started_at:
         campaign.started_at = timezone.now()
     campaign.save(update_fields=["status", "started_at", "updated_at"])
 
-    processed_so_far = 0
     t_start = time.time()
+    dispatched_now = 0
 
-    while True:
-        pending_contacts = list(
-            CampaignContact.objects.filter(
-                campaign=campaign,
-                status=CampaignContact.Status.PENDING,
-            ).order_by("id")[:batch_size]
-        )
+    # ---------------------------------------------------------
+    # PART 1: Dispatch already-generated QUEUED messages
+    # ---------------------------------------------------------
+    if queued_count > 0:
+        print(f"\n[PART 1] Sending {queued_count} QUEUED messages directly to OneXtel in batches of {batch_size}...")
+        while True:
+            batch_msgs = list(
+                Message.objects.filter(
+                    campaign=campaign,
+                    status=Message.Status.QUEUED,
+                ).order_by("id")[:batch_size]
+            )
 
-        if not pending_contacts:
-            break
+            if not batch_msgs:
+                break
 
-        # Build message models
-        messages_to_create = []
-        contacts_to_update = []
+            rcs_items = []
+            msg_map = {}
+            for msg in batch_msgs:
+                rcs_items.append(build_onextel_rcs_item(msg))
+                clean_digits = "".join(filter(str.isdigit, str(msg.recipient)))
+                msg_map[str(msg.recipient)] = msg
+                msg_map[clean_digits] = msg
+                if len(clean_digits) >= 10:
+                    msg_map[clean_digits[-10:]] = msg
+
+            try:
+                results = client.send_messages(rcs_items, prefix="+91")
+                raw_list = results
+                if isinstance(results, dict):
+                    if "data" in results and isinstance(results["data"], list):
+                        raw_list = results["data"]
+                    elif "result" in results and isinstance(results["result"], list):
+                        raw_list = results["result"]
+
+                if isinstance(raw_list, list):
+                    for idx, res in enumerate(raw_list):
+                        if isinstance(res, dict):
+                            recip = str(res.get("recipient") or res.get("number") or "").strip()
+                            mid = (
+                                res.get("messageId")
+                                or res.get("message_id")
+                                or res.get("msgId")
+                                or res.get("id")
+                                or res.get("refId")
+                                or ""
+                            )
+                            matched_msg = None
+                            if recip:
+                                r_digits = "".join(filter(str.isdigit, recip))
+                                matched_msg = msg_map.get(recip) or msg_map.get(r_digits) or (msg_map.get(r_digits[-10:]) if len(r_digits) >= 10 else None)
+                            if not matched_msg and idx < len(batch_msgs):
+                                matched_msg = batch_msgs[idx]
+
+                            if matched_msg:
+                                matched_msg.onextel_message_id = mid
+                                matched_msg.status = Message.Status.SUBMITTED
+                                matched_msg.submitted_at = timezone.now()
+                elif isinstance(results, dict):
+                    mid = results.get("messageId") or results.get("msgId") or ""
+                    for msg in batch_msgs:
+                        msg.onextel_message_id = mid
+                        msg.status = Message.Status.SUBMITTED
+                        msg.submitted_at = timezone.now()
+                else:
+                    for msg in batch_msgs:
+                        msg.status = Message.Status.SUBMITTED
+                        msg.submitted_at = timezone.now()
+            except Exception as api_err:
+                print(f"Warning: Batch API error: {api_err}")
+                for msg in batch_msgs:
+                    msg.failure_reason = str(api_err)[:250]
+
+            Message.objects.bulk_update(batch_msgs, ["onextel_message_id", "status", "submitted_at", "failure_reason"])
+            dispatched_now += len(batch_msgs)
+            pct = (dispatched_now / queued_count * 100) if queued_count else 100
+            print(f"  -> Submitted to Carrier: {dispatched_now}/{queued_count} ({pct:.1f}%)...")
+
+    # ---------------------------------------------------------
+    # PART 2: Dispatch any remaining PENDING contacts
+    # ---------------------------------------------------------
+    if pending_contacts_count > 0:
+        print(f"\n[PART 2] Generating & sending {pending_contacts_count} PENDING contacts...")
         user_wallet = getattr(user, "wallet", None)
-        transactions_to_create = []
-
-        for contact in pending_contacts:
-            msg = Message(
-                campaign=campaign,
-                user=user,
-                distributor=campaign.distributor,
-                sender_profile=campaign.sender_profile,
-                message_type=campaign.message_type,
-                recipient=contact.number,
-                content_type=campaign.content_type,
-                payload=campaign.custom_content if not campaign.template else {},
-                template=campaign.template,
-                custom_params=contact.params,
-                rate_applied=campaign.rate_applied,
-                cost=campaign.rate_applied,
-                distributor_cost=campaign.distributor_rate_applied if campaign.distributor else Decimal("0.0000"),
-                status=Message.Status.QUEUED,
+        while True:
+            pending_contacts = list(
+                CampaignContact.objects.filter(
+                    campaign=campaign,
+                    status=CampaignContact.Status.PENDING,
+                ).order_by("id")[:batch_size]
             )
-            messages_to_create.append(msg)
 
-        # Bulk create messages
-        created_msgs = Message.objects.bulk_create(messages_to_create)
+            if not pending_contacts:
+                break
 
-        # Build OneXtel items
-        rcs_items = []
-        msg_map = {}
-        for idx, contact in enumerate(pending_contacts):
-            msg = created_msgs[idx]
-            contact.status = CampaignContact.Status.DISPATCHED
-            contact.message = msg
-            contacts_to_update.append(contact)
-
-            rcs_items.append(build_onextel_rcs_item(msg))
-            clean_digits = "".join(filter(str.isdigit, str(contact.number)))
-            msg_map[str(contact.number)] = msg
-            msg_map[clean_digits] = msg
-            if len(clean_digits) >= 10:
-                msg_map[clean_digits[-10:]] = msg
-
-            if user_wallet:
-                transactions_to_create.append(
-                    WalletTransaction(
-                        wallet=user_wallet,
-                        type=WalletTransaction.TransactionType.DEBIT,
-                        amount=msg.cost,
-                        balance_after=user_wallet.balance,
-                        reference_type="MESSAGE_DISPATCH",
-                        reference_id=str(msg.id),
-                        remarks=f"Fast Campaign '{campaign.name}' - {contact.number}",
-                    )
+            messages_to_create = []
+            for contact in pending_contacts:
+                msg = Message(
+                    campaign=campaign,
+                    user=user,
+                    distributor=campaign.distributor,
+                    sender_profile=campaign.sender_profile,
+                    message_type=campaign.message_type,
+                    recipient=contact.number,
+                    content_type=campaign.content_type,
+                    payload=campaign.custom_content if not campaign.template else {},
+                    template=campaign.template,
+                    custom_params=contact.params,
+                    rate_applied=campaign.rate_applied,
+                    cost=campaign.rate_applied,
+                    distributor_cost=campaign.distributor_rate_applied if campaign.distributor else Decimal("0.0000"),
+                    status=Message.Status.QUEUED,
                 )
+                messages_to_create.append(msg)
 
-        # Send batch to OneXtel in ONE single HTTP call!
-        try:
-            results = client.send_messages(rcs_items, prefix="+91")
-            
-            # Extract raw response list
-            raw_list = results
-            if isinstance(results, dict):
-                if "data" in results and isinstance(results["data"], list):
-                    raw_list = results["data"]
-                elif "result" in results and isinstance(results["result"], list):
-                    raw_list = results["result"]
+            created_msgs = Message.objects.bulk_create(messages_to_create)
 
-            if isinstance(raw_list, list):
-                for idx, res in enumerate(raw_list):
-                    if isinstance(res, dict):
-                        recip = str(res.get("recipient") or res.get("number") or "").strip()
-                        mid = (
-                            res.get("messageId")
-                            or res.get("message_id")
-                            or res.get("msgId")
-                            or res.get("id")
-                            or res.get("refId")
-                            or ""
+            rcs_items = []
+            contacts_to_update = []
+            transactions_to_create = []
+            for idx, contact in enumerate(pending_contacts):
+                msg = created_msgs[idx]
+                contact.status = CampaignContact.Status.DISPATCHED
+                contact.message = msg
+                contacts_to_update.append(contact)
+                rcs_items.append(build_onextel_rcs_item(msg))
+                if user_wallet:
+                    transactions_to_create.append(
+                        WalletTransaction(
+                            wallet=user_wallet,
+                            type=WalletTransaction.TransactionType.DEBIT,
+                            amount=msg.cost,
+                            balance_after=user_wallet.balance,
+                            reference_type="MESSAGE_DISPATCH",
+                            reference_id=str(msg.id),
+                            remarks=f"Fast Campaign '{campaign.name}' - {contact.number}",
                         )
-                        matched_msg = None
-                        if recip:
-                            r_digits = "".join(filter(str.isdigit, recip))
-                            matched_msg = msg_map.get(recip) or msg_map.get(r_digits) or (msg_map.get(r_digits[-10:]) if len(r_digits) >= 10 else None)
-                        if not matched_msg and idx < len(created_msgs):
-                            matched_msg = created_msgs[idx]
+                    )
 
-                        if matched_msg:
-                            matched_msg.onextel_message_id = mid
-                            matched_msg.status = Message.Status.SUBMITTED
-                            matched_msg.submitted_at = timezone.now()
-            elif isinstance(results, dict):
-                mid = (
-                    results.get("messageId")
-                    or results.get("message_id")
-                    or results.get("msgId")
-                    or ""
-                )
-                for msg in created_msgs:
-                    msg.onextel_message_id = mid
-                    msg.status = Message.Status.SUBMITTED
-                    msg.submitted_at = timezone.now()
-            else:
+            try:
+                results = client.send_messages(rcs_items, prefix="+91")
                 for msg in created_msgs:
                     msg.status = Message.Status.SUBMITTED
                     msg.submitted_at = timezone.now()
-        except Exception as api_err:
-            print(f"Warning: Batch send API error: {api_err}. Marking messages queued.")
-            for msg in created_msgs:
-                msg.failure_reason = str(api_err)[:250]
+            except Exception as api_err:
+                for msg in created_msgs:
+                    msg.failure_reason = str(api_err)[:250]
 
-        # Bulk update messages and contacts
-        Message.objects.bulk_update(created_msgs, ["onextel_message_id", "status", "submitted_at", "failure_reason"])
-        CampaignContact.objects.bulk_update(contacts_to_update, ["status", "message"])
-        if transactions_to_create:
-            WalletTransaction.objects.bulk_create(transactions_to_create)
+            Message.objects.bulk_update(created_msgs, ["onextel_message_id", "status", "submitted_at", "failure_reason"])
+            CampaignContact.objects.bulk_update(contacts_to_update, ["status", "message"])
+            if transactions_to_create:
+                WalletTransaction.objects.bulk_create(transactions_to_create)
 
-        # Deduct reserved amount
-        batch_cost = sum((m.cost for m in created_msgs), Decimal("0.0000"))
-        campaign.reserved_amount = max(Decimal("0.0000"), campaign.reserved_amount - batch_cost)
-        processed_so_far += len(pending_contacts)
-        campaign.processed_count = CampaignContact.objects.filter(
-            campaign=campaign,
-            status__in=[CampaignContact.Status.DISPATCHED, CampaignContact.Status.DELIVERED, CampaignContact.Status.FAILED],
-        ).count()
-        campaign.save(update_fields=["processed_count", "reserved_amount", "updated_at"])
-
-        # Update metrics
-        try:
-            record_submission_and_cost(
-                user_id=campaign.user_id,
-                count=len(pending_contacts),
-                cost=batch_cost,
-                date=timezone.now().date(),
-                timestamp=timezone.now(),
-            )
-        except Exception:
-            pass
-
-        pct = (processed_so_far / total_pending * 100) if total_pending else 100
-        print(f"Dispatched {processed_so_far}/{total_pending} ({pct:.1f}%) in batch of {len(pending_contacts)}...")
-
-    # Completion
+    # Final wrap-up
     campaign.refresh_from_db()
+    campaign.processed_count = CampaignContact.objects.filter(
+        campaign=campaign,
+        status__in=[CampaignContact.Status.DISPATCHED, CampaignContact.Status.DELIVERED, CampaignContact.Status.FAILED],
+    ).count()
     campaign.status = Campaign.Status.COMPLETED
     campaign.completed_at = timezone.now()
-    campaign.save(update_fields=["status", "completed_at", "updated_at"])
+    campaign.save(update_fields=["processed_count", "status", "completed_at", "updated_at"])
 
     try:
         c_date = campaign.created_at.date() if campaign.created_at else timezone.now().date()
@@ -219,10 +229,12 @@ def fast_dispatch(campaign_id: str, batch_size: int = 50):
         pass
 
     elapsed = time.time() - t_start
-    print(f"\nSUCCESS! Finished dispatching campaign '{campaign.name}' in {elapsed:.1f} seconds!")
+    print(f"\n==================================================")
+    print(f"SUCCESS! Finished submitting {dispatched_now} messages to OneXtel in {elapsed:.1f} seconds!")
+    print(f"Now carrier will deliver to handsets and DLRs will start arriving.")
+    print(f"==================================================")
 
 
 if __name__ == "__main__":
     cid = sys.argv[1] if len(sys.argv) > 1 else "1acd4fe0-0954-4c07-885b-a8ef0bd58249"
     fast_dispatch(cid)
-
