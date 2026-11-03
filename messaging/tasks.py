@@ -941,21 +941,37 @@ def process_dlr_task(self, dlr_log_id: int):
 
 @shared_task
 def alert_stuck_submitted_messages_task():
-    """Find Messages stuck in SUBMITTED with an empty onextel_message_id for >15 minutes and log/alert them."""
+    """Find Messages stuck in SUBMITTED (empty carrier ID) or stuck in QUEUED for >15 minutes and log/alert them."""
     cutoff = timezone.now() - timedelta(minutes=15)
-    stuck_messages = Message.objects.filter(
-        status=Message.Status.SUBMITTED,
-    ).filter(
-        Q(submitted_at__lte=cutoff) | (Q(submitted_at__isnull=True) & Q(created_at__lte=cutoff))
-    ).filter(
-        Q(onextel_message_id__isnull=True) | Q(onextel_message_id="")
-    ).values("id", "recipient", "campaign_id", "submitted_at")
 
-    count = stuck_messages.count()
-    if count > 0:
+    # 1. Stuck in SUBMITTED with empty carrier ID
+    stuck_submitted = (
+        Message.objects.filter(status=Message.Status.SUBMITTED)
+        .filter(Q(submitted_at__lte=cutoff) | (Q(submitted_at__isnull=True) & Q(created_at__lte=cutoff)))
+        .filter(Q(onextel_message_id__isnull=True) | Q(onextel_message_id=""))
+        .exclude(custref6="LOW_PRICE_SKIPPED")
+        .values("id", "recipient", "campaign_id", "submitted_at")
+    )
+    submitted_count = stuck_submitted.count()
+    if submitted_count > 0:
         logger.warning(
             "ALERT: %d messages stuck in SUBMITTED state with empty onextel_message_id for >15 minutes: %s",
-            count,
-            list(stuck_messages[:20]),
+            submitted_count,
+            list(stuck_submitted[:20]),
         )
-    return count
+
+    # 2. Stuck in QUEUED for >15 minutes (unmapped batch items or undispatched messages)
+    stuck_queued = (
+        Message.objects.filter(status=Message.Status.QUEUED, created_at__lte=cutoff)
+        .exclude(custref6="LOW_PRICE_SKIPPED")
+        .values("id", "recipient", "campaign_id", "created_at")
+    )
+    queued_count = stuck_queued.count()
+    if queued_count > 0:
+        logger.warning(
+            "ALERT: %d messages stuck in QUEUED state for >15 minutes (unmapped/undispatched): %s",
+            queued_count,
+            list(stuck_queued[:20]),
+        )
+
+    return submitted_count + queued_count

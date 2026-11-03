@@ -416,26 +416,53 @@ class MessageIdAndDlrReconciliationTests(TestCase):
                 os.remove(tmp_path)
 
     def test_alert_stuck_submitted_messages_task(self):
-        """9. alert_stuck_submitted_messages_task identifies stuck submitted messages."""
+        """9. alert_stuck_submitted_messages_task identifies stuck SUBMITTED and QUEUED messages."""
         from datetime import timedelta
         from messaging.tasks import alert_stuck_submitted_messages_task
 
-        # Old message (>15 min) in SUBMITTED with empty onextel ID
         old_time = timezone.now() - timedelta(minutes=20)
-        m_stuck = self._create_message("919876543210", status=Message.Status.SUBMITTED, onextel_id="")
-        m_stuck.submitted_at = old_time
-        m_stuck.save(update_fields=["submitted_at"])
-
-        # Recent message (<5 min)
         recent_time = timezone.now() - timedelta(minutes=5)
-        m_recent = self._create_message("919876543211", status=Message.Status.SUBMITTED, onextel_id="")
-        m_recent.submitted_at = recent_time
-        m_recent.save(update_fields=["submitted_at"])
 
-        # Message with confirmed ID
+        # 1. Old message (>15 min) in SUBMITTED with empty onextel ID -> should be detected
+        m_stuck_sub = self._create_message("919876543210", status=Message.Status.SUBMITTED, onextel_id="")
+        m_stuck_sub.submitted_at = old_time
+        m_stuck_sub.save(update_fields=["submitted_at"])
+
+        # 2. Recent message (<5 min) in SUBMITTED with empty ID -> should NOT be detected
+        m_recent_sub = self._create_message("919876543211", status=Message.Status.SUBMITTED, onextel_id="")
+        m_recent_sub.submitted_at = recent_time
+        m_recent_sub.save(update_fields=["submitted_at"])
+
+        # 3. Message in SUBMITTED with confirmed ID -> should NOT be detected
         m_with_id = self._create_message("919876543212", status=Message.Status.SUBMITTED, onextel_id="carrier-id-ok")
         m_with_id.submitted_at = old_time
         m_with_id.save(update_fields=["submitted_at"])
 
+        # 4. Old message (>15 min) in QUEUED (unmapped batch item) -> should be detected
+        m_stuck_queued = self._create_message("919876543213", status=Message.Status.QUEUED)
+        Message.objects.filter(id=m_stuck_queued.id).update(created_at=old_time)
+
+        # 5. Recent message (<5 min) in QUEUED -> should NOT be detected
+        m_recent_queued = self._create_message("919876543214", status=Message.Status.QUEUED)
+        Message.objects.filter(id=m_recent_queued.id).update(created_at=recent_time)
+
+        # 6. Old LOW_PRICE_SKIPPED message -> must be EXCLUDED
+        m_skipped_sub = self._create_message("919876543215", status=Message.Status.SUBMITTED, onextel_id="")
+        m_skipped_sub.custref6 = "LOW_PRICE_SKIPPED"
+        m_skipped_sub.submitted_at = old_time
+        m_skipped_sub.save(update_fields=["custref6", "submitted_at"])
+
+        m_skipped_queued = self._create_message("919876543216", status=Message.Status.QUEUED)
+        m_skipped_queued.custref6 = "LOW_PRICE_SKIPPED"
+        m_skipped_queued.save(update_fields=["custref6"])
+        Message.objects.filter(id=m_skipped_queued.id).update(created_at=old_time)
+
         count = alert_stuck_submitted_messages_task()
-        self.assertEqual(count, 1)
+        # Combined count: m_stuck_sub (1) + m_stuck_queued (1) = 2
+        self.assertEqual(count, 2)
+
+        # Verify no status changes occurred
+        m_stuck_sub.refresh_from_db()
+        m_stuck_queued.refresh_from_db()
+        self.assertEqual(m_stuck_sub.status, Message.Status.SUBMITTED)
+        self.assertEqual(m_stuck_queued.status, Message.Status.QUEUED)
