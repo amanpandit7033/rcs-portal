@@ -487,29 +487,51 @@ class CampaignExportCSVView(RoleRequiredMixin, View):
     def get(self, request, campaign_id):
         campaign = get_object_or_404(Campaign.objects.for_user(request.user), id=campaign_id)
 
-        header = [
-            "Recipient Number",
-            "Contact Status",
-            "Message ID",
-            "Carrier Message ID",
-            "Message Status",
-            "Dispatched At",
-            "Delivered At",
-            "Error / Reason",
-        ]
+        is_admin = getattr(request.user, "is_admin", False) or request.user.is_superuser or request.user.role == "superadmin"
+
+        if is_admin:
+            header = [
+                "Recipient Number",
+                "Contact Status",
+                "Message ID",
+                "Carrier Message ID",
+                "Message Status",
+                "Dispatched At",
+                "Delivered At",
+                "Error / Reason",
+            ]
+        else:
+            header = [
+                "Recipient Number",
+                "Contact Status",
+                "Message Status",
+                "Dispatched At",
+                "Delivered At",
+                "Error / Reason",
+            ]
 
         def format_row(c):
             m = c.message
-            return [
-                c.number,
-                c.get_status_display(),
-                str(m.id) if m else "",
-                m.onextel_message_id if m and m.onextel_message_id else "",
-                m.get_status_display() if m else "",
-                m.created_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.created_at else "",
-                m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.delivered_at else "",
-                c.friendly_error_message,
-            ]
+            if is_admin:
+                return [
+                    c.number,
+                    c.get_status_display(),
+                    str(m.id) if m else "",
+                    m.onextel_message_id if m and m.onextel_message_id else "",
+                    m.get_status_display() if m else "",
+                    m.created_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.created_at else "",
+                    m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.delivered_at else "",
+                    c.friendly_error_message,
+                ]
+            else:
+                return [
+                    c.number,
+                    c.get_status_display(),
+                    m.get_status_display() if m else "",
+                    m.created_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.created_at else "",
+                    m.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if m and m.delivered_at else "",
+                    c.friendly_error_message,
+                ]
 
         qs = CampaignContact.objects.filter(campaign=campaign).select_related("message").order_by("id")
         filename = f"campaign_{campaign.name.lower().replace(' ', '_')}_results.csv"
