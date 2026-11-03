@@ -392,6 +392,35 @@ class CampaignProgressAjaxView(RoleRequiredMixin, View):
         )
 
 
+class CampaignMetricsAjaxView(RoleRequiredMixin, View):
+    """Return live delivery metrics for chart modal."""
+
+    allowed_roles = ["admin", "reseller", "user"]
+
+    def get(self, request, campaign_id):
+        if getattr(request.user, "is_admin", False) or getattr(request.user, "is_superuser", False):
+            campaign = get_object_or_404(Campaign.objects.all(), id=campaign_id)
+        else:
+            campaign = get_object_or_404(Campaign.objects.for_user(request.user), id=campaign_id)
+
+        stats = campaign.messages.aggregate(
+            read=Count("id", filter=Q(status="read")),
+            delivered=Count("id", filter=Q(status__in=["delivered", "read"])),
+            failed=Count("id", filter=Q(status="failed")),
+        )
+        total = campaign.total or campaign.valid_count or campaign.total_count or 0
+
+        return JsonResponse({
+            "id": str(campaign.id),
+            "name": campaign.name,
+            "total": total,
+            "read": stats["read"] or 0,
+            "delivered": stats["delivered"] or 0,
+            "failed": stats["failed"] or 0,
+            "status": campaign.status,
+        })
+
+
 
 class CampaignActionView(RoleRequiredMixin, View):
     """Handle pause, resume, and cancel commands."""

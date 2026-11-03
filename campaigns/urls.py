@@ -5,6 +5,7 @@ from .views import (
     CampaignDetailView,
     CampaignExportCSVView,
     CampaignListView,
+    CampaignMetricsAjaxView,
     CampaignProgressAjaxView,
     ContactGroupCreateView,
     ContactGroupDeleteContactView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("new/", CampaignCreateView.as_view(), name="campaign_create"),
     path("<uuid:campaign_id>/", CampaignDetailView.as_view(), name="campaign_detail"),
     path("<uuid:campaign_id>/progress/", CampaignProgressAjaxView.as_view(), name="campaign_progress"),
+    path("<uuid:campaign_id>/metrics/", CampaignMetricsAjaxView.as_view(), name="campaign_metrics"),
     path("<uuid:campaign_id>/action/", CampaignActionView.as_view(), name="campaign_action"),
     path("<uuid:campaign_id>/export/", CampaignExportCSVView.as_view(), name="campaign_export_csv"),
 
