@@ -351,7 +351,7 @@
                                     @click="openChart({
                                         id: '{{ c.id }}',
                                         name: '{{ c.name|escapejs }}',
-                                        total: {{ c.total|default:c.valid_count|default:0 }},
+                                        total: {{ c.valid_count|default:c.total|default:0 }},
                                         read: {{ c.annotated_read|default:0 }},
                                         delivered: {{ c.annotated_delivered|default:c.delivered_count|default:0 }},
                                         failed: {{ c.annotated_failed|default:c.failed_count|default:0 }}
@@ -362,7 +362,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
                                 </svg>
-                                <span>{{ c.total|default:c.valid_count }}</span>
+                                <span>{{ c.valid_count|default:c.total }}</span>
                             </button>
                         </td>
 

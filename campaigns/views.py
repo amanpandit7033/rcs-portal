@@ -420,7 +420,7 @@ class CampaignMetricsAjaxView(RoleRequiredMixin, View):
             delivered=Count("id", filter=Q(status__in=["delivered", "read"])),
             failed=Count("id", filter=Q(status="failed")),
         )
-        total = campaign.total or campaign.valid_count or campaign.total_count or 0
+        total = campaign.valid_count or campaign.total or campaign.total_count or 0
 
         return JsonResponse({
             "id": str(campaign.id),

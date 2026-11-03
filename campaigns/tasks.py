@@ -92,26 +92,12 @@ def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, 
 
             if val_error:
                 invalid_count += 1
-                contacts_batch.append(
-                    CampaignContact(
-                        campaign=campaign,
-                        number=raw_phone[:20] if raw_phone else f"Row-{row_idx}",
-                        params=params,
-                        status=CampaignContact.Status.INVALID,
-                        error_message=val_error,
-                    )
-                )
+                # Skip invalid numbers - do not persist unnecessary records to DB
+                continue
             elif clean_phone in seen_numbers:
                 duplicate_count += 1
-                contacts_batch.append(
-                    CampaignContact(
-                        campaign=campaign,
-                        number=clean_phone,
-                        params=params,
-                        status=CampaignContact.Status.DUPLICATE,
-                        error_message="Duplicate recipient number in file",
-                    )
-                )
+                # Skip duplicate numbers - do not persist unnecessary records to DB
+                continue
             else:
                 valid_count += 1
                 seen_numbers.add(clean_phone)
@@ -132,8 +118,8 @@ def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, 
         if contacts_batch:
             CampaignContact.objects.bulk_create(contacts_batch)
 
-        # Update metrics and financial estimate
-        campaign.total = total_rows
+        # Update metrics and financial estimate (total reflects clean sendable contacts)
+        campaign.total = valid_count
         campaign.valid_count = valid_count
         campaign.invalid_count = invalid_count
         campaign.duplicate_count = duplicate_count
