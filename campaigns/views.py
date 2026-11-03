@@ -4,6 +4,7 @@ from decimal import Decimal
 import logging
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -320,19 +321,51 @@ class CampaignDetailView(RoleRequiredMixin, View):
             id=campaign_id,
         )
 
-        # Get recent contacts sample
-        contacts_sample = (
+        contacts_qs = (
             CampaignContact.objects.filter(campaign=campaign)
             .select_related("message")
-            .order_by("id")[:20]
+            .order_by("id")
         )
+
+        q = request.GET.get("q", "").strip()
+        status = request.GET.get("status", "").strip()
+
+        if q:
+            clean_digits = "".join(filter(str.isdigit, q))
+            if clean_digits:
+                contacts_qs = contacts_qs.filter(number__icontains=clean_digits)
+            else:
+                contacts_qs = contacts_qs.filter(number__icontains=q)
+
+        if status:
+            if status == "delivered":
+                contacts_qs = contacts_qs.filter(
+                    Q(message__status__in=["delivered", "read"]) | Q(status="delivered")
+                )
+            elif status == "read":
+                contacts_qs = contacts_qs.filter(
+                    Q(message__status="read") | Q(status="read")
+                )
+            elif status == "failed":
+                contacts_qs = contacts_qs.filter(
+                    Q(status="failed") | Q(message__status="failed")
+                )
+            else:
+                contacts_qs = contacts_qs.filter(status=status)
+
+        paginator = Paginator(contacts_qs, 25)
+        page_number = request.GET.get("page", 1)
+        contacts_page = paginator.get_page(page_number)
 
         return render(
             request,
             self.template_name,
             {
                 "campaign": campaign,
-                "contacts_sample": contacts_sample,
+                "contacts": contacts_page,
+                "contacts_sample": contacts_page,
+                "search_query": q,
+                "selected_status": status,
                 "page_title": f"Campaign Report - {campaign.name}",
             },
         )

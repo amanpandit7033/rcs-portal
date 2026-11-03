@@ -45,17 +45,53 @@
         </div>
     </div>
 
-    <!-- Sample Recent Contacts Table -->
+    <!-- Campaign Contacts Table with Search & Pagination -->
     <div class="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-                <h3 class="text-base font-bold text-slate-900 tracking-tight">Recent Dispatched Contacts Sample</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Showing recent 20 recipient rows. Download full CSV for complete carrier delivery telemetry.</p>
+                <h3 class="text-base font-bold text-slate-900 tracking-tight">Campaign Contacts & Delivery Telemetry</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Showing paginated recipient logs with live delivery statuses and carrier details.</p>
             </div>
             <a href="{% url 'campaigns:campaign_export_csv' campaign.id %}" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 <span>Export Full Result CSV</span>
             </a>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <form method="get" class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <div class="relative min-w-[240px]">
+                    <input type="text"
+                           name="q"
+                           value="{{ search_query }}"
+                           placeholder="Search recipient phone number..."
+                           class="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                </div>
+
+                <select name="status" class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs">
+                    <option value="">All Statuses</option>
+                    <option value="delivered" {% if selected_status == 'delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="read" {% if selected_status == 'read' %}selected{% endif %}>Read</option>
+                    <option value="failed" {% if selected_status == 'failed' %}selected{% endif %}>Failed</option>
+                    <option value="dispatched" {% if selected_status == 'dispatched' %}selected{% endif %}>Dispatched</option>
+                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+                </select>
+
+                <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-2xs transition-colors">
+                    Search
+                </button>
+
+                {% if search_query or selected_status %}
+                <a href="{% url 'campaigns:campaign_detail' campaign.id %}" class="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+
+            <div class="text-xs text-slate-500 shrink-0">
+                Total Found: <span class="font-bold font-mono text-slate-800">{{ contacts.paginator.count|default:0 }}</span>
+            </div>
         </div>
 
         <div class="rounded-xl border border-slate-200 overflow-x-auto">
@@ -70,7 +106,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700">
-                    {% for c in contacts_sample %}
+                    {% for c in contacts %}
                     <tr class="hover:bg-slate-50/60 transition-colors">
                         <td class="px-4 py-3 font-mono font-medium text-slate-900">{{ c.number }}</td>
                         <td class="px-4 py-3">
@@ -115,12 +151,46 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-slate-400">No contacts recorded yet.</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-400">
+                            {% if search_query or selected_status %}
+                            No contacts matching your search criteria.
+                            {% else %}
+                            No contacts recorded yet.
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% if contacts.has_other_pages %}
+        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 rounded-b-xl">
+            <div>
+                Showing <span class="font-semibold text-slate-800">{{ contacts.start_index }}</span> to <span class="font-semibold text-slate-800">{{ contacts.end_index }}</span> of <span class="font-semibold text-slate-800">{{ contacts.paginator.count }}</span> contacts
+            </div>
+            <div class="flex items-center gap-1">
+                {% if contacts.has_previous %}
+                <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium text-xs">First</a>
+                <a href="?page={{ contacts.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium text-xs">Previous</a>
+                {% endif %}
+
+                <span class="px-3 py-1.5 font-semibold text-slate-800">
+                    Page {{ contacts.number }} of {{ contacts.paginator.num_pages }}
+                </span>
+
+                {% if contacts.has_next %}
+                <a href="?page={{ contacts.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium text-xs">Next</a>
+                <a href="?page={{ contacts.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium text-xs">Last</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
