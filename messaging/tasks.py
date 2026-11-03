@@ -299,10 +299,14 @@ def send_batch_messages_task(self, message_ids: List[str]):
                 raw_list = resp["data"]
             elif "result" in resp and isinstance(resp["result"], list):
                 raw_list = resp["result"]
+            elif "messageId" in resp or "id" in resp or "msgId" in resp:
+                raw_list = [resp]
+            elif "data" in resp and isinstance(resp["data"], dict):
+                raw_list = [resp["data"]]
 
         assigned_ids = set()
         if isinstance(raw_list, list):
-            for res in raw_list:
+            for idx, res in enumerate(raw_list):
                 if isinstance(res, dict):
                     mid = (
                         res.get("messageId")
@@ -311,15 +315,28 @@ def send_batch_messages_task(self, message_ids: List[str]):
                         or res.get("id")
                         or ""
                     )
-                    recip = str(res.get("recipient") or res.get("number") or "").strip()
+                    recip = str(res.get("recipient") or res.get("number") or res.get("mobile") or "").strip()
                     clean_recip = "".join(filter(str.isdigit, recip))[-10:] if recip else ""
                     target_msg = msg_map.get(clean_recip) or msg_map.get(str(res.get("custref1") or ""))
+
+                    # Fallback to positional index if recipient was not echoed in response
+                    if not target_msg and idx < len(messages):
+                        target_msg = messages[idx]
+
                     if target_msg and mid:
                         target_msg.onextel_message_id = str(mid)
                         target_msg.status = Message.Status.SUBMITTED
                         target_msg.submitted_at = now
                         target_msg.failure_reason = ""
                         target_msg.save(update_fields=["onextel_message_id", "status", "submitted_at", "failure_reason"])
+                        assigned_ids.add(target_msg.id)
+                elif isinstance(res, str) and res.strip():
+                    if idx < len(messages):
+                        target_msg = messages[idx]
+                        target_msg.onextel_message_id = res.strip()
+                        target_msg.status = Message.Status.SUBMITTED
+                        target_msg.submitted_at = now
+                        target_msg.save(update_fields=["onextel_message_id", "status", "submitted_at"])
                         assigned_ids.add(target_msg.id)
 
         # Mark all remaining messages in batch as SUBMITTED
@@ -475,6 +492,11 @@ def process_dlr_task(self, dlr_log_id: int):
         dlr_log.error_message = f"Message with carrier ID '{onextel_id}' not found."
         dlr_log.save(update_fields=["onextel_message_id", "status_extracted", "error_message"])
         return
+
+    # Always ensure the carrier's real message ID is saved on the matched Message
+    if onextel_id and message.onextel_message_id != onextel_id:
+        message.onextel_message_id = onextel_id
+        message.save(update_fields=["onextel_message_id"])
 
     dlr_log.message = message
 
