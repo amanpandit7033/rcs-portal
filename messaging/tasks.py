@@ -135,16 +135,45 @@ def extract_onextel_id(resp: Any) -> str:
     return str(mid).strip()
 
 
+SUCCESS_STATUSES = {"success", "submitted", "queued", "accepted", "sent"}
+SUCCESS_CODES = {200, 201, 202, "200", "201", "202"}
+EXPLICIT_FAILURE_STATUSES = {"failed", "error", "rejected", "failure", "undelivered"}
+
+
 def is_entry_success(entry: Any) -> bool:
-    """Check if entry indicates success based on code (200) or status ('success')."""
+    """Check if entry indicates success tolerantly.
+
+    Treats as success if:
+    - status in {'success', 'submitted', 'queued', 'accepted', 'sent'}
+    - code in {200, 201, 202}
+    - or messageId is present and code is not an explicit error (4xx/5xx) and status is not an explicit error.
+    """
     if isinstance(entry, dict):
-        code = entry.get("code")
+        raw_code = entry.get("code")
         status = str(entry.get("status") or "").strip().lower()
-        if code in (200, "200") or status == "success":
+
+        # Check explicit success indicators
+        if status in SUCCESS_STATUSES or raw_code in SUCCESS_CODES:
             return True
-        if code is None and not status and extract_onextel_id(entry):
+
+        # Check explicit failure indicators
+        if status in EXPLICIT_FAILURE_STATUSES:
+            return False
+
+        if raw_code is not None:
+            try:
+                code_int = int(raw_code)
+                if 400 <= code_int <= 599:
+                    return False
+            except (ValueError, TypeError):
+                pass
+
+        # If a messageId is present and not an explicit error, treat as success
+        if extract_onextel_id(entry):
             return True
+
         return False
+
     if isinstance(entry, str) and entry.strip():
         return True
     return False
@@ -285,7 +314,7 @@ def send_message_task(self, message_id: str):
         )
 
         onextel_id = extract_onextel_id(resp)
-        if not is_entry_success(resp):
+        if not onextel_id and not is_entry_success(resp):
             raise OneXtelClientError(f"OneXtel rejected message: {get_entry_error(resp)}")
 
         message.onextel_message_id = onextel_id or ""
@@ -496,16 +525,17 @@ def send_batch_messages_task(self, message_ids: List[str]):
         if unassigned:
             resp_count = len(resp) if isinstance(resp, list) else 1
             logger.warning(
-                "Batch mismatch: %d messages sent, response contained %d items. %d messages unassigned. Retrying individually.",
+                "Batch mismatch: %d messages sent, response contained %d items. %d messages unassigned.",
                 len(messages),
                 resp_count,
                 len(unassigned),
             )
-            for u_msg in unassigned:
-                send_message_task.apply_async(args=[str(u_msg.id)], queue="bulk")
+            if getattr(settings, "ONEXTEL_RESEND_UNASSIGNED", False):
+                for u_msg in unassigned:
+                    send_message_task.apply_async(args=[str(u_msg.id)], queue="bulk")
 
         logger.info(
-            "Batch of %d messages processed: %d mapped (%d successful), %d unassigned retrying individually",
+            "Batch of %d messages processed: %d mapped (%d successful), %d unassigned",
             len(messages),
             len(assignments),
             sum(1 for _, e in assignments if is_entry_success(e)),
@@ -617,31 +647,32 @@ def process_dlr_task(self, dlr_log_id: int):
         dlr_log.save(update_fields=["onextel_message_id", "status_extracted", "processed", "processed_at", "error_message"])
         return
 
-    # Priority matching
+    # Priority matching:
+    # 1. Match on custref1 / custref2 (valid UUID) FIRST
     message = None
+    matched_by_custref = False
 
-    # Priority 1: Exact match on onextel_message_id
-    if onextel_id:
+    for ref_cand in [parsed.get("custref1"), parsed.get("custref2")]:
+        if not ref_cand:
+            continue
+        try:
+            val_uuid = uuid.UUID(str(ref_cand).strip())
+            message = Message.objects.select_related(
+                "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
+            ).filter(id=val_uuid).first()
+            if message:
+                matched_by_custref = True
+                break
+        except (ValueError, TypeError, AttributeError):
+            pass
+
+    # 2. Match on exact onextel_message_id
+    if not message and onextel_id:
         message = Message.objects.select_related(
             "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
         ).filter(onextel_message_id=onextel_id).first()
 
-    # Priority 2: Match on custref1 / custref2 from the DLR, which equals str(Message.id)
-    if not message:
-        for ref_cand in [parsed.get("custref1"), parsed.get("custref2")]:
-            if not ref_cand:
-                continue
-            try:
-                val_uuid = uuid.UUID(str(ref_cand).strip())
-                message = Message.objects.select_related(
-                    "user", "user__parent_reseller", "distributor", "distributor__parent_reseller"
-                ).filter(id=val_uuid).first()
-                if message:
-                    break
-            except (ValueError, TypeError, AttributeError):
-                pass
-
-    # Priority 3: Phone-number fallback ONLY if steps 1 and 2 fail
+    # 3. Phone-number fallback ONLY if steps 1 and 2 fail
     if not message:
         recipient_phone = parsed.get("recipient")
         if recipient_phone:
@@ -691,24 +722,41 @@ def process_dlr_task(self, dlr_log_id: int):
         dlr_log.save(update_fields=["onextel_message_id", "status_extracted", "error_message"])
         return
 
-    # Requirement B: Never overwrite an existing ID.
+    # Handle carrier message ID reconciliation:
+    # If matched via custref1/custref2 and stored onextel_message_id differs from DLR's ID,
+    # update the stored ID to the DLR's ID, log a warning with both values, and continue processing status.
     if onextel_id:
-        if message.onextel_message_id and message.onextel_message_id != onextel_id:
-            logger.warning(
-                "DLR carrier ID mismatch for message %s: stored '%s' vs DLR '%s'. Skipping modification.",
-                message.id,
-                message.onextel_message_id,
-                onextel_id,
-            )
-            dlr_log.message = message
-            dlr_log.error_message = (
-                f"Carrier ID mismatch: stored '{message.onextel_message_id}' != DLR '{onextel_id}'"
-            )
-            dlr_log.save(update_fields=["message", "onextel_message_id", "status_extracted", "error_message"])
-            return
-        elif not message.onextel_message_id:
-            message.onextel_message_id = onextel_id
-            message.save(update_fields=["onextel_message_id"])
+        if matched_by_custref:
+            if message.onextel_message_id and message.onextel_message_id != onextel_id:
+                logger.warning(
+                    "DLR matched by custref for message %s: updating carrier ID from '%s' to '%s'.",
+                    message.id,
+                    message.onextel_message_id,
+                    onextel_id,
+                )
+                message.onextel_message_id = onextel_id
+                message.save(update_fields=["onextel_message_id"])
+            elif not message.onextel_message_id:
+                message.onextel_message_id = onextel_id
+                message.save(update_fields=["onextel_message_id"])
+        else:
+            # If matched via exact ID or phone fallback:
+            if message.onextel_message_id and message.onextel_message_id != onextel_id:
+                logger.warning(
+                    "DLR carrier ID mismatch for message %s: stored '%s' vs DLR '%s'. Skipping modification.",
+                    message.id,
+                    message.onextel_message_id,
+                    onextel_id,
+                )
+                dlr_log.message = message
+                dlr_log.error_message = (
+                    f"Carrier ID mismatch: stored '{message.onextel_message_id}' != DLR '{onextel_id}'"
+                )
+                dlr_log.save(update_fields=["message", "onextel_message_id", "status_extracted", "error_message"])
+                return
+            elif not message.onextel_message_id:
+                message.onextel_message_id = onextel_id
+                message.save(update_fields=["onextel_message_id"])
 
     dlr_log.message = message
 

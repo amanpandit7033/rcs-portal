@@ -79,7 +79,7 @@ class MessageIdAndDlrReconciliationTests(TestCase):
         self.assertEqual(extract_onextel_id(assignments[2][1]), "carrier-id-3")
 
     def test_batch_response_fewer_entries_no_positional_assignment_stay_queued(self):
-        """2. Response with fewer entries than messages -> no positional assignment, messages stay QUEUED."""
+        """2. Response with fewer entries than messages -> no positional assignment, messages stay QUEUED without resending by default."""
         m1 = self._create_message("919876543210")
         m2 = self._create_message("919876543211")
         m3 = self._create_message("919876543212")
@@ -97,7 +97,8 @@ class MessageIdAndDlrReconciliationTests(TestCase):
         self.assertEqual(len(unassigned), 3)
         self.assertEqual(set(m.id for m in unassigned), {m1.id, m2.id, m3.id})
 
-        # Test within send_batch_messages_task with mocked client and apply_async
+        # Test within send_batch_messages_task with mocked client:
+        # Default ONEXTEL_RESEND_UNASSIGNED=False: do NOT call send_message_task
         with patch("messaging.tasks.OneXtelClient") as mock_client_cls, \
              patch("messaging.tasks.send_message_task.apply_async") as mock_apply_async:
             mock_client = MagicMock()
@@ -118,8 +119,56 @@ class MessageIdAndDlrReconciliationTests(TestCase):
             self.assertEqual(m3.status, Message.Status.QUEUED)
             self.assertEqual(m3.onextel_message_id, "")
 
-            # Single-send task fallback should be triggered for all 3
+            # Single-send task fallback should NOT be triggered by default (avoiding duplicate RCS)
+            self.assertEqual(mock_apply_async.call_count, 0)
+
+        # When ONEXTEL_RESEND_UNASSIGNED is enabled, resend is called
+        with patch("messaging.tasks.OneXtelClient") as mock_client_cls, \
+             patch("messaging.tasks.send_message_task.apply_async") as mock_apply_async, \
+             self.settings(ONEXTEL_RESEND_UNASSIGNED=True):
+            mock_client = MagicMock()
+            mock_client.send_messages.return_value = raw_response
+            mock_client_cls.return_value = mock_client
+
+            send_batch_messages_task([str(m1.id), str(m2.id), str(m3.id)])
             self.assertEqual(mock_apply_async.call_count, 3)
+
+    def test_is_entry_success_tolerant(self):
+        """Tolerant entry success checking."""
+        # Status variations
+        for st in ["success", "submitted", "queued", "accepted", "sent", "SUCCESS", "Queued"]:
+            self.assertTrue(is_entry_success({"status": st}))
+
+        # Code variations
+        for cd in [200, 201, 202, "200", "201", "202"]:
+            self.assertTrue(is_entry_success({"code": cd}))
+
+        # MessageId present without explicit error code
+        self.assertTrue(is_entry_success({"messageId": "msg-xyz"}))
+        self.assertTrue(is_entry_success({"messageId": "msg-xyz", "code": 100}))
+
+        # Explicit errors
+        self.assertFalse(is_entry_success({"messageId": "msg-xyz", "code": 400}))
+        self.assertFalse(is_entry_success({"code": 500}))
+        self.assertFalse(is_entry_success({"status": "failed"}))
+        self.assertFalse(is_entry_success({"status": "rejected"}))
+
+    def test_send_message_task_does_not_raise_if_message_id_present(self):
+        """In send_message_task, do not raise/retry for an entry that has a messageId."""
+        msg = self._create_message("919876543210")
+        with patch("messaging.tasks.OneXtelClient") as mock_client_cls:
+            mock_client = MagicMock()
+            # Carrier returns messageId with a non-200 code (e.g. 101 or unknown)
+            mock_client.send_message.return_value = {"messageId": "carrier-id-custom", "code": 101}
+            mock_client_cls.return_value = mock_client
+
+            from messaging.tasks import send_message_task
+            res = send_message_task(str(msg.id))
+            self.assertEqual(res, "carrier-id-custom")
+
+            msg.refresh_from_db()
+            self.assertEqual(msg.status, Message.Status.SUBMITTED)
+            self.assertEqual(msg.onextel_message_id, "carrier-id-custom")
 
     def test_batch_response_failed_entry_in_middle_only_that_failed_others_correct_ids(self):
         """3. Response with a failed entry in the middle -> only that message FAILED, others keep their own correct IDs."""
@@ -214,21 +263,19 @@ class MessageIdAndDlrReconciliationTests(TestCase):
         self.assertEqual(msg2.status, Message.Status.SUBMITTED)
         self.assertEqual(msg2.onextel_message_id, "")
 
-    def test_dlr_with_different_id_stored_id_unchanged_warning_logged(self):
-        """6. DLR with an ID different from the stored one -> stored ID unchanged, warning logged."""
-        # Message already has a confirmed carrier ID
+    def test_dlr_matched_via_custref_updates_mismatched_id_and_processes_status(self):
+        """6. If matched via custref1 and stored onextel_message_id differs, update stored ID and continue processing."""
         msg = self._create_message(
             "919876543210",
             status=Message.Status.SUBMITTED,
-            onextel_id="confirmed-carrier-id-123",
+            onextel_id="old-mismatched-id-123",
             custref1="",
         )
         msg.custref1 = str(msg.id)
         msg.save(update_fields=["custref1"])
 
-        # DLR matches via custref1 but brings a different carrier messageId
         dlr_payload = {
-            "messageId": "conflicting-carrier-id-456",
+            "messageId": "real-operator-id-456",
             "custref1": str(msg.id),
             "status": "DELIVERED",
         }
@@ -239,12 +286,11 @@ class MessageIdAndDlrReconciliationTests(TestCase):
         msg.refresh_from_db()
         dlr_log.refresh_from_db()
 
-        # Stored ID must NOT be overwritten
-        self.assertEqual(msg.onextel_message_id, "confirmed-carrier-id-123")
-        # Status must not be changed on ID mismatch
-        self.assertEqual(msg.status, Message.Status.SUBMITTED)
-        # DLR log should record the mismatch
-        self.assertIn("Carrier ID mismatch", dlr_log.error_message)
+        # Stored ID must be updated to the real operator ID
+        self.assertEqual(msg.onextel_message_id, "real-operator-id-456")
+        # Status must continue processing to DELIVERED
+        self.assertEqual(msg.status, Message.Status.DELIVERED)
+        self.assertTrue(dlr_log.processed)
 
     def test_delivered_dlr_updates_campaign_contact_and_delivered_count(self):
         """7. DELIVERED DLR updates CampaignContact status and Campaign.delivered_count (UnboundLocalError regression)."""
