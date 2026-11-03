@@ -188,3 +188,4 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING("To apply corrections, rerun with --apply")
             )
+
