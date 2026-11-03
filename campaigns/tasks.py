@@ -3,6 +3,7 @@ from decimal import Decimal
 import logging
 import uuid
 from celery import shared_task
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -194,12 +195,24 @@ def parse_campaign_file_task(self, campaign_id: str, auto_launch: bool = False, 
         raise exc
 
 
-@shared_task(bind=True, max_retries=1)
+@shared_task(bind=True, max_retries=1, acks_late=True, reject_on_worker_lost=True)
 def run_campaign_task(self, campaign_id: str):
     """Batch-dispatch queued campaign contacts to the 'bulk' queue respecting throttle limits.
 
     Converts wallet reservation to per-message debits and releases unused reserve on completion.
     """
+    lock_key = f"campaign_runner_active_{campaign_id}"
+    if not cache.add(lock_key, "1", timeout=600):
+        logger.info("run_campaign_task: Campaign %s is already running in another worker. Skipping.", campaign_id)
+        return
+
+    try:
+        _execute_campaign_run(campaign_id, lock_key)
+    finally:
+        cache.delete(lock_key)
+
+
+def _execute_campaign_run(campaign_id: str, lock_key: str):
     try:
         campaign = Campaign.objects.select_related("user", "user__parent_reseller", "distributor", "sender_profile", "template").get(id=campaign_id)
     except Campaign.DoesNotExist:
@@ -288,6 +301,7 @@ def run_campaign_task(self, campaign_id: str):
     BATCH_CHUNK = 200
 
     while True:
+        cache.set(lock_key, "1", timeout=600)
         # Re-check status from DB before each chunk to allow instant pause/cancel
         campaign.refresh_from_db(fields=["status", "reserved_amount", "distributor_reserved_amount"])
         if campaign.status in [Campaign.Status.PAUSED, Campaign.Status.CANCELLED]:
@@ -539,4 +553,49 @@ def check_scheduled_campaigns():
     if ready_campaigns:
         logger.info("check_scheduled_campaigns: Launched %d scheduled campaigns.", len(ready_campaigns))
     return len(ready_campaigns)
+
+
+@shared_task
+def recover_stuck_running_campaigns_task():
+    """Watchdog task running periodically via Celery Beat (rcs-celery-beat).
+
+    Detects campaigns in 'running' or 'queued' state that still have pending contacts
+    after a worker crash, restart, or queue interruption, and automatically resumes them.
+    """
+    from datetime import timedelta
+    cutoff = timezone.now() - timedelta(minutes=2)
+
+    stuck_campaigns = (
+        Campaign.objects.filter(
+            status__in=[Campaign.Status.RUNNING, Campaign.Status.QUEUED],
+            updated_at__lte=cutoff,
+        )
+        .order_by("updated_at")
+    )
+
+    resumed_count = 0
+    for campaign in stuck_campaigns:
+        pending_count = CampaignContact.objects.filter(
+            campaign=campaign,
+            status=CampaignContact.Status.PENDING,
+        ).count()
+
+        if pending_count > 0:
+            lock_key = f"campaign_runner_active_{campaign.id}"
+            if not cache.get(lock_key):
+                logger.warning(
+                    "recover_stuck_running_campaigns: Automatically resuming stuck campaign %s (%d pending contacts)",
+                    campaign.id,
+                    pending_count,
+                )
+                run_campaign_task.apply_async(args=[str(campaign.id)], queue="bulk")
+                resumed_count += 1
+        else:
+            # All contacts were processed but task exited before marking COMPLETED
+            logger.info("recover_stuck_running_campaigns: Campaign %s has 0 pending contacts. Marking COMPLETED.", campaign.id)
+            campaign.status = Campaign.Status.COMPLETED
+            campaign.completed_at = timezone.now()
+            campaign.save(update_fields=["status", "completed_at", "updated_at"])
+
+    return resumed_count
 

@@ -231,6 +231,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "messaging.tasks.alert_stuck_submitted_messages_task",
         "schedule": 600.0,  # every 10 minutes
     },
+    "recover-stuck-running-campaigns": {
+        "task": "campaigns.tasks.recover_stuck_running_campaigns_task",
+        "schedule": 120.0,  # every 2 minutes
+    },
 }
 
 # Optional Sentry initialization
