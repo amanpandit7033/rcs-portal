@@ -207,7 +207,18 @@ class OneXtelClient:
         try:
             response = self.session.post(endpoint, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            is_valid_shape = isinstance(data, list) or (
+                isinstance(data, dict) and any(isinstance(v, list) for v in data.values())
+            )
+            if not is_valid_shape:
+                raw_body = (response.text or "")[:1000]
+                logger.warning(
+                    "OneXtel send_messages: unexpected response shape from endpoint %s: %s",
+                    endpoint,
+                    raw_body,
+                )
+            return data
         except requests.RequestException as e:
             logger.error("OneXtel send_messages failed: %s", e)
             status_code = getattr(getattr(e, "response", None), "status_code", None)

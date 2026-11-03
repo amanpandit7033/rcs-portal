@@ -227,6 +227,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "campaigns.tasks.check_scheduled_campaigns",
         "schedule": 60.0,
     },
+    "alert-stuck-submitted-messages": {
+        "task": "messaging.tasks.alert_stuck_submitted_messages_task",
+        "schedule": 600.0,  # every 10 minutes
+    },
 }
 
 # Optional Sentry initialization

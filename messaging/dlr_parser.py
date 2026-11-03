@@ -156,6 +156,17 @@ def parse_dlr_payload(payload: Any) -> Dict[str, Any]:
         or ""
     ).strip()
 
+    def _clean_ref(val: Any) -> str:
+        if val is None:
+            return ""
+        s = str(val).strip()
+        return "" if s.lower() in ("none", "null") else s
+
+    c1 = _clean_ref(data.get("custref1")) or _clean_ref(entity.get("custref1"))
+    c2 = _clean_ref(data.get("custref2")) or _clean_ref(entity.get("custref2"))
+    c3 = _clean_ref(data.get("custref3")) or _clean_ref(entity.get("custref3"))
+    bot_id = _clean_ref(data.get("botId")) or _clean_ref(entity.get("botId"))
+
     return {
         "onextel_message_id": message_id,
         "status": normalized_status,
@@ -163,9 +174,9 @@ def parse_dlr_payload(payload: Any) -> Dict[str, Any]:
         "failure_reason": failure_reason,
         "event_timestamp": event_timestamp or timezone.now(),
         "recipient": recipient,
-        "custref1": str(data.get("custref1") or entity.get("custref1") or "").strip(),
-        "custref2": str(data.get("custref2") or entity.get("custref2") or "").strip(),
-        "custref3": str(data.get("custref3") or entity.get("custref3") or "").strip(),
-        "bot_id": str(data.get("botId") or "").strip(),
+        "custref1": c1,
+        "custref2": c2,
+        "custref3": c3,
+        "bot_id": bot_id,
         "raw": data,
     }
