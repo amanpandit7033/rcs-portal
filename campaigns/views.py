@@ -190,6 +190,14 @@ class CampaignCreateView(RoleRequiredMixin, View):
         )
 
     def post(self, request):
+        user_wallet = getattr(request.user, "wallet", None)
+        if not user_wallet or user_wallet.balance <= Decimal("0.0000"):
+            messages.error(
+                request,
+                f"Insufficient wallet balance. Your balance is ₹{user_wallet.balance if user_wallet else '0.0000'}. Please recharge before launching a campaign."
+            )
+            return redirect("campaigns:campaign_create")
+
         name = request.POST.get("name", "").strip()
         sender_profile_id = request.POST.get("sender_profile")
         message_type = request.POST.get("message_type", "PROMOTIONAL")
@@ -294,7 +302,11 @@ class CampaignCreateView(RoleRequiredMixin, View):
         campaign.refresh_from_db()
 
         if campaign.status == Campaign.Status.FAILED:
-            messages.error(request, campaign.error_message or "Campaign failed to launch.")
+            err_msg = campaign.error_message or "Campaign failed to launch."
+            # Delete the unlaunched campaign and its contacts to prevent polluting campaign list
+            campaign.delete()
+            messages.error(request, err_msg)
+            return redirect("campaigns:campaign_create")
         elif campaign.status == Campaign.Status.SCHEDULED:
             messages.success(request, f"Campaign '{campaign.name}' scheduled for {campaign.scheduled_at.strftime('%Y-%m-%d %H:%M')}.")
         else:

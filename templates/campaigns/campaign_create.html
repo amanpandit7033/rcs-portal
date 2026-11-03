@@ -127,6 +127,18 @@ function campaignCreator() {
 
         <!-- LEFT COLUMN: Campaign Creation Form (7 Cols) -->
         <div class="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs">
+            {% if current_balance <= 0 %}
+            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3">
+                <svg class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div>
+                    <span class="font-bold text-rose-900 block text-sm">Insufficient Wallet Balance</span>
+                    <span class="text-rose-700 mt-0.5 block font-medium">Your current wallet balance is ₹{{ current_balance|floatformat:2 }}. You must recharge your wallet before you can dispatch a campaign.</span>
+                </div>
+            </div>
+            {% endif %}
+
             <form method="post" enctype="multipart/form-data" class="space-y-6">
                 {% csrf_token %}
                 <input type="hidden" name="input_mode" :value="inputMode">
@@ -370,7 +382,8 @@ function campaignCreator() {
                     {% endif %}
 
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all active:scale-[0.99]">
+                            {% if current_balance <= 0 %}disabled title="Please recharge your wallet to dispatch campaigns"{% endif %}
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                         <span x-text="timingMode === 'schedule' ? 'Schedule Campaign' : 'Send Campaign Now'">Send Campaign Now</span>
                     </button>
