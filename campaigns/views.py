@@ -449,6 +449,21 @@ class CampaignActionView(RoleRequiredMixin, View):
             else:
                 messages.error(request, "Campaign cannot be cancelled.")
 
+        elif action == "retry":
+            from .services import reserve_campaign_funds
+            from wallet.services import InsufficientBalanceError
+            try:
+                reserve_campaign_funds(campaign)
+                campaign.status = Campaign.Status.QUEUED
+                campaign.error_message = ""
+                campaign.save(update_fields=["status", "error_message", "updated_at"])
+                run_campaign_task.delay(str(campaign.id))
+                messages.success(request, f"Campaign '{campaign.name}' queued for retry.")
+            except InsufficientBalanceError as e:
+                messages.error(request, f"Cannot retry: {e}")
+            except Exception as e:
+                messages.error(request, f"Retry failed: {e}")
+
         return redirect("campaigns:campaign_detail", campaign_id=campaign.id)
 
 

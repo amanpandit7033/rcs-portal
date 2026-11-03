@@ -32,6 +32,10 @@
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold">
                         <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Cancelled
                     </span>
+                    {% elif campaign.status == 'failed' %}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Failed
+                    </span>
                     {% else %}
                     <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
                         {{ campaign.get_status_display }}
@@ -78,6 +82,19 @@
                 </form>
                 {% endif %}
 
+                {% if campaign.status == 'failed' %}
+                <form method="post" action="{% url 'campaigns:campaign_action' campaign.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="retry">
+                    <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-2xs flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Retry Campaign
+                    </button>
+                </form>
+                {% endif %}
+
                 <a href="{% url 'campaigns:campaign_export_csv' campaign.id %}" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors shadow-2xs flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Download CSV
@@ -96,6 +113,19 @@
                      style="width: {{ campaign.progress_pct }}%"></div>
             </div>
         </div>
+
+        {% if campaign.status == 'failed' or campaign.error_message %}
+        <!-- Failure Error Notice -->
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3 mt-4">
+            <svg class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <span class="font-bold text-rose-900 block text-sm">Campaign Failed to Launch</span>
+                <span class="text-rose-700 mt-0.5 block font-medium">{{ campaign.error_message|default:"An error occurred during campaign preparation. Please check wallet balance and logs." }}</span>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Live Telemetry Counters -->
