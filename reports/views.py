@@ -12,6 +12,7 @@ from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 
 from accounts.mixins import AdminRequiredMixin, ResellerRequiredMixin, RoleRequiredMixin
@@ -711,7 +712,16 @@ class MISBillingView(RoleRequiredMixin, View):
 
         # Date range filtering
         today = timezone.now().date()
-        if from_date and to_date and from_date <= today <= to_date:
+        f_date = parse_date(from_date) if from_date else None
+        t_date = parse_date(to_date) if to_date else None
+
+        in_range = True
+        if f_date and today < f_date:
+            in_range = False
+        if t_date and today > t_date:
+            in_range = False
+
+        if (f_date or t_date) and in_range:
             try:
                 from .models import sync_user_daily_mis
                 sync_user_daily_mis(
@@ -721,9 +731,14 @@ class MISBillingView(RoleRequiredMixin, View):
             except Exception as sync_err:
                 logger.warning("Auto sync MISBilling error: %s", sync_err)
 
-        if from_date:
+        if f_date:
+            qs = qs.filter(date__gte=f_date)
+        elif from_date:
             qs = qs.filter(date__gte=from_date)
-        if to_date:
+
+        if t_date:
+            qs = qs.filter(date__lte=t_date)
+        elif to_date:
             qs = qs.filter(date__lte=to_date)
 
 
