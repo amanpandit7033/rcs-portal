@@ -50,6 +50,11 @@ class MISBilling(models.Model):
         default=0,
         help_text="Messages permanently failed on this date",
     )
+    cut_count = models.PositiveIntegerField(
+        "Stopped Submissions (Cut)",
+        default=0,
+        help_text="Messages stopped from operator submission by cutting",
+    )
     total_cost = models.DecimalField(
         "Total Cost (INR)",
         max_digits=14,
@@ -100,6 +105,7 @@ def sync_user_daily_mis(user_id=None, date=None):
             ),
             read_count=Count("id", filter=Q(status=Message.Status.READ)),
             failed_count=Count("id", filter=Q(status=Message.Status.FAILED)),
+            cut_count=Count("id", filter=Q(custref6="LOW_PRICE_SKIPPED")),
             total_cost=Sum("cost"),
         )
     )
@@ -117,6 +123,7 @@ def sync_user_daily_mis(user_id=None, date=None):
                 "delivered_count": item["delivered_count"] or 0,
                 "read_count": item["read_count"] or 0,
                 "failed_count": item["failed_count"] or 0,
+                "cut_count": item["cut_count"] or 0,
                 "total_cost": item["total_cost"] or Decimal("0.0000"),
             },
         )
@@ -164,6 +171,11 @@ class LiveStatus(models.Model):
         "Total Failed",
         default=0,
         help_text="Messages permanently failed on this date",
+    )
+    cut_count = models.PositiveIntegerField(
+        "Stopped Submissions (Cut)",
+        default=0,
+        help_text="Messages stopped from operator submission by cutting",
     )
     total_cost = models.DecimalField(
         "Total Cost (INR)",
@@ -228,6 +240,7 @@ def sync_live_status(user_id=None, user_ids=None, date=None, from_date=None, to_
             ),
             total_read=Count("id", filter=Q(status=Message.Status.READ)),
             total_failed=Count("id", filter=Q(status=Message.Status.FAILED)),
+            cut_count=Count("id", filter=Q(custref6="LOW_PRICE_SKIPPED")),
             total_cost=Sum("cost"),
             last_sent_at=Max("created_at"),
         )
@@ -246,15 +259,16 @@ def sync_live_status(user_id=None, user_ids=None, date=None, from_date=None, to_
                 "total_delivered": item["total_delivered"] or 0,
                 "total_read": item["total_read"] or 0,
                 "total_failed": item["total_failed"] or 0,
+                "cut_count": item["cut_count"] or 0,
                 "total_cost": item["total_cost"] or Decimal("0.0000"),
                 "last_sent_at": item["last_sent_at"],
             },
         )
 
 
-def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), date=None, timestamp=None):
+def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), cut_count=0, date=None, timestamp=None):
     """
-    Directly updates total_submission / sent_count and total_cost
+    Directly updates total_submission / sent_count, cut_count, and total_cost
     in both LiveStatus and MISBilling tables in real time upon message submission/dispatch,
     without requiring carrier DLR callbacks.
     """
@@ -282,6 +296,7 @@ def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), date=No
             "total_delivered": 0,
             "total_read": 0,
             "total_failed": 0,
+            "cut_count": cut_count,
             "total_cost": cost,
             "last_sent_at": timestamp,
         },
@@ -289,6 +304,7 @@ def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), date=No
     if not created:
         LiveStatus.objects.filter(pk=live_record.pk).update(
             total_submission=F("total_submission") + count,
+            cut_count=F("cut_count") + cut_count,
             total_cost=F("total_cost") + cost,
             last_sent_at=timestamp,
             updated_at=timezone.now(),
@@ -303,12 +319,14 @@ def record_submission_and_cost(user_id, count=1, cost=Decimal("0.0000"), date=No
             "delivered_count": 0,
             "read_count": 0,
             "failed_count": 0,
+            "cut_count": cut_count,
             "total_cost": cost,
         },
     )
     if not created:
         MISBilling.objects.filter(pk=mis_record.pk).update(
             sent_count=F("sent_count") + count,
+            cut_count=F("cut_count") + cut_count,
             total_cost=F("total_cost") + cost,
             updated_at=timezone.now(),
         )

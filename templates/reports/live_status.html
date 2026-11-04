@@ -28,7 +28,7 @@
     </div>
 
     <!-- Summary KPI Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+    <div class="grid grid-cols-2 sm:grid-cols-3 {% if can_view_cutting %}lg:grid-cols-6{% else %}lg:grid-cols-5{% endif %} gap-3.5">
         <!-- 1. Total Submissions -->
         <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
             <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Total Submissions</span>
@@ -37,6 +37,17 @@
                 <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-semibold">Volume</span>
             </div>
         </div>
+
+        {% if can_view_cutting %}
+        <!-- Stopped / Cut Submissions -->
+        <div class="p-4 rounded-2xl bg-white border border-amber-200/90 shadow-2xs flex flex-col justify-between">
+            <span class="text-[11px] font-semibold text-amber-700 uppercase tracking-wider block">Stopped (Cut)</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xl sm:text-2xl font-bold font-mono text-amber-600">{{ summary.total_cut|default:"0" }}</span>
+                <span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-semibold">Kept Back</span>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- 2. Delivered -->
         <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
@@ -230,6 +241,9 @@
                         <th class="px-4 py-3">Parent Reseller</th>
                         {% endif %}
                         <th class="px-4 py-3 text-right">Submissions</th>
+                        {% if can_view_cutting %}
+                        <th class="px-4 py-3 text-right text-amber-700">Stopped (Cut)</th>
+                        {% endif %}
                         <th class="px-4 py-3 text-right">Delivered</th>
                         <th class="px-4 py-3 text-right">Read</th>
                         <th class="px-4 py-3 text-right">Failed</th>
@@ -294,6 +308,13 @@
                             {{ row.total_submission|default:"0" }}
                         </td>
 
+                        {% if can_view_cutting %}
+                        <!-- Stopped / Cut Submissions -->
+                        <td class="px-4 py-3.5 text-right font-mono font-bold text-amber-600 whitespace-nowrap" title="Messages held back by cutting (not submitted to operator)">
+                            {{ row.cut_count|default:"0" }}
+                        </td>
+                        {% endif %}
+
                         <!-- Delivered -->
                         <td class="px-4 py-3.5 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">
                             {{ row.total_delivered|default:"0" }}
@@ -341,7 +362,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{% if request.user.is_admin %}10{% else %}9{% endif %}" class="py-12 text-center text-slate-400">
+                        <td colspan="{% if request.user.is_admin or request.user.is_distributor %}{% if can_view_cutting %}11{% else %}10{% endif %}{% else %}{% if can_view_cutting %}10{% else %}9{% endif %}{% endif %}" class="py-12 text-center text-slate-400">
                             <div class="flex flex-col items-center justify-center gap-2">
                                 <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 <span class="text-xs font-semibold text-slate-600">

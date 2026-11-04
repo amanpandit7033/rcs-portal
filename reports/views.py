@@ -742,22 +742,37 @@ class MISBillingView(RoleRequiredMixin, View):
             qs = qs.filter(date__lte=to_date)
 
 
+        can_view_cutting = bool(
+            getattr(user, "is_admin", False)
+            or getattr(user, "is_superuser", False)
+            or getattr(user, "role", "") == "superadmin"
+            or getattr(user, "can_use_low_price", False)
+        )
+
         # Handle CSV Export if requested
         if request.GET.get("export") == "csv":
-            header = ["Date", "Username", "Company Name", "Role", "Sent", "Delivered", "Read", "Failed", "Cost (INR)"]
+            if can_view_cutting:
+                header = ["Date", "Username", "Company Name", "Role", "Sent", "Stopped (Cut)", "Delivered", "Read", "Failed", "Cost (INR)"]
+            else:
+                header = ["Date", "Username", "Company Name", "Role", "Sent", "Delivered", "Read", "Failed", "Cost (INR)"]
 
             def format_row(r):
-                return [
+                row_data = [
                     r.date.strftime("%Y-%m-%d") if r.date else "",
                     r.user.username if r.user else "",
                     r.user.company_name if r.user else "",
                     r.user.get_role_display() if r.user and hasattr(r.user, "get_role_display") else (r.user.role if r.user else ""),
                     r.sent_count,
+                ]
+                if can_view_cutting:
+                    row_data.append(getattr(r, "cut_count", 0) or 0)
+                row_data.extend([
                     r.delivered_count,
                     r.read_count,
                     r.failed_count,
                     f"{r.total_cost:.4f}",
-                ]
+                ])
+                return row_data
 
             filename = f"mis_billing_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
             return stream_csv_response(
@@ -770,12 +785,14 @@ class MISBillingView(RoleRequiredMixin, View):
         # Aggregate totals for filtered records
         summary = qs.aggregate(
             total_sent=Sum("sent_count"),
+            total_cut=Sum("cut_count"),
             total_delivered=Sum("delivered_count"),
             total_read=Sum("read_count"),
             total_failed=Sum("failed_count"),
             total_cost=Sum("total_cost"),
         )
         total_sent = summary["total_sent"] or 0
+        total_cut = summary["total_cut"] or 0
         total_delivered = summary["total_delivered"] or 0
         total_read = summary["total_read"] or 0
         total_failed = summary["total_failed"] or 0
@@ -794,12 +811,14 @@ class MISBillingView(RoleRequiredMixin, View):
                 "page_obj": page_obj,
                 "summary": {
                     "total_sent": total_sent,
+                    "total_cut": total_cut,
                     "total_delivered": total_delivered,
                     "total_read": total_read,
                     "total_failed": total_failed,
                     "total_cost": total_cost,
                     "delivery_rate": delivery_rate,
                 },
+                "can_view_cutting": can_view_cutting,
                 "username_query": username,
                 "from_date": from_date,
                 "to_date": to_date,
@@ -893,15 +912,24 @@ class LiveStatusView(RoleRequiredMixin, View):
         if role_filter in [User.Role.USER, User.Role.RESELLER, User.Role.DISTRIBUTOR]:
             base_qs = base_qs.filter(user__role=role_filter)
 
+        can_view_cutting = bool(
+            getattr(user, "is_admin", False)
+            or getattr(user, "is_superuser", False)
+            or getattr(user, "role", "") == "superadmin"
+            or getattr(user, "can_use_low_price", False)
+        )
+
         # Overall summary KPI cards (summed across date range)
         summary = base_qs.aggregate(
             total_submission=Sum("total_submission"),
+            total_cut=Sum("cut_count"),
             total_delivered=Sum("total_delivered"),
             total_read=Sum("total_read"),
             total_failed=Sum("total_failed"),
             total_cost=Sum("total_cost"),
         )
         total_sub = summary["total_submission"] or 0
+        total_cut = summary["total_cut"] or 0
         total_dlvr = summary["total_delivered"] or 0
         total_read = summary["total_read"] or 0
         total_failed = summary["total_failed"] or 0
@@ -915,6 +943,7 @@ class LiveStatusView(RoleRequiredMixin, View):
             base_qs.values("user_id")
             .annotate(
                 total_submission=Sum("total_submission"),
+                total_cut=Sum("cut_count"),
                 total_delivered=Sum("total_delivered"),
                 total_read=Sum("total_read"),
                 total_failed=Sum("total_failed"),
@@ -939,6 +968,7 @@ class LiveStatusView(RoleRequiredMixin, View):
                 {
                     "user": account,
                     "total_submission": item["total_submission"] or 0,
+                    "cut_count": item["total_cut"] or 0,
                     "total_delivered": item["total_delivered"] or 0,
                     "total_read": item["total_read"] or 0,
                     "total_failed": item["total_failed"] or 0,
@@ -955,30 +985,39 @@ class LiveStatusView(RoleRequiredMixin, View):
                 "Role",
                 "Parent Reseller",
                 "Total Submissions",
+            ]
+            if can_view_cutting:
+                header.append("Stopped (Cut)")
+            header.extend([
                 "Delivered",
                 "Read",
                 "Failed",
                 "Cost (INR)",
                 "Last Sent At",
-            ]
+            ])
 
             def format_row(r):
                 u = r["user"]
                 role_str = u.get_role_display() if hasattr(u, "get_role_display") else u.role
                 parent_str = u.parent_reseller.username if u.parent_reseller else "Direct / Admin"
                 last_sent = r["last_sent_at"].strftime("%Y-%m-%d %H:%M:%S") if r["last_sent_at"] else "N/A"
-                return [
+                row_data = [
                     u.username,
                     u.company_name or "",
                     role_str,
                     parent_str,
                     r["total_submission"],
+                ]
+                if can_view_cutting:
+                    row_data.append(r.get("cut_count", 0))
+                row_data.extend([
                     r["total_delivered"],
                     r["total_read"],
                     r["total_failed"],
                     str(r["total_cost"]),
                     last_sent,
-                ]
+                ])
+                return row_data
 
             return stream_csv_response(
                 filename=f"live_status_{from_date}_to_{to_date}.csv",
@@ -1017,8 +1056,10 @@ class LiveStatusView(RoleRequiredMixin, View):
                 "search_query": q,
                 "candidate_usernames": candidate_usernames,
                 "selected_role": role_filter,
+                "can_view_cutting": can_view_cutting,
                 "summary": {
                     "total_submission": total_sub,
+                    "total_cut": total_cut,
                     "total_delivered": total_dlvr,
                     "total_read": total_read,
                     "total_failed": total_failed,

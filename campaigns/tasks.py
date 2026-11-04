@@ -455,6 +455,7 @@ def _execute_campaign_run(campaign_id: str, lock_key: str):
         # Immediately update submission count and cost in LiveStatus and MISBilling
         if chunk_dispatched_messages:
             chunk_count = len(chunk_dispatched_messages)
+            chunk_cut_count = sum(1 for m in chunk_dispatched_messages if m.custref6 == "LOW_PRICE_SKIPPED")
             chunk_cost = sum((m.cost for m in chunk_dispatched_messages), Decimal("0.0000"))
             try:
                 from reports.models import record_submission_and_cost
@@ -462,6 +463,7 @@ def _execute_campaign_run(campaign_id: str, lock_key: str):
                     user_id=campaign.user_id,
                     count=chunk_count,
                     cost=chunk_cost,
+                    cut_count=chunk_cut_count,
                     date=timezone.now().date(),
                     timestamp=timezone.now(),
                 )
